@@ -1894,12 +1894,8 @@ uint32 Spell::GetSearcherTypeMask(SpellTargetObjectTypes objType, ConditionConta
     {
         case TARGET_OBJECT_TYPE_UNIT:
         case TARGET_OBJECT_TYPE_UNIT_AND_DEST:
-            if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_DEAD))
-            {
-                retMask &= GRID_MAP_TYPE_MASK_PLAYER | GRID_MAP_TYPE_MASK_CREATURE;
-                break;
-            }
-            [[fallthrough]];
+            retMask &= GRID_MAP_TYPE_MASK_PLAYER | GRID_MAP_TYPE_MASK_CREATURE;
+            break;
         case TARGET_OBJECT_TYPE_CORPSE:
         case TARGET_OBJECT_TYPE_CORPSE_ENEMY:
         case TARGET_OBJECT_TYPE_CORPSE_ALLY:
@@ -2240,7 +2236,7 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
             if (Unit* owner = m_originalCaster->GetOwner())
                 caster = owner;
 
-        targetInfo.missCondition = caster->SpellHitResult(target, m_spellInfo, m_canReflect && !(m_spellInfo->IsPositive() && m_caster->IsFriendlyTo(target)));
+        targetInfo.missCondition = caster->SpellHitResult(target, m_spellInfo, m_canReflect && !(m_spellInfo->IsPositive() && m_caster->IsFriendlyTo(target)), effectMask);
         if (m_skipCheck && targetInfo.missCondition != SPELL_MISS_IMMUNE)
             targetInfo.missCondition = SPELL_MISS_NONE;
     }
@@ -2746,7 +2742,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
             return SPELL_MISS_EVADE;
 
     // For delayed spells immunity may be applied between missile launch and hit - check immunity for that case
-    if (m_spellInfo->Speed && unit->IsImmunedToSpell(m_spellInfo, m_caster))
+    if (m_spellInfo->Speed && unit->IsImmunedToSpell(m_spellInfo, m_caster, effectMask))
         return SPELL_MISS_IMMUNE;
 
     // disable effects to which unit is immune
@@ -6625,10 +6621,7 @@ std::pair<float, float> Spell::GetMinMaxRange(bool strict) const
     float minRange = 0.0f;
     float maxRange = 0.0f;
     if (strict && m_spellInfo->IsNextMeleeSwingSpell())
-    {
-        maxRange = 100.0f;
-        return std::pair<float, float>(minRange, maxRange);
-    }
+        return { 0.0f, 100.0f };
 
     if (m_spellInfo->RangeEntry)
     {
@@ -6669,7 +6662,7 @@ std::pair<float, float> Spell::GetMinMaxRange(bool strict) const
 
     maxRange += rangeMod;
 
-    return std::pair<float, float>(minRange, maxRange);
+    return { minRange, maxRange };
 }
 
 SpellCastResult Spell::CheckPower() const
@@ -8318,9 +8311,10 @@ bool WorldObjectSpellAreaTargetCheck::operator()(WorldObject* target)
         if (!isInRange)
             return false;
     }
-    else
+    else if (target->ToUnit())
     {
-        bool isInsideCylinder = target->IsWithinDist2d(_position, _range) && std::abs(target->GetPositionZ() - _position->GetPositionZ()) <= _range;
+        float hitboxSum = _spellInfo->HasAttribute(SPELL_ATTR5_INCLUDE_MELEE_RANGE) ? target->ToUnit()->GetMeleeRange(_caster) : 0.f;
+        bool isInsideCylinder = target->IsWithinDist2d(_position, _range + hitboxSum) && std::abs(target->GetPositionZ() - _position->GetPositionZ()) <= (_range + hitboxSum);
         if (!isInsideCylinder)
             return false;
     }

@@ -1026,6 +1026,40 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 entry, Posit
     return true;
 }
 
+bool Creature::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+{
+    Unit::SetDisableGravity(disable, packetOnly, updateAnimationTier);
+
+    if (updateAnimationTier && IsAlive() && !HasUnitState(UNIT_STATE_ROOT) && !GetMovementTemplate().IsRooted())
+    {
+        if (IsGravityDisabled())
+            SetAnimationTier(AnimationTier::Fly);
+        else if (IsHovering())
+            SetAnimationTier(AnimationTier::Hover);
+        else
+            SetAnimationTier(AnimationTier::Ground);
+    }
+
+    return true;
+}
+
+bool Creature::SetHover(bool enable, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+{
+    Unit::SetHover(enable, packetOnly, updateAnimationTier);
+
+    if (updateAnimationTier && IsAlive() && !HasUnitState(UNIT_STATE_ROOT) && !GetMovementTemplate().IsRooted())
+    {
+        if (IsGravityDisabled())
+            SetAnimationTier(AnimationTier::Fly);
+        else if (IsHovering())
+            SetAnimationTier(AnimationTier::Hover);
+        else
+            SetAnimationTier(AnimationTier::Ground);
+    }
+
+    return true;
+}
+
 void Creature::InitializeReactState()
 {
     if (IsTotem() || IsTrigger() || IsCritter() || IsSpiritService())
@@ -1189,10 +1223,15 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask)
     data.displayid = displayId;
     data.equipmentId = GetCurrentEquipmentId();
     if (!GetTransport())
-        data.spawnPoint.WorldRelocate(this);
+    {
+        data.mapId = GetMapId();
+        data.spawnPoint.Relocate(this);
+    }
     else
-        data.spawnPoint.WorldRelocate(mapid, GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO());
-
+    {
+        data.mapId = mapid;
+        data.spawnPoint.Relocate(GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO());
+    }
     data.spawntimesecs = m_respawnDelay;
     // prevent add data integrity problems
     data.spawndist = GetDefaultMovementType() == IDLE_MOTION_TYPE ? 0.0f : m_respawnradius;
@@ -1579,24 +1618,12 @@ void Creature::SetSpawnHealth()
 
 bool Creature::hasQuest(uint32 quest_id) const
 {
-    QuestRelationBounds qr = sObjectMgr->GetCreatureQuestRelationBounds(GetEntry());
-    for (QuestRelations::const_iterator itr = qr.first; itr != qr.second; ++itr)
-    {
-        if (itr->second == quest_id)
-            return true;
-    }
-    return false;
+    return sObjectMgr->GetCreatureQuestRelations(GetEntry()).HasQuest(quest_id);
 }
 
 bool Creature::hasInvolvedQuest(uint32 quest_id) const
 {
-    QuestRelationBounds qir = sObjectMgr->GetCreatureQuestInvolvedRelationBounds(GetEntry());
-    for (QuestRelations::const_iterator itr = qir.first; itr != qir.second; ++itr)
-    {
-        if (itr->second == quest_id)
-            return true;
-    }
-    return false;
+    return sObjectMgr->GetCreatureQuestInvolvedRelations(GetEntry()).HasQuest(quest_id);
 }
 
 /*static*/ bool Creature::DeleteFromDB(ObjectGuid::LowType spawnId)
@@ -1607,7 +1634,7 @@ bool Creature::hasInvolvedQuest(uint32 quest_id) const
 
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
-    sMapMgr->DoForAllMapsWithMapId(data->spawnPoint.GetMapId(),
+    sMapMgr->DoForAllMapsWithMapId(data->mapId,
         [spawnId, trans](Map* map) -> void
         {
             // despawn all active creatures, and remove their respawns
@@ -2026,7 +2053,7 @@ void Creature::LoadTemplateImmunities()
     }
 }
 
-bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster) const
+bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask /*= nullptr*/) const
 {
     if (!spellInfo)
         return false;
@@ -2036,6 +2063,10 @@ bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster) const
     {
         if (!spellInfo->Effects[i].IsEffect())
             continue;
+
+        if (effectMask && !(effectMask.get() & (1 << i)))
+            continue;
+
         if (!IsImmunedToSpellEffect(spellInfo, i, caster))
         {
             immunedToAllEffects = false;
@@ -2851,7 +2882,7 @@ void Creature::UpdateMovementFlags()
         if (GetMovementTemplate().Flight == CreatureFlightMovementType::CanFly)
             SetCanFly(true);
         else
-            SetDisableGravity(true);
+            SetDisableGravity(true, false, false);
 
         if (!HasAuraType(SPELL_AURA_HOVER))
             SetHover(false);
@@ -2859,9 +2890,9 @@ void Creature::UpdateMovementFlags()
     else
     {
         SetCanFly(false);
-        SetDisableGravity(false);
+        SetDisableGravity(false, false, false);
         if ((IsAlive() && CanHover()) || HasAuraType(SPELL_AURA_HOVER))
-            SetHover(true);
+            SetHover(true, false, false);
     }
 
     if (!isInAir)

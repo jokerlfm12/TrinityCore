@@ -22,6 +22,7 @@
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "QuestPackets.h"
+#include "QuestPools.h"
 #include "World.h"
 
 Quest::Quest(Field* questRecord)
@@ -265,6 +266,14 @@ uint32 Quest::GetXPReward(Player const* player) const
     return 0;
 }
 
+/*static*/ bool Quest::IsTakingQuestEnabled(uint32 questId)
+{
+    if (!sQuestPoolMgr->IsQuestActive(questId))
+        return false;
+
+    return true;
+}
+
 int32 Quest::GetRewOrReqMoney(Player const* player) const
 {
     // RequiredMoney: the amount is the negative copper sum.
@@ -272,7 +281,7 @@ int32 Quest::GetRewOrReqMoney(Player const* player) const
         return _rewardMoney;
 
     // RewardMoney: the positive amount
-    if (!player || player->getLevel() < sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+    if (!player || !player->IsMaxLevel())
         return int32(_rewardMoney * sWorld->getRate(RATE_MONEY_QUEST));
     else // At level cap, the money reward is the maximum amount between normal and bonus money reward
         return std::max(int32(GetRewMoneyMaxLevel()), int32(_rewardMoney * sWorld->getRate(RATE_MONEY_QUEST)));

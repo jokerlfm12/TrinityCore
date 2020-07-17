@@ -973,7 +973,7 @@ class TC_GAME_API Unit : public WorldObject
         typedef std::list<AuraApplication *> AuraApplicationList;
 
         typedef std::vector<std::pair<uint8 /*procEffectMask*/, AuraApplication*>> AuraApplicationProcContainer;
-        typedef std::vector<Unit*> FormationFollowerContainer;
+        typedef std::vector<ObjectGuid> FormationFollowerGUIDContainer;
 
         typedef std::map<uint8, AuraApplication*> VisibleAuraMap;
 
@@ -1207,7 +1207,7 @@ class TC_GAME_API Unit : public WorldObject
         float MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, uint32 spellId) const;
         SpellMissInfo MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo);
         SpellMissInfo MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo);
-        SpellMissInfo SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect = false);
+        SpellMissInfo SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect = false, Optional<uint8> effectMask = nullptr);
 
         float GetUnitDodgeChance(Unit const* attacker) const;
         float GetUnitParryChance(Unit const* attacker) const;
@@ -1342,13 +1342,13 @@ class TC_GAME_API Unit : public WorldObject
         bool IsWalking() const { return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_WALKING); }
         bool IsHovering() const { return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_HOVER); }
         bool SetWalk(bool enable);
-        bool SetDisableGravity(bool disable, bool packetOnly = false, bool updateAnimationTier = true);
+        virtual bool SetDisableGravity(bool disable, bool packetOnly = false, bool updateAnimationTier = true);
         bool SetFall(bool enable);
         bool SetSwim(bool enable);
         bool SetCanFly(bool enable, bool packetOnly = false);
         bool SetWaterWalking(bool enable, bool packetOnly = false);
         bool SetFeatherFall(bool enable, bool packetOnly = false);
-        bool SetHover(bool enable, bool packetOnly = false, bool updateAnimationTier = true);
+        virtual bool SetHover(bool enable, bool packetOnly = false, bool updateAnimationTier = true);
 
         void SetInFront(WorldObject const* target);
         void SetFacingTo(float const ori, bool force = true);
@@ -1758,7 +1758,7 @@ class TC_GAME_API Unit : public WorldObject
         uint32 GetRemainingPeriodicAmount(ObjectGuid caster, uint32 spellId, AuraType auraType, uint8 effectIndex = 0) const;
 
         void ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply);
-        virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster) const; // redefined in Creature
+        virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask = nullptr) const; // redefined in Creature
         uint32 GetSchoolImmunityMask() const;
         uint32 GetMechanicImmunityMask() const;
 
@@ -1787,8 +1787,8 @@ class TC_GAME_API Unit : public WorldObject
         // Makes the unit follow the given target. Use this function above using the MotionMaster::MoveFollow for default follow behaivior.
         void FollowTarget(Unit* target);
 
-        FormationFollowerContainer GetFormationFollowers() { return _formationFollowers; }
-        void AddFormationFollower(Unit* follower) { _formationFollowers.push_back(follower); }
+        FormationFollowerGUIDContainer GetFormationFollowers() { return _formationFollowers; }
+        void AddFormationFollower(Unit* follower) { _formationFollowers.push_back(follower->GetGUID()); }
         void RemoveFormationFollower(Unit* follower);
         bool HasFormationFollower(Unit* follower) const;
 
@@ -2064,7 +2064,7 @@ class TC_GAME_API Unit : public WorldObject
 
         PositionUpdateInfo _positionUpdateInfo;
 
-        FormationFollowerContainer _formationFollowers;
+        FormationFollowerGUIDContainer _formationFollowers;
 };
 
 namespace Trinity

@@ -205,3 +205,57 @@ WorldPacket const* WorldPackets::Spells::MountResult::Write()
 
     return &_worldPacket;
 }
+
+ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::AuraDataInfo const& auraData)
+{
+    data << int32(auraData.SpellID);
+    if (auraData.SpellID <= 0)
+        return data;
+
+    data << int16(auraData.Flags);
+    data << uint8(auraData.CastLevel);
+    data << uint8(auraData.Applications);
+
+    if (auraData.CastUnit)
+        data << auraData.CastUnit.get().WriteAsPacked();
+
+    if (auraData.Duration)
+        data << int32(*auraData.Duration);
+
+    if (auraData.Remaining)
+        data << int32(*auraData.Remaining);
+
+    for (uint8 i = 0; i < 3 /*MAX_SPELL_EFFECTS*/; ++i)
+        if (auraData.Points[i].is_initialized())
+            data << int32(*auraData.Points[i]);
+
+    return data;
+}
+
+ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::AuraInfo const& aura)
+{
+    data << uint8(aura.Slot);
+    data << aura.AuraData;
+
+    return data;
+}
+
+WorldPacket const* WorldPackets::Spells::AuraUpdate::Write()
+{
+    _worldPacket << UnitGUID.WriteAsPacked();
+
+    for (AuraInfo const& aura : Auras)
+        _worldPacket << aura;
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Spells::AuraUpdateAll::Write()
+{
+    _worldPacket << UnitGUID.WriteAsPacked();
+
+    for (AuraInfo const& aura : Auras)
+        _worldPacket << aura;
+
+    return &_worldPacket;
+}

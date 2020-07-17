@@ -20,6 +20,7 @@
 #include "EventProcessor.h"
 #include "MoveSpline.h"
 #include "MoveSplineInit.h"
+#include "ObjectAccessor.h"
 #include "PathGenerator.h"
 #include "Pet.h"
 #include "TemporarySummon.h"
@@ -93,10 +94,10 @@ static void ApplyCatchUpMod(Unit* owner, Position dest, float& velocity)
 {
     float distance = owner->GetExactDist2d(dest);
 
-    if (dest.HasInArc(float(M_PI), owner)) // owner is beyond default destination. throttle speed.
-        AddPct(velocity, -((distance / velocity) * 100.f));
-    else // owner is behind destination, catch up.
+    if (!dest.HasInArc(float(M_PI), owner)) // owner is falling back. Catch up
         AddPct(velocity, ((distance / velocity) * 100.f));
+    else if (distance < 3.f)
+        AddPct(velocity, -((distance / velocity) * 100.f));
 }
 
 static void DoMovementInform(Unit* owner, Unit* target)
@@ -168,7 +169,7 @@ void FollowMovementGenerator::Initialize(Unit* owner)
     owner->AddUnitState(UNIT_STATE_FOLLOW);
 
     // owner joins a organized follower formation.
-    if (_joinFormation)
+    if (_joinFormation && _target)
     {
         _target->AddFormationFollower(owner);
         UpdateFollowFormation();
@@ -202,7 +203,7 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
         return false;
 
     // Our target might have gone away
-    if (!_target || !_target->IsInWorld())
+    if (!_target || !_target->IsInWorld() || !_target->IsAlive())
         return false;
 
     // Follower cannot move at the moment
@@ -274,19 +275,22 @@ bool FollowMovementGenerator::Update(Unit* owner, uint32 diff)
 void FollowMovementGenerator::UpdateFollowFormation()
 {
     uint8 followSlot = 0;
-    for (Unit* follower : _target->GetFormationFollowers())
+    for (ObjectGuid guid : _target->GetFormationFollowers())
     {
-        for (uint8 slot = MOTION_SLOT_IDLE; slot < MAX_MOTION_SLOT; ++slot)
+        if (Unit* follower = ObjectAccessor::GetUnit(*_target, guid))
         {
-            MovementGenerator* moveGen = follower->GetMotionMaster()->GetMotionSlot(MovementSlot(slot));
-            if (!moveGen || moveGen->GetMovementGeneratorType() != FOLLOW_MOTION_TYPE)
-                continue;
+            for (uint8 slot = MOTION_SLOT_IDLE; slot < MAX_MOTION_SLOT; ++slot)
+            {
+                MovementGenerator* moveGen = follower->GetMotionMaster()->GetMotionSlot(MovementSlot(slot));
+                if (!moveGen || moveGen->GetMovementGeneratorType() != FOLLOW_MOTION_TYPE)
+                    continue;
 
-            if (FollowMovementGenerator* followMoveGen = static_cast<FollowMovementGenerator*>(moveGen))
-                followMoveGen->UpdateFormationFollowOffsets(followSlot);
+                if (FollowMovementGenerator* followMoveGen = static_cast<FollowMovementGenerator*>(moveGen))
+                    followMoveGen->UpdateFormationFollowOffsets(followSlot);
+            }
+
+            ++followSlot;
         }
-
-        ++followSlot;
     }
 }
 
@@ -334,16 +338,22 @@ void FollowMovementGenerator::LaunchMovement(Unit* owner)
     if (velocity <= 0.1f)
         return;
 
-    // Predicting our follow destination
-    dest.m_positionX += std::cos(Position::NormalizeOrientation(_target->GetOrientation() + offset)) * velocity;
-    dest.m_positionY += std::sin(Position::NormalizeOrientation(_target->GetOrientation() + offset)) * velocity;
+    // Predicting our follow destination if the owner is slower or equally as fast as the target
+    bool predictDestination = (!_joinFormation && !_catchUpToTarget && velocity < _target->GetSpeed(SelectSpeedType(_target->m_movementInfo.GetMovementFlags())))
+        || (_joinFormation || _catchUpToTarget);
+
+    if (predictDestination)
+    {
+        dest.m_positionX += std::cos(Position::NormalizeOrientation(_target->GetOrientation() + offset)) * velocity;
+        dest.m_positionY += std::sin(Position::NormalizeOrientation(_target->GetOrientation() + offset)) * velocity;
+    }
 
     // Now we calculate our actual destination data
     if (!owner->HasUnitState(UNIT_STATE_IGNORE_PATHFINDING))
     {
-        float relativeAngle = _target->GetRelativeAngle(dest);
-        float distance = _target->GetExactDist2d(dest);
-        dest = _target->GetPosition();
+        float relativeAngle = owner->GetRelativeAngle(dest) - _target->GetOrientation() + owner->GetOrientation();
+        float distance = owner->GetExactDist2d(dest);
+        dest = owner->GetPosition();
         _target->MovePositionToFirstCollision(dest, distance, relativeAngle);
     }
 

@@ -325,19 +325,19 @@ char* DB2FileLoader::AutoProduceStringsArrayHolders(char const* format, char* da
         return nullptr;
 
     // we store flat holders pool as single memory block
-    size_t stringFields = GetFormatStringFieldCount(format);
-    if (!stringFields)
+    std::size_t localizedStringFields = GetFormatStringFieldCount(format);
+    if (!localizedStringFields)
         return nullptr;
 
     // each string field at load have array of string for each locale
-    size_t stringHolderSize = sizeof(char*) * TOTAL_LOCALES;
-    size_t stringHoldersRecordPoolSize = stringFields * stringHolderSize;
-    size_t stringHoldersPoolSize = stringHoldersRecordPoolSize * recordCount;
+    std::size_t stringHolderSize = sizeof(char*) * TOTAL_LOCALES;
+    std::size_t stringHoldersRecordPoolSize = localizedStringFields * stringHolderSize;
+    std::size_t stringHoldersPoolSize = stringHoldersRecordPoolSize * recordCount;
 
     char* stringHoldersPool = new char[stringHoldersPoolSize];
 
     // DB2 strings expected to have at least empty string
-    for (size_t i = 0; i < stringHoldersPoolSize / sizeof(char*); ++i)
+    for (std::size_t i = 0; i < stringHoldersPoolSize / sizeof(char*); ++i)
         ((char const**)stringHoldersPool)[i] = nullStr;
 
     uint32 offset = 0;
@@ -345,7 +345,7 @@ char* DB2FileLoader::AutoProduceStringsArrayHolders(char const* format, char* da
     // assign string holders to string field slots
     for (uint32 y = 0; y < recordCount; y++)
     {
-        uint32 stringFieldNum = 0;
+        uint32 stringFieldOffset = 0;
 
         for (uint32 x = 0; x < fieldCount; x++)
         {
@@ -363,8 +363,8 @@ char* DB2FileLoader::AutoProduceStringsArrayHolders(char const* format, char* da
                 {
                     // init db2 string field slots by pointers to string holders
                     char const*** slot = (char const***)(&dataTable[offset]);
-                    *slot = (char const**)(&stringHoldersPool[stringHoldersRecordPoolSize * y + stringHolderSize * stringFieldNum]);
-                    ++stringFieldNum;
+                    *slot = (char const**)(&stringHoldersPool[stringHoldersRecordPoolSize * y + stringFieldOffset]);
+                    stringFieldOffset += stringHolderSize;
                     offset += sizeof(char*);
                     break;
                 }
@@ -438,19 +438,19 @@ char* DB2DatabaseLoader::Load(const char* format, int32 preparedStatement, uint3
     uint32 recordSize = DB2FileLoader::GetFormatRecordSize(format, &indexField);
 
     // we store flat holders pool as single memory block
-    size_t stringFields = DB2FileLoader::GetFormatStringFieldCount(format);
+    std::size_t stringFields = DB2FileLoader::GetFormatStringFieldCount(format);
 
     // each string field at load have array of string for each locale
-    size_t stringHolderSize = sizeof(char*) * TOTAL_LOCALES;
-    size_t stringHoldersRecordPoolSize = stringFields * stringHolderSize;
+    std::size_t stringHolderSize = sizeof(char*) * TOTAL_LOCALES;
+    std::size_t stringHoldersRecordPoolSize = stringFields * stringHolderSize;
 
     if (stringFields)
     {
-        size_t stringHoldersPoolSize = stringHoldersRecordPoolSize * result->GetRowCount();
+        std::size_t stringHoldersPoolSize = stringHoldersRecordPoolSize * result->GetRowCount();
         stringHolders = new char[stringHoldersPoolSize];
 
         // DB2 strings expected to have at least empty string
-        for (size_t i = 0; i < stringHoldersPoolSize / sizeof(char*); ++i)
+        for (std::size_t i = 0; i < stringHoldersPoolSize / sizeof(char*); ++i)
             ((char const**)stringHolders)[i] = nullStr;
     }
     else

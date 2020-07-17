@@ -4195,13 +4195,6 @@ void SpellMgr::LoadSpellInfoCorrections()
     //
     // STONECORE SPELLS
     //
-    ApplySpellFix({
-        95284, // Teleport (from entrance to Slabhide)
-        95285  // Teleport (from Slabhide to entrance)
-    }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->Effects[EFFECT_0].TargetB = SpellImplicitTargetInfo(TARGET_DEST_DB);
-    });
 
     // Paralyze
     ApplySpellFix({ 92426 }, [](SpellInfo* spellInfo)
@@ -4380,6 +4373,12 @@ void SpellMgr::LoadSpellInfoCorrections()
 
     // Summon Spiked Tentacle Trigger
     ApplySpellFix({ 93315 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 1;
+    });
+
+    // Phased Burn
+    ApplySpellFix({ 85799 }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 1;
     });
@@ -4826,6 +4825,15 @@ void SpellMgr::LoadSpellInfoCorrections()
     {
         spellInfo->ChannelInterruptFlags = 0;
         spellInfo->AuraInterruptFlags &= ~AURA_INTERRUPT_FLAG_TURNING;
+    });
+
+    // Twilight Portal
+    ApplySpellFix({
+        95210,
+        95012
+    }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].AuraPeriod = 1250;
     });
 
     // ENDOF BLACKROCK CAVERNS SPELLS
@@ -5610,12 +5618,43 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->MaxAffectedTargets = 1;
     });
 
+    // Constricting Chains
+    ApplySpellFix({ 79589 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 2;
+    });
+
+    // Constricting Chains
+    ApplySpellFix({ 91911 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 4;
+    });
+
+    // Laser Strike
+    ApplySpellFix({
+        81067,
+        91884
+    }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx3 |= SPELL_ATTR3_NO_INITIAL_AGGRO;
+        spellInfo->Effects[EFFECT_1].RadiusEntry = sSpellRadiusStore.LookupEntry(EFFECT_RADIUS_4_YARDS);
+    });
+
     // ENDOF BLACKWING DESCENT SPELLS
 
     // Living Bomb
     ApplySpellFix({ 44457 }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAuraTargets = 3;
+    });
+
+    // Overhead Smash
+    ApplySpellFix({
+        79580,
+        91906,
+    }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->RangeEntry = sSpellRangeStore.LookupEntry(6); // 100 yards
     });
 
     // Living Bomb

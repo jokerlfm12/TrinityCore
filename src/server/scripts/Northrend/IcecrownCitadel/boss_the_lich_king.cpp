@@ -722,7 +722,7 @@ class boss_the_lich_king : public CreatureScript
                             summon->CastSpell(summon, SPELL_ICE_SPHERE, false);
                             summon->CastSpell(summon, SPELL_ICE_BURST_TARGET_SEARCH, false);
                             summon->CastSpell(target, SPELL_ICE_PULSE, false);
-                            summon->GetMotionMaster()->MoveFollow(target, 0.0f, 0.0f);
+                            summon->GetMotionMaster()->MoveFollow(target, 0.0f, 0.0f, false, false, true);
                         }
                         else
                             summon->DespawnOrUnsummon();
@@ -3113,8 +3113,13 @@ class spell_the_lich_king_jump : public SpellScriptLoader
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
-                GetHitUnit()->RemoveAurasDueToSpell(SPELL_RAISE_DEAD);
-                GetHitUnit()->CastSpell((Unit*)nullptr, SPELL_JUMP_2, true);
+
+                if (Unit* target = GetHitUnit())
+                {
+                    target->RemoveAurasDueToSpell(SPELL_RAISE_DEAD);
+                    target->CastSpell((Unit*)nullptr, SPELL_JUMP_2, true);
+                }
+
                 if (Creature* creature = GetHitCreature())
                     creature->AI()->DoAction(ACTION_BREAK_FROSTMOURNE);
             }

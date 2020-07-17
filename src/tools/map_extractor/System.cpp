@@ -15,8 +15,10 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "StringFormat.h"
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <bitset>
 #include <cstdio>
 #include <deque>
 #include <fstream>
@@ -24,6 +26,11 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <cstring>
+
+#include "Common.h"
+#ifdef PLATFORM_WINDOWS
+#undef PLATFORM_WINDOWS
+#endif
 
 #ifdef _WIN32
 #include "direct.h"
@@ -87,8 +94,9 @@ std::vector<map_id> map_ids;
 std::unordered_map<uint32, LiquidMaterialEntry> LiquidMaterials;
 std::unordered_map<uint32, LiquidObjectEntry> LiquidObjects;
 std::unordered_map<uint32, LiquidTypeEntry> LiquidTypes;
-char output_path[128] = ".";
-char input_path[128] = ".";
+#define MAX_PATH_LENGTH 128
+char output_path[MAX_PATH_LENGTH];
+char input_path[MAX_PATH_LENGTH];
 
 // **************************************************
 // Extractor options
@@ -145,6 +153,25 @@ char const* Locales[LOCALES_COUNT] =
     "itIT"
 };
 
+uint8 const MpqToWowLocale[LOCALES_COUNT] =
+{
+    LOCALE_enUS,
+    LOCALE_enUS,
+    LOCALE_deDE,
+    LOCALE_esES,
+    LOCALE_frFR,
+    LOCALE_koKR,
+    LOCALE_zhCN,
+    LOCALE_zhTW,
+    LOCALE_zhCN,
+    LOCALE_zhTW,
+    LOCALE_esMX,
+    LOCALE_ruRU,
+    LOCALE_ptBR,
+    LOCALE_ptBR,
+    LOCALE_itIT
+};
+
 TCHAR const* LocalesT[LOCALES_COUNT] =
 {
     _T("enGB"), _T("enUS"),
@@ -161,8 +188,8 @@ void CreateDir(std::string const& path)
 {
     if (chdir(path.c_str()) == 0)
     {
-            chdir("../");
-            return;
+        chdir("../");
+        return;
     }
 
 #ifdef _WIN32
@@ -214,17 +241,22 @@ void HandleArgs(int argc, char* arg[])
         switch (arg[c][1])
         {
             case 'i':
-                if (c + 1 < argc)                            // all ok
-                    strcpy(input_path, arg[c++ + 1]);
+                if (c + 1 < argc && strlen(arg[c + 1]) < MAX_PATH_LENGTH) // all ok
+                {
+                    strncpy(input_path, arg[c++ + 1], MAX_PATH_LENGTH);
+                    input_path[MAX_PATH_LENGTH - 1] = '\0';
+                }
                 else
                     Usage(arg[0]);
                 break;
             case 'o':
-                if (c + 1 < argc)                            // all ok
-                    strcpy(output_path, arg[c++ + 1]);
+                if (c + 1 < argc && strlen(arg[c + 1]) < MAX_PATH_LENGTH) // all ok
+                {
+                    strncpy(output_path, arg[c++ + 1], MAX_PATH_LENGTH);
+                    output_path[MAX_PATH_LENGTH - 1] = '\0';
+                }
                 else
                     Usage(arg[0]);
-                break;
             case 'f':
                 if (c + 1 < argc)                            // all ok
                     CONF_allow_float_to_int = atoi(arg[c++ + 1])!=0;
@@ -1122,25 +1154,36 @@ void ExtractMapsFromMpq(uint32 build)
         // Loadup map grid data
         sprintf(mpq_map_name, "World\\Maps\\%s\\%s.wdt", map_ids[z].name, map_ids[z].name);
         ChunkedFile wdt;
-        if (!wdt.loadFile(WorldMpq, mpq_map_name, false))
-            continue;
 
-        FileChunk* chunk = wdt.GetChunk("MAIN");
-        for (uint32 y = 0; y < WDT_MAP_SIZE; ++y)
+        std::bitset<(WDT_MAP_SIZE)* (WDT_MAP_SIZE)> existingTiles;
+        if (wdt.loadFile(WorldMpq, mpq_map_name, false))
         {
-            for (uint32 x = 0; x < WDT_MAP_SIZE; ++x)
+            FileChunk* main = wdt.GetChunk("MAIN");
+            for (uint32 y = 0; y < WDT_MAP_SIZE; ++y)
             {
-                if (!(chunk->As<wdt_MAIN>()->adt_list[y][x].flag & 0x1))
-                    continue;
+                for (uint32 x = 0; x < WDT_MAP_SIZE; ++x)
+                {
+                    if (!(main->As<wdt_MAIN>()->adt_list[y][x].flag & 0x1))
+                        continue;
 
-                sprintf(mpq_filename, "World\\Maps\\%s\\%s_%u_%u.adt", map_ids[z].name, map_ids[z].name, x, y);
-                sprintf(output_filename, "%s/maps/%03u%02u%02u.map", output_path, map_ids[z].id, y, x);
-                bool ignoreDeepWater = IsDeepWaterIgnored(map_ids[z].id, y, x);
-                ConvertADT(mpq_filename, output_filename, y, x, build, ignoreDeepWater);
+                    sprintf(mpq_filename, "World\\Maps\\%s\\%s_%u_%u.adt", map_ids[z].name, map_ids[z].name, x, y);
+                    sprintf(output_filename, "%s/maps/%03u%02u%02u.map", output_path, map_ids[z].id, y, x);
+                    bool ignoreDeepWater = IsDeepWaterIgnored(map_ids[z].id, y, x);
+                    existingTiles[y * WDT_MAP_SIZE + x] = ConvertADT(mpq_filename, output_filename, y, x, build, ignoreDeepWater);
+                }
+
+                // draw progress bar
+                printf("Processing........................%d%%\r", (100 * (y + 1)) / WDT_MAP_SIZE);
             }
+        }
 
-            // draw progress bar
-            printf("Processing........................%d%%\r", (100 * (y+1)) / WDT_MAP_SIZE);
+        if (FILE* tileList = fopen(Trinity::StringFormat("%s/maps/%03u.tilelist", output_path, map_ids[z].id).c_str(), "wb"))
+        {
+            fwrite(MAP_MAGIC, 1, strlen(MAP_MAGIC), tileList);
+            fwrite(MAP_VERSION_MAGIC, 1, strlen(MAP_VERSION_MAGIC), tileList);
+            fwrite(&build, sizeof(build), 1, tileList);
+            fwrite(existingTiles.to_string().c_str(), 1, existingTiles.size(), tileList);
+            fclose(tileList);
         }
     }
 
@@ -1170,7 +1213,7 @@ bool ExtractFile(HANDLE fileInArchive, char const* filename)
     return true;
 }
 
-void ExtractDBCFiles(int l, bool basicLocale)
+void ExtractDBCFiles(int l)
 {
     printf("Extracting dbc files...\n");
 
@@ -1185,12 +1228,9 @@ void ExtractDBCFiles(int l, bool basicLocale)
         outputPath += "/dbc/";
 
         CreateDir(outputPath);
-        if (!basicLocale)
-        {
-            outputPath += Locales[l];
-            outputPath += "/";
-            CreateDir(outputPath);
-        }
+        outputPath += localeNames[MpqToWowLocale[l]];
+        outputPath += "/";
+        CreateDir(outputPath);
 
         std::string filename;
 
@@ -1220,7 +1260,7 @@ void ExtractDBCFiles(int l, bool basicLocale)
     printf("Extracted %u DBC files\n\n", count);
 }
 
-void ExtractDB2Files(int l, bool basicLocale)
+void ExtractDB2Files(int l)
 {
     printf("Extracting db2 files...\n");
 
@@ -1233,11 +1273,8 @@ void ExtractDB2Files(int l, bool basicLocale)
     {
         std::string outputPath = output_path;
         outputPath += "/dbc/";
-        if (!basicLocale)
-        {
-            outputPath += Locales[l];
-            outputPath += "/";
-        }
+        outputPath += localeNames[MpqToWowLocale[l]];
+        outputPath += "/";
 
         std::string filename;
 
@@ -1263,7 +1300,7 @@ void ExtractDB2Files(int l, bool basicLocale)
     printf("Extracted %u DB2 files\n\n", count);
 }
 
-void ExtractCameraFiles(int locale, bool basicLocale)
+void ExtractCameraFiles()
 {
     printf("Extracting camera files...\n");
     HANDLE dbcFile;
@@ -1298,12 +1335,6 @@ void ExtractCameraFiles(int locale, bool basicLocale)
     std::string path = output_path;
     path += "/Cameras/";
     CreateDir(path);
-    if (!basicLocale)
-    {
-        path += Locales[locale];
-        path += "/";
-        CreateDir(path);
-    }
 
     // extract M2s
     uint32 count = 0;
@@ -1450,6 +1481,10 @@ int main(int argc, char * arg[])
 {
     Trinity::Banner::Show("Map & DBC Extractor", [](char const* text) { printf("%s\n", text); }, nullptr);
 
+    boost::filesystem::path current(boost::filesystem::current_path());
+    strcpy(input_path, current.string().c_str());
+    strcpy(output_path, current.string().c_str());
+
     HandleArgs(argc, arg);
 
     int FirstLocale = -1;
@@ -1492,8 +1527,8 @@ int main(int argc, char * arg[])
         }
 
         printf("\n");
-        ExtractDBCFiles(i, FirstLocale < 0);
-        ExtractDB2Files(i, FirstLocale < 0);
+        ExtractDBCFiles(i);
+        ExtractDB2Files(i);
 
         if (FirstLocale < 0)
         {
@@ -1520,7 +1555,7 @@ int main(int argc, char * arg[])
         LoadCommonMPQFiles(build);
 
         // Extract cameras
-        ExtractCameraFiles(FirstLocale, true);
+        ExtractCameraFiles();
 
         // Close MPQs
         SFileCloseArchive(WorldMpq);

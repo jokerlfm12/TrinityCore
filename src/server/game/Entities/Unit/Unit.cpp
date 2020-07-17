@@ -40,6 +40,7 @@
 #include "Item.h"
 #include "Log.h"
 #include "LootMgr.h"
+#include "LootPackets.h"
 #include "MiscPackets.h"
 #include "MotionMaster.h"
 #include "MovementGenerator.h"
@@ -694,7 +695,7 @@ bool Unit::IsWithinMeleeRangeAt(Position const& pos, Unit const* obj) const
 
 float Unit::GetMeleeRange(Unit const* target) const
 {
-    float range = GetCombatReach() + target->GetCombatReach() + 4.0f / 3.0f;
+    float range = GetCombatReach() + target->GetCombatReach() + 1.3333334f;
     return std::max(range, NOMINAL_MELEE_RANGE);
 }
 
@@ -2797,7 +2798,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 //   Parry
 // For spells
 //   Resist
-SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect /*= false*/)
+SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect /*= false*/, Optional<uint8> effectMask /*= nullptr*/)
 {
     // All positive spells can`t miss
     /// @todo client not show miss log for this spells - so need find info for this in dbc and use it!
@@ -2828,7 +2829,7 @@ SpellMissInfo Unit::SpellHitResult(Unit* victim, SpellInfo const* spellInfo, boo
         return SPELL_MISS_NONE;
 
     // Check for immune
-    if (victim->IsImmunedToSpell(spellInfo, this))
+    if (victim->IsImmunedToSpell(spellInfo, this, effectMask))
         return SPELL_MISS_IMMUNE;
 
     // Damage immunity is only checked if the spell has damage effects, this immunity must not prevent aura apply
@@ -7845,7 +7846,7 @@ bool Unit::IsImmunedToDamage(SpellInfo const* spellInfo) const
     return false;
 }
 
-bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster) const
+bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask /*= nullptr*/) const
 {
     if (!spellInfo)
         return false;
@@ -7879,6 +7880,9 @@ bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster) const
         // State/effect immunities applied by aura expect full spell immunity
         // Ignore effects with mechanic, they are supposed to be checked separately
         if (!spellInfo->Effects[i].IsEffect())
+            continue;
+
+        if (effectMask && !(effectMask.get() & (1 << i)))
             continue;
 
         if (!IsImmunedToSpellEffect(spellInfo, i, caster))
@@ -9247,22 +9251,27 @@ void Unit::FollowTarget(Unit* target)
 
 void Unit::RemoveFormationFollower(Unit* follower)
 {
-    for (FormationFollowerContainer::const_iterator itr = _formationFollowers.begin(); itr != _formationFollowers.end();)
+    for (FormationFollowerGUIDContainer::const_iterator itr = _formationFollowers.begin(); itr != _formationFollowers.end();)
     {
-        Unit* follwingUnit = *itr;
-        // Cleaning up dead references while at it
-        if (!follwingUnit || follwingUnit == follower)
-            _formationFollowers.erase(itr);
+        ObjectGuid guid = *itr;
+        if (Unit* followingUnit = ObjectAccessor::GetUnit(*this, guid))
+        {
+            if (followingUnit == follower)
+                itr = _formationFollowers.erase(itr);
+            else
+                ++itr;
+        }
         else
-            itr++;
+            itr = _formationFollowers.erase(itr);
     }
 }
 
 bool Unit::HasFormationFollower(Unit* follower) const
 {
-    for (Unit* followingUnit : _formationFollowers)
-        if (followingUnit == follower)
-            return true;
+    for (ObjectGuid guid : _formationFollowers)
+        if (Unit* followingUnit = ObjectAccessor::GetUnit(*this, guid))
+            if (followingUnit == follower)
+                return true;
 
     return false;
 }
@@ -10464,8 +10473,6 @@ void Unit::RemoveFromWorld()
 
         RemoveAreaAurasDueToLeaveWorld();
 
-        GetMotionMaster()->Clear(MOTION_SLOT_IDLE); // clear idle movement slot to finalize follow movement to unregister formation targets
-
         if (GetCharmerGUID())
         {
             TC_LOG_FATAL("entities.unit", "Unit %u has charmer guid when removed from world", GetEntry());
@@ -10490,6 +10497,9 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
 {
     // This needs to be before RemoveFromWorld to make GetCaster() return a valid pointer on aura removal
     InterruptNonMeleeSpells(true);
+
+    // clear idle movement slot to finalize follow movement to unregister formation targets
+    GetMotionMaster()->Clear(MOTION_SLOT_IDLE);
 
     if (IsInWorld())
         RemoveFromWorld();
@@ -11283,6 +11293,9 @@ bool Unit::IsPolymorphed() const
 
 void Unit::SetAnimationTier(AnimationTier tier, bool immediate /* = true */)
 {
+    if (!IsCreature())
+        return;
+
     SetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, static_cast<uint8>(tier));
 
     if (immediate)
@@ -11875,11 +11888,11 @@ void Unit::Kill(Unit* victim, bool durabilityLoss)
 
             if (creature)
             {
-                WorldPacket data2(SMSG_LOOT_LIST, 8 + 1 + 1);
-                data2 << uint64(creature->GetGUID());
-                data2 << uint8(0); // unk1
-                data2 << uint8(0); // no group looter
-                player->SendMessageToSet(&data2, true);
+                WorldPackets::Loot::LootList lootList;
+                lootList.Owner = creature->GetGUID();
+                lootList.RoundRobinWinner = player->GetGUID();
+
+                player->SendMessageToSet(lootList.Write(), true);
             }
         }
 
@@ -13997,80 +14010,40 @@ void Unit::SendTeleportPacket(Position const& pos)
     // SMSG_MOVE_UPDATE_TELEPORT is sent to nearby players to signal the teleport
     // MSG_MOVE_TELEPORT is sent to self in order to trigger MSG_MOVE_TELEPORT_ACK and update the position server side
 
-    // This oldPos actually contains the destination position if the Unit is a Player.
-    Position oldPos = {GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation()};
+    WorldPackets::Movement::MoveUpdateTeleport moveUpdateTeleport;
+    moveUpdateTeleport.Status = &m_movementInfo;
 
-    if (GetTypeId() == TYPEID_UNIT)
-        Relocate(&pos); // Relocate the unit to its new position in order to build the packets correctly.
+    Unit* broadcastSource = this;
 
-    ObjectGuid guid = GetGUID();
-    ObjectGuid transGuid = GetTransGUID();
-
-    WorldPacket data(SMSG_MOVE_UPDATE_TELEPORT, 38);
-    WriteMovementInfo(data);
-
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (Player* playerMover = GetPlayerBeingMoved())
     {
-        WorldPacket data2(MSG_MOVE_TELEPORT, 38);
-        data2.WriteBit(guid[6]);
-        data2.WriteBit(guid[0]);
-        data2.WriteBit(guid[3]);
-        data2.WriteBit(guid[2]);
-        data2.WriteBit(uint64(transGuid));
-        data2.WriteBit(bool(GetVehicle())); // unknown
-        data2.WriteBit(guid[1]);
-        if (transGuid)
-        {
-            data2.WriteBit(transGuid[1]);
-            data2.WriteBit(transGuid[3]);
-            data2.WriteBit(transGuid[2]);
-            data2.WriteBit(transGuid[5]);
-            data2.WriteBit(transGuid[0]);
-            data2.WriteBit(transGuid[7]);
-            data2.WriteBit(transGuid[6]);
-            data2.WriteBit(transGuid[4]);
-        }
-        data2.WriteBit(guid[4]);
-        data2.WriteBit(guid[7]);
-        data2.WriteBit(guid[5]);
-        data2.FlushBits();
+        float x, y, z, o;
+        pos.GetPosition(x, y, z, o);
+        if (TransportBase* transportBase = GetDirectTransport())
+            transportBase->CalculatePassengerOffset(x, y, z, &o);
 
-        if (transGuid)
-        {
-            data2.WriteByteSeq(transGuid[6]);
-            data2.WriteByteSeq(transGuid[5]);
-            data2.WriteByteSeq(transGuid[1]);
-            data2.WriteByteSeq(transGuid[7]);
-            data2.WriteByteSeq(transGuid[0]);
-            data2.WriteByteSeq(transGuid[2]);
-            data2.WriteByteSeq(transGuid[4]);
-            data2.WriteByteSeq(transGuid[3]);
-        }
+        WorldPackets::Movement::MoveTeleport moveTeleport;
+        moveTeleport.MoverGUID = GetGUID();
+        moveTeleport.Pos = Position(x, y, z);
+        if (GetTransGUID())
+            moveTeleport.TransportGUID = GetTransGUID();
+        moveTeleport.Facing = o;
+        moveTeleport.SequenceIndex = m_movementCounter++;
+        playerMover->SendDirectMessage(moveTeleport.Write());
 
-        data2 << uint32(0); // counter
-        data2.WriteByteSeq(guid[1]);
-        data2.WriteByteSeq(guid[2]);
-        data2.WriteByteSeq(guid[3]);
-        data2.WriteByteSeq(guid[5]);
-        data2 << float(GetPositionX());
-        data2.WriteByteSeq(guid[4]);
-        data2 << float(GetOrientation());
-        data2.WriteByteSeq(guid[7]);
-        data2 << float(GetPositionZ());
-        data2.WriteByteSeq(guid[0]);
-        data2.WriteByteSeq(guid[6]);
-        data2 << float(GetPositionY());
-        ToPlayer()->SendDirectMessage(&data2); // Send the MSG_MOVE_TELEPORT packet to self.
+        broadcastSource = playerMover;
+    }
+    else
+    {
+        // This is the only packet sent for creatures which contains MovementInfo structure
+        // we do not update m_movementInfo for creatures so it needs to be done manually here
+        moveUpdateTeleport.Status->guid = GetGUID();
+        moveUpdateTeleport.Status->pos.Relocate(pos);
+        moveUpdateTeleport.Status->time = GameTime::GetGameTimeMS();
     }
 
-    // Relocate the player/creature to its old position, so we can broadcast to nearby players correctly
-    if (GetTypeId() == TYPEID_PLAYER)
-        Relocate(&pos);
-    else
-        Relocate(&oldPos);
-
     // Broadcast the packet to everyone except self.
-    SendMessageToSet(&data, false);
+    broadcastSource->SendMessageToSet(moveUpdateTeleport.Write(), false);
 }
 
 bool Unit::UpdatePosition(float x, float y, float z, float orientation, bool teleport)
@@ -14442,7 +14415,7 @@ bool Unit::SetWalk(bool enable)
     return true;
 }
 
-bool Unit::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+bool Unit::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool /*updateAnimationTier = true*/)
 {
     if (!packetOnly)
     {
@@ -14467,16 +14440,6 @@ bool Unit::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool upd
         Movement::PacketSender(this, SMSG_SPLINE_MOVE_GRAVITY_DISABLE, SMSG_MOVE_GRAVITY_DISABLE).Send();
     else
         Movement::PacketSender(this, SMSG_SPLINE_MOVE_GRAVITY_ENABLE, SMSG_MOVE_GRAVITY_ENABLE).Send();
-
-    if (updateAnimationTier && IsAlive() && IsCreature())
-    {
-        if (IsGravityDisabled())
-            SetAnimationTier(AnimationTier::Fly);
-        else if (IsHovering())
-            SetAnimationTier(AnimationTier::Hover);
-        else
-            SetAnimationTier(AnimationTier::Ground);
-    }
 
     return true;
 }
@@ -14595,7 +14558,7 @@ bool Unit::SetFeatherFall(bool enable, bool packetOnly /*= false */)
     return true;
 }
 
-bool Unit::SetHover(bool enable, bool packetOnly /*= false*/, bool updateAnimationTier /*= true*/)
+bool Unit::SetHover(bool enable, bool packetOnly /*= false*/, bool /*updateAnimationTier = true*/)
 {
     if (!packetOnly)
     {
@@ -14628,16 +14591,6 @@ bool Unit::SetHover(bool enable, bool packetOnly /*= false*/, bool updateAnimati
         Movement::PacketSender(this, SMSG_SPLINE_MOVE_SET_HOVER, SMSG_MOVE_SET_HOVER).Send();
     else
         Movement::PacketSender(this, SMSG_SPLINE_MOVE_UNSET_HOVER, SMSG_MOVE_UNSET_HOVER).Send();
-
-    if (updateAnimationTier && IsAlive() && IsCreature())
-    {
-        if (IsGravityDisabled())
-            SetAnimationTier(AnimationTier::Fly);
-        else if (IsHovering())
-            SetAnimationTier(AnimationTier::Hover);
-        else
-            SetAnimationTier(AnimationTier::Ground);
-    }
 
     SendSetPlayHoverAnim(enable);
 

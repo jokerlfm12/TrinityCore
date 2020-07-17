@@ -36,12 +36,16 @@ enum BWDDataTypes
     DATA_NEFARIANS_END              = 5,
 
     /*Events*/
-    DATA_DEAD_DWARF_SPIRITS,
+    DATA_RESET_DWARVEN_SPIRIT_GROUP,
+    DATA_DWARVEN_SPIRIT_DIED,
     DATA_ANCIENT_BELL,
     DATA_COLUMN_OF_LIGHT,
     DATA_ATRAMEDES_INTRO,
     DATA_ENTRANCE_INTRO,
     DATA_NEFARIAN_ACHIEVEMENT_STATE,
+    DATA_LORD_VICTOR_NEFARIUS_GENERIC,
+    DATA_BOSS_DEFEATED,
+    DATA_HEROES_ENTERED_HALLS,
 
     // Encounter Data
     /*Magmaw*/
@@ -62,7 +66,6 @@ enum BWDDataTypes
     /*Chimaeron*/
     DATA_BILE_O_TRON_800,
     DATA_FINKLE_EINHORN,
-    DATA_LORD_VICTOR_NEFARIUS_CHIMAERON,
 
     /*Maloriak*/
     DATA_CAULDRON_TRIGGER,
@@ -128,7 +131,6 @@ enum BWDCreatureIds
     /*Chimaeron*/
     NPC_FINKLE_EINHORN                      = 44202,
     NPC_BILE_O_TRON_800                     = 44418,
-    NPC_LORD_VICTOR_NEFARIUS_CHIMAERON      = 48964,
 
     /*Maloriak*/
     NPC_CAULDRON_TRIGGER                    = 41505,
@@ -159,7 +161,13 @@ enum BWDCreatureIds
     NPC_SPIRIT_OF_IRONSTAR                  = 43127,
     NPC_SPIRIT_OF_THAURISSAN                = 43126,
     NPC_SPIRIT_OF_BURNINGEYE                = 43130,
-    NPC_COLUMN_OF_LIGHT                     = 51506
+    NPC_COLUMN_OF_LIGHT                     = 51506,
+    NPC_LORD_VICTOR_NEFARIUS_GENERIC        = 48964,
+
+    // Generic Creatures
+    NPC_DRAKONID_DRUDGE                     = 42362,
+    NPC_OVERHEAD_SMASH                      = 42690,
+    NPC_EXECUTION_SENTENCE_VISUAL           = 43206
 };
 
 enum BWDGameObjectIds
@@ -175,8 +183,13 @@ enum BWDGameObjectIds
 
 enum BWDMisc
 {
+    // Magmaw
     MASSIVE_CRASH_SIDE_LEFT     = 0,
-    MASSIVE_CRASH_SIDE_RIGHT    = 1
+    MASSIVE_CRASH_SIDE_RIGHT    = 1,
+
+    // Dwarven Spirit Council
+    DWARVEN_SPIRIT_GROUP_LEFT   = 0,
+    DWARVEN_SPIRIT_GROUP_RIGHT  = 1
 };
 
 enum BWDSpells
