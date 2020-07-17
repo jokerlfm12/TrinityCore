@@ -8020,6 +8020,12 @@ void ObjectMgr::LoadQuestPOI()
         uint32 unk3               = fields[6].GetUInt32();
         uint32 unk4               = fields[7].GetUInt32();
 
+        // EJ only end points
+        if (objIndex != -1)
+        {
+            continue;
+        }
+
         QuestPOI POI(id, objIndex, mapId, WorldMapAreaId, FloorId, unk3, unk4);
         if (questId < POIs.size() && id < POIs[questId].size())
         {
@@ -9703,11 +9709,11 @@ void ObjectMgr::LoadCreatureClassLevelStats()
         if (sJokerConfig->Enable)
         {
             float checkMeleeAP = stats.AttackPower;
-            if (checkMeleeAP < 40)
+            if (checkMeleeAP < 30)
             {
-                checkMeleeAP = 40;
+                checkMeleeAP = 30;
             }
-            checkMeleeAP = checkMeleeAP * 1.3f;
+            checkMeleeAP = checkMeleeAP * 1.0f;
             float checkRangeAP = checkMeleeAP / 4;
             if (checkRangeAP < stats.RangedAttackPower)
             {

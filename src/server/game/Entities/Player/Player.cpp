@@ -14657,6 +14657,36 @@ void Player::AddQuestAndCheckCompletion(Quest const* quest, Object* questGiver)
 {
     AddQuest(quest, questGiver);
 
+    // EJ check learn spell credit
+    for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT; ++j)
+    {
+        // skip GO activate objective or none
+        if (quest->RequiredNpcOrGo[j] <= 0)
+        {
+            continue;
+        }
+        uint32 reqSpell = quest->RequiredNpcOrGo[j];
+        uint32 realSpell = 0;
+        switch (reqSpell)
+        {
+        case 44420:
+        {
+            realSpell = 20271;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        if (realSpell > 0)
+        {
+            if (HasSpell(realSpell))
+            {
+                LearnSpellCredit(realSpell, false);
+            }
+        }
+    }
+
     if (CanCompleteQuest(quest->GetQuestId()))
         CompleteQuest(quest->GetQuestId());
 
@@ -16260,6 +16290,70 @@ void Player::KilledMonsterCredit(uint32 entry, ObjectGuid guid /*= ObjectGuid::E
 
                         // same objective target can be in many active quests, but not in 2 objectives for single quest (code optimization).
                         break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// EJ learn spell credit
+void Player::LearnSpellCredit(uint32 pmSpellID,bool pmUpdate)
+{
+    for (uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+    {
+        uint32 questid = GetQuestSlotQuestId(i);
+        if (!questid)
+            continue;
+
+        Quest const* qInfo = sObjectMgr->GetQuestTemplate(questid);
+        if (!qInfo)
+            continue;
+        // just if !ingroup || !noraidgroup || raidgroup
+        QuestStatusData& q_status = m_QuestStatus[questid];
+        if (q_status.Status == QUEST_STATUS_INCOMPLETE)
+        {
+            for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT; ++j)
+            {
+                // skip GO activate objective or none
+                if (qInfo->RequiredNpcOrGo[j] <= 0)
+                {
+                    continue;
+                }
+                uint32 reqSpell = qInfo->RequiredNpcOrGo[j];
+                uint32 realSpell = 0;
+                switch (reqSpell)
+                {
+                case 44420:
+                {
+                    realSpell = 20271;
+                }
+                default:
+                {
+                    break;
+                }
+                }
+                if (realSpell == pmSpellID)
+                {
+                    uint32 reqCount = qInfo->RequiredNpcOrGoCount[j];
+                    uint16 curCount = q_status.CreatureOrGOCount[j];
+                    if (curCount < reqCount)
+                    {
+                        q_status.CreatureOrGOCount[j] = curCount + 1;
+                        m_QuestStatusSave[questid] = QUEST_DEFAULT_SAVE_TYPE;
+                        uint16 log_slot = FindQuestSlot(questid);
+                        if (log_slot < MAX_QUEST_LOG_SIZE)
+                        {
+                            SetQuestSlotCounter(log_slot, j, curCount + 1);
+                        }
+                        if (pmUpdate)
+                        {
+                            SendQuestUpdateAddCredit(qInfo, ObjectGuid::Empty, j, curCount + 1);
+                        }                        
+                    }
+                    if (CanCompleteQuest(questid))
+                    {
+                        CompleteQuest(questid);
                     }
                 }
             }
