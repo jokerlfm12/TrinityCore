@@ -443,6 +443,14 @@ void GameObject::Update(uint32 diff)
         /* fallthrough */
         case GO_READY:
         {
+            // EJ auto fish
+            if (GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE)
+            {
+                Unit* caster = GetOwner();
+                Use(caster);
+                break;
+            }
+
             if (m_respawnCompatibilityMode)
             {
                 if (m_respawnTime > 0)                          // timer on
@@ -1600,7 +1608,8 @@ void GameObject::Use(Unit* user)
 
             switch (getLootState())
             {
-                case GO_READY:                              // ready for loot
+                // ready for loot
+                case GO_READY:
                 {
                     uint32 zone, subzone;
                     GetZoneAndAreaId(zone, subzone);
@@ -1656,18 +1665,28 @@ void GameObject::Use(Unit* user)
                         player->SendLoot(GetGUID(), LOOT_FISHING_JUNK);
                     break;
                 }
-                case GO_JUST_DEACTIVATED:                   // nothing to do, will be deleted at next update
+                // nothing to do, will be deleted at next update
+                case GO_JUST_DEACTIVATED:
+                {
                     break;
+                }
                 default:
                 {
                     SetLootState(GO_JUST_DEACTIVATED);
-
                     WorldPacket data(SMSG_FISH_NOT_HOOKED, 0);
                     player->SendDirectMessage(&data);
                     break;
                 }
             }
 
+            // EJ auto fish
+            player->fishing = true;
+            uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
+            for (uint32 checkSlot = 0; checkSlot < maxSlot; checkSlot++)
+            {
+                player->StoreLootItem(checkSlot, &loot);
+            }
+            player->SendLootRelease(player->GetLootGUID());
             player->FinishSpell(CURRENT_CHANNELED_SPELL);
             return;
         }

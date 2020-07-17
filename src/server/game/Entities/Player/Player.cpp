@@ -372,6 +372,9 @@ Player::Player(WorldSession* session): Unit(true)
     m_groupUpdateTimer.Reset(5000);
 
     _transportSpawnID = 0;
+
+    // EJ auto fish
+    fishing = false;
 }
 
 Player::~Player()
@@ -1345,6 +1348,12 @@ void Player::Update(uint32 p_time)
     if (IsHasDelayedTeleport() && IsAlive())
         TeleportTo(m_teleport_dest, m_teleport_options, m_teleport_transport);
 
+    // EJ auto fish
+    if (fishing)
+    {
+        CastSpell(this, 7620, TriggerCastFlags::TRIGGERED_NONE);
+        fishing = false;
+    }
 }
 
 void Player::setDeathState(DeathState s)

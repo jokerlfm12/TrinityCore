@@ -1029,6 +1029,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(i_AI); }
 
+        // EJ auto fish
+        bool fishing;
+
         void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
         void AddToWorld() override;
