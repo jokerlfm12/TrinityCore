@@ -168,7 +168,7 @@ bool JokerConfig::StartJokerSystem()
     LevelUpEXPRate_Expansion_0 = GetFloatDefault("LevelUpEXPRate_Expansion_0", 1.0f);
     LevelUpEXPRate_Expansion_1 = GetFloatDefault("LevelUpEXPRate_Expansion_1", 1.0f);
     LevelUpEXPRate_Expansion_2 = GetFloatDefault("LevelUpEXPRate_Expansion_2", 1.0f);
-    LevelUpEXPRate_Expansion_2 = GetFloatDefault("LevelUpEXPRate_Expansion_3", 1.0f);
+    LevelUpEXPRate_Expansion_3 = GetFloatDefault("LevelUpEXPRate_Expansion_3", 1.0f);
 
     RandomMoveCreatureEntries = GetStringDefault("RandomMoveCreatureEntries", "");
     std::vector<std::string> entryVector = SplitString(RandomMoveCreatureEntries, ",", true);
@@ -179,6 +179,8 @@ bool JokerConfig::StartJokerSystem()
         uint32 eachEntry = std::atoi(eachEntryStr.c_str());
         RandomMoveCreatureEntrySet.insert(eachEntry);
     }
+
+    NewPlayerExpansion = GetIntDefault("NewPlayerExpansion", 0);
 
     if (Enable == 0)
     {

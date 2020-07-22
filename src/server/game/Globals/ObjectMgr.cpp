@@ -570,6 +570,10 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_NPC;
         creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
     }
+    if (creatureTemplate.IconName == "LootAll")
+    {
+        creatureTemplate.npcflag |= NPCFlags::UNIT_NPC_FLAG_SPELLCLICK;
+    }
 }
 
 void ObjectMgr::LoadCreatureTemplateAddons()

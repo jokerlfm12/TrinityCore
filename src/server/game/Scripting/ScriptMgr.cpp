@@ -43,6 +43,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+// EJ joker player script
+#include "JokerPlayerScript.h"
+
 // Trait which indicates whether this script type
 // must be assigned in the database.
 template<typename>
@@ -1035,6 +1038,9 @@ void ScriptMgr::Initialize()
 
     // LFGScripts
     lfg::AddSC_LFGScripts();
+
+    // EJ joker player script
+    AddSC_JokerPlayerScript();
 
     // Load all static linked scripts through the script loader function.
     ASSERT(_script_loader_callback,

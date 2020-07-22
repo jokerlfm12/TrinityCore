@@ -47,6 +47,8 @@ public:
 
     std::unordered_set<uint32> RandomMoveCreatureEntrySet;
 
+    uint32 NewPlayerExpansion;
+
     std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
     std::string TrimString(std::string srcStr);
 
