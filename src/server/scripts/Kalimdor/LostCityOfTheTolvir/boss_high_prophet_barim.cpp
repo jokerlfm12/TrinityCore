@@ -143,9 +143,9 @@ public:
             Initialize();
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             events.ScheduleEvent(EVENT_FIFTY_LASHINGS, Seconds(9));
@@ -243,12 +243,12 @@ public:
                         events.Repeat(Seconds(40));
                         break;
                     case EVENT_PLAGUE_OF_AGES:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.f, true))
                             DoCast(target, SPELL_PLAGUE_OF_AGES);
                         events.Repeat(Seconds(25));
                         break;
                     case EVENT_HEAVENS_FURY:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.f, true))
                             DoCast(target, SPELL_HEAVENS_FURY);
                         events.Repeat(Seconds(22));
                         break;
@@ -416,7 +416,7 @@ public:
                         _events.Repeat(Seconds(2) + Milliseconds(500));
                         break;
                     case EVENT_SOUL_SEVER:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0, true, 0))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.f, true))
                             DoCast(target, SPELL_SOUL_SEVER);
                         _events.Repeat(Seconds(11));
                         break;
@@ -680,8 +680,6 @@ public:
 
     class spell_barim_plague_of_ages_first_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_barim_plague_of_ages_first_SpellScript);
-
         void FilterTargets(std::list<WorldObject*>& targets)
         {
             if (targets.empty())
@@ -692,7 +690,7 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_barim_plague_of_ages_first_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
+            OnObjectAreaTargetSelect.Register(&spell_barim_plague_of_ages_first_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
         }
     };
 
@@ -709,8 +707,6 @@ public:
 
     class spell_barim_plague_of_ages_second_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_barim_plague_of_ages_second_SpellScript);
-
         void FilterTargets(std::list<WorldObject*>& targets)
         {
             if (targets.empty())
@@ -721,7 +717,7 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_barim_plague_of_ages_second_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
+            OnObjectAreaTargetSelect.Register(&spell_barim_plague_of_ages_second_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
         }
     };
 
@@ -738,8 +734,6 @@ public:
 
     class spell_barim_repentance_script_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_barim_repentance_script_SpellScript);
-
         void EffectScriptEffect(SpellEffIndex /*effIndex*/)
         {
             if (Unit* playerTarget = GetHitPlayer())
@@ -748,7 +742,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_barim_repentance_script_SpellScript::EffectScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_barim_repentance_script_SpellScript::EffectScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -765,8 +759,6 @@ public:
 
     class spell_barim_repentance_pull_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_barim_repentance_pull_SpellScript);
-
         void HandPullEffect(SpellEffIndex effIndex)
         {
             PreventHitDefaultEffect(effIndex);
@@ -791,7 +783,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_barim_repentance_pull_SpellScript::HandPullEffect, EFFECT_0, SPELL_EFFECT_PULL_TOWARDS);
+            OnEffectHitTarget.Register(&spell_barim_repentance_pull_SpellScript::HandPullEffect, EFFECT_0, SPELL_EFFECT_PULL_TOWARDS);
         }
     };
 

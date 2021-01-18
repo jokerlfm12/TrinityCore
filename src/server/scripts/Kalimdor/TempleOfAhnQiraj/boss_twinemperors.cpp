@@ -63,14 +63,11 @@ enum Misc
     TELEPORTTIME                  = 30000
 };
 
-
-
-struct boss_twinemperorsAI : public ScriptedAI
+struct boss_twinemperorsAI : public BossAI
 {
-    boss_twinemperorsAI(Creature* creature): ScriptedAI(creature)
+    boss_twinemperorsAI(Creature* creature): BossAI(creature, DATA_TWIN_EMPERORS)
     {
         Initialize();
-        instance = creature->GetInstanceScript();
     }
 
     void Initialize()
@@ -86,8 +83,6 @@ struct boss_twinemperorsAI : public ScriptedAI
         DontYellWhenDead = false;
         EnrageTimer = 15 * 60000;
     }
-
-    InstanceScript* instance;
 
     uint32 Heal_Timer;
     uint32 Teleport_Timer;
@@ -106,6 +101,7 @@ struct boss_twinemperorsAI : public ScriptedAI
     {
         Initialize();
         me->ClearUnitState(UNIT_STATE_STUNNED);
+        _Reset();
     }
 
     Creature* GetOtherBoss()
@@ -142,6 +138,7 @@ struct boss_twinemperorsAI : public ScriptedAI
         }
         if (!DontYellWhenDead)                              // I hope AI is not threaded
             DoPlaySoundToSet(me, IAmVeklor() ? SOUND_VL_DEATH : SOUND_VN_DEATH);
+        _JustDied();
     }
 
     void KilledUnit(Unit* /*victim*/) override
@@ -151,7 +148,7 @@ struct boss_twinemperorsAI : public ScriptedAI
 
     void JustEngagedWith(Unit* who) override
     {
-        DoZoneInCombat();
+        _JustEngagedWith(who);
         Creature* pOtherBoss = GetOtherBoss();
         if (pOtherBoss)
         {
@@ -239,7 +236,7 @@ struct boss_twinemperorsAI : public ScriptedAI
     {
         me->InterruptNonMeleeSpells(false);
         DoStopAttack();
-        DoResetThreat();
+        ResetThreatList();
         DoCast(me, SPELL_TWIN_TELEPORT_VISUAL);
         me->AddUnitState(UNIT_STATE_STUNNED);
         AfterTeleport = true;
@@ -268,7 +265,7 @@ struct boss_twinemperorsAI : public ScriptedAI
                 {
                     //DoYell(nearu->GetName(), LANG_UNIVERSAL, 0);
                     AttackStart(nearu);
-                    me->AddThreat(nearu, 10000);
+                    AddThreat(nearu, 10000);
                 }
                 return true;
             }
@@ -423,7 +420,7 @@ public:
         void CastSpellOnBug(Creature* target) override
         {
             target->SetFaction(FACTION_MONSTER);
-            target->AI()->AttackStart(me->getThreatManager().getHostilTarget());
+            target->AI()->AttackStart(me->GetThreatManager().GetCurrentVictim());
             target->AddAura(SPELL_MUTATE_BUG, target);
             target->SetFullHealth();
         }
@@ -551,7 +548,7 @@ public:
 
             if (ArcaneBurst_Timer <= diff)
             {
-                if (Unit* mvic = SelectTarget(SELECT_TARGET_NEAREST, 0, NOMINAL_MELEE_RANGE, true))
+                if (Unit* mvic = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, NOMINAL_MELEE_RANGE, true))
                 {
                     DoCast(mvic, SPELL_ARCANEBURST);
                     ArcaneBurst_Timer = 5000;
@@ -586,7 +583,7 @@ public:
                 if (me->Attack(who, false))
                 {
                     me->GetMotionMaster()->MoveChase(who, VEKLOR_DIST);
-                    me->AddThreat(who, 0.0f);
+                    AddThreat(who, 0.0f);
                 }
             }
         }

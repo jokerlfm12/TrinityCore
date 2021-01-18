@@ -22,6 +22,15 @@
 #include "MoveSplineInitArgs.h"
 #include <G3D/Vector3.h>
 
+namespace WorldPackets
+{
+    namespace Movement
+    {
+        class CommonMovement;
+        class MonsterMove;
+    }
+}
+
 enum class AnimationTier : uint8;
 
 namespace Movement
@@ -41,6 +50,8 @@ namespace Movement
     // point can have vertical acceleration motion componemt(used in fall, parabolic movement)
     class TC_GAME_API MoveSpline
     {
+        friend class WorldPackets::Movement::MonsterMove;
+
     public:
         typedef Spline<int32> MySpline;
         enum UpdateResult
@@ -76,8 +87,9 @@ namespace Movement
 
     protected:
         MySpline::ControlArray const& getPath() const { return spline.getPoints(); }
-        void computeParabolicElevation(float& el) const;
-        void computeFallElevation(float& el) const;
+        Location computePosition(int32 time_point, int32 point_index) const;
+        void computeParabolicElevation(int32 time_point, float& el) const;
+        void computeFallElevation(int32 time_point, float& el) const;
 
         UpdateResult _updateState(int32& ms_time_diff);
         int32 next_timestamp() const { return spline.length(point_Idx + 1); }
@@ -116,6 +128,7 @@ namespace Movement
         }
 
         Location ComputePosition() const;
+        Location ComputePosition(int32 time_offset) const;
 
         uint32 GetId() const { return m_Id; }
         bool Finalized() const { return splineflags.done; }
@@ -128,7 +141,7 @@ namespace Movement
         bool HasStarted() const { return time_passed > 0; }
 
         bool HasAnimation() const { return splineflags.animation; }
-        AnimationTier GetAnimation() const { return static_cast<AnimationTier>(splineflags.animId); }
+        AnimationTier GetAnimationTier() const { return static_cast<AnimationTier>(splineflags.animTier); }
 
         bool onTransport;
         std::string ToString() const;

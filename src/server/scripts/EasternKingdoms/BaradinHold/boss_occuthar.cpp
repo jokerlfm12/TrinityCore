@@ -66,9 +66,9 @@ class boss_occuthar : public CreatureScript
                 ASSERT(_vehicle);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
                 events.ScheduleEvent(EVENT_SEARING_SHADOWS, 8 * IN_MILLISECONDS);
                 events.ScheduleEvent(EVENT_FOCUSED_FIRE, 15 * IN_MILLISECONDS);
@@ -212,7 +212,7 @@ class FocusedFireTargetSelector
 
         bool operator() (WorldObject* target)
         {
-            if (target == _victim && _me->getThreatManager().getThreatList().size() > 1)
+            if (target == _victim && !_me->GetThreatManager().IsThreatListEmpty())
                 return true;
 
             if (target->GetTypeId() != TYPEID_PLAYER)
@@ -233,8 +233,6 @@ class spell_occuthar_focused_fire : public SpellScriptLoader
 
         class spell_occuthar_focused_fire_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_occuthar_focused_fire_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -248,7 +246,7 @@ class spell_occuthar_focused_fire : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_occuthar_focused_fire_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_occuthar_focused_fire_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -266,8 +264,6 @@ class spell_occuthar_eyes_of_occuthar : public SpellScriptLoader
 
         class spell_occuthar_eyes_of_occuthar_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_occuthar_eyes_of_occuthar_SpellScript);
-
             bool Validate(SpellInfo const* spellInfo) override
             {
                 return ValidateSpellInfo({ uint32(spellInfo->Effects[EFFECT_0].CalcValue()) });
@@ -295,8 +291,8 @@ class spell_occuthar_eyes_of_occuthar : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_occuthar_eyes_of_occuthar_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_occuthar_eyes_of_occuthar_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_occuthar_eyes_of_occuthar_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_occuthar_eyes_of_occuthar_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -314,8 +310,6 @@ class spell_occuthar_eyes_of_occuthar_vehicle : public SpellScriptLoader
 
         class spell_occuthar_eyes_of_occuthar_vehicle_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_occuthar_eyes_of_occuthar_vehicle_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetInstanceScript() != nullptr;
@@ -334,7 +328,7 @@ class spell_occuthar_eyes_of_occuthar_vehicle : public SpellScriptLoader
 
             void Register() override
             {
-                AfterHit += SpellHitFn(spell_occuthar_eyes_of_occuthar_vehicle_SpellScript::HandleScript);
+                AfterHit.Register(&spell_occuthar_eyes_of_occuthar_vehicle_SpellScript::HandleScript);
             }
         };
 
@@ -352,8 +346,6 @@ class spell_occuthar_occuthars_destruction : public SpellScriptLoader
 
         class spell_occuthar_occuthars_destruction_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_occuthar_occuthars_destruction_AuraScript);
-
             bool Load() override
             {
                 return GetCaster() && GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -364,7 +356,7 @@ class spell_occuthar_occuthars_destruction : public SpellScriptLoader
                 if (Unit* caster = GetCaster())
                 {
                     if (IsExpired())
-                        caster->CastSpell((Unit*)nullptr, SPELL_OCCUTHARS_DESTUCTION, true, nullptr, aurEff);
+                        caster->CastSpell(nullptr, SPELL_OCCUTHARS_DESTUCTION, aurEff);
 
                     caster->ToCreature()->DespawnOrUnsummon(500);
                 }
@@ -372,7 +364,7 @@ class spell_occuthar_occuthars_destruction : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_occuthar_occuthars_destruction_AuraScript::OnRemove, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_occuthar_occuthars_destruction_AuraScript::OnRemove, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

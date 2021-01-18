@@ -62,11 +62,13 @@ class TC_GAME_API PathGenerator
         // Calculate the path from owner to given destination
         // return: true if new path was calculated, false otherwise (no change needed)
         bool CalculatePath(float destX, float destY, float destZ, bool forceDest = false);
+        // Calculates the path from start point to given destination
+        bool CalculatePath(G3D::Vector3 const& startPoint, G3D::Vector3 const& endPoint, bool forceDest = false);
         bool IsInvalidDestinationZ(Unit const* target) const;
 
         // option setters - use optional
         void SetUseStraightPath(bool useStraightPath) { _useStraightPath = useStraightPath; }
-        void SetPathLengthLimit(float distance) { _pointPathLimit = std::min<uint32>(uint32(distance/SMOOTH_PATH_STEP_SIZE), MAX_POINT_PATH_LENGTH); }
+        void SetPathLengthLimit(float length);
         void SetUseRaycast(bool useRaycast) { _useRaycast = useRaycast; }
 
         // result getters

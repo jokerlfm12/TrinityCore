@@ -119,6 +119,8 @@ class TC_GAME_API AuraEffect
         bool m_canBeRecalculated;
         bool m_isPeriodic;
 
+        float GetCritChanceFor(Unit const* caster, Unit const* target) const;
+
     public:
         // aura effect apply/remove handlers
         void HandleNULL(AuraApplication const* /*aurApp*/, uint8 /*mode*/, bool /*apply*/) const
@@ -180,6 +182,7 @@ class TC_GAME_API AuraEffect
         void HandleModThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModTaunt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModDetaunt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraFixate(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //  control
         void HandleModConfuse(AuraApplication const* aurApp, uint8 mode, bool apply) const;

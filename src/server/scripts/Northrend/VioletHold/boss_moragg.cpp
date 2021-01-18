@@ -105,8 +105,6 @@ class spell_moragg_ray : public SpellScriptLoader
 
         class spell_moragg_ray_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_moragg_ray_AuraScript);
-
             void OnPeriodic(AuraEffect const* aurEff)
             {
                 PreventDefaultAction();
@@ -117,13 +115,13 @@ class spell_moragg_ray : public SpellScriptLoader
                 if (Unit* target = GetTarget()->GetAI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 45.0f, true))
                 {
                     uint32 triggerSpell = GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell;
-                    GetTarget()->CastSpell(target, triggerSpell, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                    GetTarget()->CastSpell(target, triggerSpell, aurEff);
                 }
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_moragg_ray_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_moragg_ray_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -140,19 +138,17 @@ public:
 
     class spell_moragg_optic_link_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_moragg_optic_link_AuraScript);
-
         void OnPeriodic(AuraEffect const* aurEff)
         {
             if (Unit* caster = GetCaster())
             {
                 if (aurEff->GetTickNumber() >= 8)
-                    caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_3, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                    caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_3, aurEff);
 
                 if (aurEff->GetTickNumber() >= 4)
-                    caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_2, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                    caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_2, aurEff);
 
-                caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_1, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                caster->CastSpell(GetTarget(), SPELL_OPTIC_LINK_LEVEL_1, aurEff);
             }
         }
 
@@ -176,8 +172,8 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_moragg_optic_link_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
-            OnEffectUpdatePeriodic += AuraEffectUpdatePeriodicFn(spell_moragg_optic_link_AuraScript::OnUpdate, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+            OnEffectPeriodic.Register(&spell_moragg_optic_link_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+            OnEffectUpdatePeriodic.Register(&spell_moragg_optic_link_AuraScript::OnUpdate, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
         }
     };
 

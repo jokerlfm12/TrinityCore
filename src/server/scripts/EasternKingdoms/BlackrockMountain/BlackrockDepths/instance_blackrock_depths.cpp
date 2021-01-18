@@ -356,7 +356,7 @@ public:
                 if (Creature* boss = instance->GetCreature(TombBossGUIDs[TombEventCounter]))
                 {
                     boss->SetFaction(FACTION_DARK_IRON_DWARVES);
-                    boss->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    boss->SetImmuneToPC(false);
                     if (Unit* target = boss->SelectNearestTarget(500))
                         boss->AI()->AttackStart(target);
                 }
@@ -372,16 +372,9 @@ public:
                 if (Creature* boss = instance->GetCreature(TombBossGUIDs[i]))
                 {
                     if (!boss->IsAlive())
-                    {//do not call EnterEvadeMode(), it will create infinit loops
                         boss->Respawn();
-                        boss->RemoveAllAuras();
-                        boss->DeleteThreatList();
-                        boss->CombatStop(true);
-                        boss->LoadCreaturesAddon();
-                        boss->GetMotionMaster()->MoveTargetedHome();
-                        boss->SetLootRecipient(nullptr);
-                    }
-                    boss->SetFaction(FACTION_FRIENDLY);
+                    else
+                        boss->SetFaction(FACTION_FRIENDLY);
                 }
             }
             GhostKillCount = 0;

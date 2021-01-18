@@ -120,7 +120,7 @@ class boss_ignis : public CreatureScript
 
         struct boss_ignis_AI : public BossAI
         {
-            boss_ignis_AI(Creature* creature) : BossAI(creature, BOSS_IGNIS)
+            boss_ignis_AI(Creature* creature) : BossAI(creature, DATA_IGNIS)
             {
                 Initialize();
             }
@@ -141,9 +141,9 @@ class boss_ignis : public CreatureScript
                 instance->DoStopTimedAchievement(ACHIEVEMENT_TIMED_TYPE_EVENT, ACHIEVEMENT_IGNIS_START_EVENT);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 events.ScheduleEvent(EVENT_JET, 30000);
                 events.ScheduleEvent(EVENT_SCORCH, 25000);
@@ -181,7 +181,8 @@ class boss_ignis : public CreatureScript
                 {
                     summon->SetFaction(FACTION_MONSTER_2);
                     summon->SetReactState(REACT_AGGRESSIVE);
-                    summon->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_PACIFIED | UNIT_FLAG_STUNNED | UNIT_FLAG_IMMUNE_TO_PC);
+                    summon->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_PACIFIED | UNIT_FLAG_STUNNED);
+                    summon->SetImmuneToPC(false);
                     summon->SetControlled(false, UNIT_STATE_ROOT);
                 }
 
@@ -327,7 +328,7 @@ class npc_iron_construct : public CreatureScript
                 if (me->HasAura(RAID_MODE(SPELL_BRITTLE, SPELL_BRITTLE_25)) && damage >= 5000)
                 {
                     DoCast(SPELL_SHATTER);
-                    if (Creature* ignis = _instance->GetCreature(BOSS_IGNIS))
+                    if (Creature* ignis = _instance->GetCreature(DATA_IGNIS))
                         if (ignis->AI())
                             ignis->AI()->DoAction(ACTION_REMOVE_BUFF);
 
@@ -452,8 +453,6 @@ class spell_ignis_slag_pot : public SpellScriptLoader
 
         class spell_ignis_slag_pot_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_ignis_slag_pot_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_SLAG_POT_DAMAGE, SPELL_SLAG_IMBUED });
@@ -476,8 +475,8 @@ class spell_ignis_slag_pot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_ignis_slag_pot_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_ignis_slag_pot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_ignis_slag_pot_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                AfterEffectRemove.Register(&spell_ignis_slag_pot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

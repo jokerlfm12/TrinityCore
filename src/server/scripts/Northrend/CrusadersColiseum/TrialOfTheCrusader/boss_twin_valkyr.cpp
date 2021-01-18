@@ -200,7 +200,8 @@ struct boss_twin_baseAI : public BossAI
         switch (uiId)
         {
             case 1:
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToPC(false);
                 me->SetReactState(REACT_AGGRESSIVE);
                 break;
             default:
@@ -316,8 +317,8 @@ struct boss_twin_baseAI : public BossAI
                 events.ScheduleEvent(EVENT_TWIN_SPIKE, 20 * IN_MILLISECONDS);
                 break;
             case EVENT_TOUCH:
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true, OtherEssenceSpellId))
-                    me->CastCustomSpell(TouchSpellId, SPELLVALUE_MAX_TARGETS, 1, target, false);
+                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true, true, OtherEssenceSpellId))
+                    me->CastSpell(target, TouchSpellId, { SPELLVALUE_MAX_TARGETS, 1 });
                 events.ScheduleEvent(EVENT_TOUCH, urand(10 * IN_MILLISECONDS, 15 * IN_MILLISECONDS));
                 break;
             case EVENT_BERSERK:
@@ -688,8 +689,6 @@ class spell_powering_up : public SpellScriptLoader
 
         class spell_powering_up_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_powering_up_SpellScript);
-
             uint32 spellId = 0;
             uint32 poweringUp = 0;
 
@@ -728,7 +727,7 @@ class spell_powering_up : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_powering_up_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_powering_up_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -745,8 +744,6 @@ class spell_valkyr_essences : public SpellScriptLoader
 
         class spell_valkyr_essences_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_valkyr_essences_AuraScript);
-
             uint32 spellId = 0;
 
             bool Load() override
@@ -821,7 +818,7 @@ class spell_valkyr_essences : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectAbsorb += AuraEffectAbsorbFn(spell_valkyr_essences_AuraScript::Absorb, EFFECT_0);
+                OnEffectAbsorb.Register(&spell_valkyr_essences_AuraScript::Absorb, EFFECT_0);
             }
         };
 
@@ -838,8 +835,6 @@ class spell_power_of_the_twins : public SpellScriptLoader
 
         class spell_power_of_the_twins_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_power_of_the_twins_AuraScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -865,8 +860,8 @@ class spell_power_of_the_twins : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_power_of_the_twins_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_power_of_the_twins_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+                AfterEffectApply.Register(&spell_power_of_the_twins_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_power_of_the_twins_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
 
             }
         };

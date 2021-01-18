@@ -120,21 +120,21 @@ public:
             events.ScheduleEvent(EVENT_FORGE_CAST, 2 * IN_MILLISECONDS, 0, PHASE_INTRO);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
             Talk(SAY_AGGRO);
             events.SetPhase(PHASE_NORMAL);
             events.ScheduleEvent(EVENT_PAUSE,            3.5 * IN_MILLISECONDS, 0, PHASE_NORMAL);
             events.ScheduleEvent(EVENT_SHATTERING_STOMP,   0 * IN_MILLISECONDS, 0, PHASE_NORMAL);
             events.ScheduleEvent(EVENT_SHATTER,            5 * IN_MILLISECONDS, 0, PHASE_NORMAL);
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
         }
 
         void AttackStart(Unit* who) override
         {
             if (me->Attack(who, true))
             {
-                me->AddThreat(who, 0.0f);
+                AddThreat(who, 0.0f);
                 me->SetInCombatWith(who);
                 who->SetInCombatWith(me);
 
@@ -201,7 +201,7 @@ public:
                     summoned->GetMotionMaster()->MoveFollow(target, 0.0f, 0.0f);
 
                 // Why healing when just summoned?
-                summoned->CastSpell(summoned, SPELL_HEAT, false, nullptr, nullptr, me->GetGUID());
+                summoned->CastSpell(summoned, SPELL_HEAT, CastSpellExtraArgs(false).SetOriginalCaster(me->GetGUID()));
             }
         }
 
@@ -327,7 +327,7 @@ public:
                     // 4 - Wait for delay to expire
                     if (m_uiDelay_Timer <= diff)
                     {
-                        if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0))
                         {
                             me->SetReactState(REACT_AGGRESSIVE);
                             me->SetInCombatWith(target);
@@ -409,7 +409,7 @@ public:
         {
             if (me->Attack(who, true))
             {
-                me->AddThreat(who, 0.0f);
+                AddThreat(who, 0.0f);
                 me->SetInCombatWith(who);
                 who->SetInCombatWith(me);
 

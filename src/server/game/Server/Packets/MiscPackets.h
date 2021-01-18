@@ -19,8 +19,11 @@
 #define MiscPackets_h__
 
 #include "Packet.h"
+#include "CUFProfile.h"
 #include "ObjectGuid.h"
 #include "Optional.h"
+#include "SharedDefines.h"
+#include "Position.h"
 
 enum WeatherState : uint32;
 
@@ -294,6 +297,216 @@ namespace WorldPackets
             uint32 Type = 0;
             int32 TimeLeft = 0;
             int32 TotalTime = 0;
+        };
+
+        class DestroyObject final : public ServerPacket
+        {
+        public:
+            DestroyObject() : ServerPacket(SMSG_DESTROY_OBJECT, 9) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Guid;
+            bool IsDead = false;
+        };
+
+        class StandStateUpdate : public ServerPacket
+        {
+        public:
+            StandStateUpdate() : ServerPacket(SMSG_STAND_STATE_UPDATE, 1) { }
+
+            WorldPacket const* Write() override;
+
+            uint8 State = 0;
+        };
+
+        class SetAnimTier final : public ServerPacket
+        {
+        public:
+            SetAnimTier() : ServerPacket(SMSG_SET_ANIM_TIER, 8 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Unit;
+            int32 Tier = 0;
+        };
+
+        class SetPlayHoverAnim final : public ServerPacket
+        {
+        public:
+            SetPlayHoverAnim() : ServerPacket(SMSG_SET_PLAY_HOVER_ANIM, 8 + 1) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid UnitGUID;
+            bool PlayHoverAnim = false;
+        };
+
+        class StartMirrorTimer final : public ServerPacket
+        {
+        public:
+            StartMirrorTimer() : ServerPacket(SMSG_START_MIRROR_TIMER, 4 + 4 + 4 + 4 + 4 + 1) { }
+            StartMirrorTimer(int32 timer, int32 value, int32 maxValue, int32 scale, int32 spellID, bool paused) :
+                ServerPacket(SMSG_START_MIRROR_TIMER, 21), Scale(scale), MaxValue(maxValue), Timer(timer), SpellID(spellID), Value(value), Paused(paused) { }
+
+            WorldPacket const* Write() override;
+
+            int32 Scale = 0;
+            int32 MaxValue = 0;
+            int32 Timer = 0;
+            int32 SpellID = 0;
+            int32 Value = 0;
+            bool Paused = false;
+        };
+
+        class PauseMirrorTimer final : public ServerPacket
+        {
+        public:
+            PauseMirrorTimer() : ServerPacket(SMSG_PAUSE_MIRROR_TIMER, 4 + 1) { }
+            PauseMirrorTimer(int32 timer, bool paused) : ServerPacket(SMSG_PAUSE_MIRROR_TIMER, 5), Timer(timer), Paused(paused) { }
+
+            WorldPacket const* Write() override;
+
+            int32 Timer = 0;
+            bool Paused = true;
+        };
+
+        class StopMirrorTimer final : public ServerPacket
+        {
+        public:
+            StopMirrorTimer() : ServerPacket(SMSG_STOP_MIRROR_TIMER, 4) { }
+            StopMirrorTimer(int32 timer) : ServerPacket(SMSG_STOP_MIRROR_TIMER, 4), Timer(timer) { }
+
+            WorldPacket const* Write() override;
+
+            int32 Timer = 0;
+        };
+
+        class CrossedInebriationThreshold final : public ServerPacket
+        {
+        public:
+            CrossedInebriationThreshold() : ServerPacket(SMSG_CROSSED_INEBRIATION_THRESHOLD, 8 + 4 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Guid;
+            int32 ItemID = 0;
+            int32 Threshold = 0;
+        };
+
+        class LevelUpInfo final : public ServerPacket
+        {
+        public:
+            LevelUpInfo() : ServerPacket(SMSG_LEVEL_UP_INFO, 48) { }
+
+            WorldPacket const* Write() override;
+
+            int32 Level = 0;
+            int32 HealthDelta = 0;
+            std::array<int32, 6> PowerDelta = { };
+            std::array<int32, MAX_STATS> StatDelta = { };
+        };
+
+        class BindPointUpdate final : public ServerPacket
+        {
+        public:
+            BindPointUpdate() : ServerPacket(SMSG_BIND_POINT_UPDATE, 20) { }
+
+            WorldPacket const* Write() override;
+
+            uint32 BindMapID = 0;
+            TaggedPosition<Position::XYZ> BindPosition;
+            uint32 BindAreaID = 0;
+        };
+
+        class WorldServerInfo final : public ServerPacket
+        {
+        public:
+            WorldServerInfo() : ServerPacket(SMSG_WORLD_SERVER_INFO, 10) { }
+
+            WorldPacket const* Write() override;
+
+            uint32 DifficultyID = 0;
+            uint32 WeeklyReset = 0;
+            uint8 IsTournamentRealm = 0;
+            Optional<uint32> IneligibleForLootMask;
+            Optional<uint32> RestrictedAccountMaxLevel;
+            Optional<uint32> RestrictedAccountMaxMoney;
+        };
+
+        class LoginSetTimeSpeed final : public ServerPacket
+        {
+        public:
+            LoginSetTimeSpeed() : ServerPacket(SMSG_LOGIN_SET_TIME_SPEED, 12) { }
+
+            WorldPacket const* Write() override;
+
+            float NewSpeed = 0.0f;
+            uint32 GameTime = 0;
+            uint32 GameTimeHolidayOffset = 0;
+        };
+
+        class ZoneUnderAttack final : public ServerPacket
+        {
+        public:
+            ZoneUnderAttack() : ServerPacket(SMSG_ZONE_UNDER_ATTACK, 4) { }
+
+            WorldPacket const* Write() override;
+
+            int32 AreaID = 0;
+        };
+
+        class Dismount final : public ServerPacket
+        {
+        public:
+            Dismount() : ServerPacket(SMSG_DISMOUNT, 8) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Guid;
+        };
+
+        class LoadCUFProfiles final : public ServerPacket
+        {
+        public:
+            LoadCUFProfiles() : ServerPacket(SMSG_LOAD_CUF_PROFILES, 20) { }
+
+            WorldPacket const* Write() override;
+
+            std::vector<CUFProfile const*> CUFProfiles;
+        };
+
+        class DeathReleaseLoc : public ServerPacket
+        {
+        public:
+            DeathReleaseLoc() : ServerPacket(SMSG_DEATH_RELEASE_LOC, 4 + (3 * 4)) { }
+
+            WorldPacket const* Write() override;
+
+            int32 MapID = 0;
+            TaggedPosition<Position::XYZ> Loc;
+        };
+
+        class BinderConfirm final : public ServerPacket
+        {
+        public:
+            BinderConfirm() : ServerPacket(SMSG_BINDER_CONFIRM, 8) { }
+            BinderConfirm(ObjectGuid unit) : ServerPacket(SMSG_BINDER_CONFIRM, 8), Unit(unit) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Unit;
+        };
+
+        class RequestCemeteryListResponse final : public ServerPacket
+        {
+        public:
+            RequestCemeteryListResponse() : ServerPacket(SMSG_REQUEST_CEMETERY_LIST_RESPONSE, 1) { }
+
+            WorldPacket const* Write() override;
+
+            bool IsGossipTriggered = false;
+            std::vector<uint32> CemeteryID;
         };
     }
 }

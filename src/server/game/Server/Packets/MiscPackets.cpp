@@ -52,12 +52,12 @@ WorldPacket const* WorldPackets::Misc::SetupCurrency::Write()
 
 WorldPacket const* WorldPackets::Misc::RequestPVPRewardsResponse::Write()
 {
-    _worldPacket << uint32(MaxRewardPointsThisWeek);
-    _worldPacket << uint32(RewardPointsThisWeek);
-    _worldPacket << uint32(ArenaMaxRewardPointsThisWeek);
-    _worldPacket << uint32(RatedRewardPointsThisWeek);
-    _worldPacket << uint32(ArenaRewardPointsThisWeek);
-    _worldPacket << uint32(RatedMaxRewardPointsThisWeek);
+    _worldPacket << int32(RatedMaxRewardPointsThisWeek);
+    _worldPacket << int32(RewardPointsThisWeek);
+    _worldPacket << int32(ArenaMaxRewardPointsThisWeek);
+    _worldPacket << int32(RatedRewardPointsThisWeek);
+    _worldPacket << int32(ArenaRewardPointsThisWeek);
+    _worldPacket << int32(MaxRewardPointsThisWeek);
 
     return &_worldPacket;
 }
@@ -238,6 +238,242 @@ WorldPacket const* WorldPackets::Misc::StartTimer::Write()
     _worldPacket << uint32(Type);
     _worldPacket << uint32(TimeLeft);
     _worldPacket << uint32(TotalTime);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::DestroyObject::Write()
+{
+    _worldPacket << Guid;
+    _worldPacket << uint8(IsDead);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::StandStateUpdate::Write()
+{
+    _worldPacket << uint8(State);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::SetAnimTier::Write()
+{
+    _worldPacket << Unit.WriteAsPacked();
+    _worldPacket << int32(Tier);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::SetPlayHoverAnim::Write()
+{
+    _worldPacket.WriteBit(UnitGUID[4]);
+    _worldPacket.WriteBit(UnitGUID[0]);
+    _worldPacket.WriteBit(UnitGUID[1]);
+    _worldPacket.WriteBit(PlayHoverAnim);
+    _worldPacket.WriteBit(UnitGUID[3]);
+    _worldPacket.WriteBit(UnitGUID[7]);
+    _worldPacket.WriteBit(UnitGUID[5]);
+    _worldPacket.WriteBit(UnitGUID[2]);
+    _worldPacket.WriteBit(UnitGUID[6]);
+    _worldPacket.FlushBits();
+
+    _worldPacket.WriteByteSeq(UnitGUID[3]);
+    _worldPacket.WriteByteSeq(UnitGUID[2]);
+    _worldPacket.WriteByteSeq(UnitGUID[1]);
+    _worldPacket.WriteByteSeq(UnitGUID[7]);
+    _worldPacket.WriteByteSeq(UnitGUID[0]);
+    _worldPacket.WriteByteSeq(UnitGUID[5]);
+    _worldPacket.WriteByteSeq(UnitGUID[4]);
+    _worldPacket.WriteByteSeq(UnitGUID[6]);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::StartMirrorTimer::Write()
+{
+    _worldPacket << int32(Timer);
+    _worldPacket << int32(Value);
+    _worldPacket << int32(MaxValue);
+    _worldPacket << int32(Scale);
+    _worldPacket << uint8(Paused);
+    _worldPacket << int32(SpellID);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::PauseMirrorTimer::Write()
+{
+    _worldPacket << int32(Timer);
+    _worldPacket << uint8(Paused);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::StopMirrorTimer::Write()
+{
+    _worldPacket << int32(Timer);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::CrossedInebriationThreshold::Write()
+{
+    _worldPacket << Guid;
+    _worldPacket << int32(Threshold);
+    _worldPacket << int32(ItemID);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::LevelUpInfo::Write()
+{
+    _worldPacket << int32(Level);
+    _worldPacket << int32(HealthDelta);
+
+    for (int32 power : PowerDelta)
+        _worldPacket << power;
+
+    for (int32 stat : StatDelta)
+        _worldPacket << stat;
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::BindPointUpdate::Write()
+{
+    _worldPacket << BindPosition;
+    _worldPacket << uint32(BindMapID);
+    _worldPacket << uint32(BindAreaID);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::WorldServerInfo::Write()
+{
+    _worldPacket.WriteBit(RestrictedAccountMaxLevel.is_initialized());
+    _worldPacket.WriteBit(RestrictedAccountMaxMoney.is_initialized());
+    _worldPacket.WriteBit(IneligibleForLootMask.is_initialized());
+    _worldPacket.FlushBits();
+
+    if (IneligibleForLootMask)
+        _worldPacket << uint32(*IneligibleForLootMask);
+
+    _worldPacket << uint8(IsTournamentRealm);
+
+    if (RestrictedAccountMaxMoney)
+        _worldPacket << uint32(*RestrictedAccountMaxMoney);
+
+    if (RestrictedAccountMaxLevel)
+        _worldPacket << uint32(*RestrictedAccountMaxLevel);
+
+    _worldPacket << uint32(WeeklyReset);
+    _worldPacket << uint32(DifficultyID);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::LoginSetTimeSpeed::Write()
+{
+    _worldPacket.AppendPackedTime(GameTime);
+    _worldPacket << float(NewSpeed);
+    _worldPacket << uint32(GameTimeHolidayOffset);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::ZoneUnderAttack::Write()
+{
+    _worldPacket << int32(AreaID);
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::Dismount::Write()
+{
+    _worldPacket << Guid.WriteAsPacked();
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::LoadCUFProfiles::Write()
+{
+    _worldPacket.WriteBits(CUFProfiles.size(), 20);
+
+    for (CUFProfile const* cufProfile : CUFProfiles)
+    {
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_UNK_157]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_10_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_5_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_25_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_HEAL_PREDICTION]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_PVE]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_HORIZONTAL_GROUPS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_40_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_3_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_AGGRO_HIGHLIGHT]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_BORDER]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_2_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_NON_BOSS_DEBUFFS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_MAIN_TANK_AND_ASSIST]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_UNK_156]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_SPEC_2]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_USE_CLASS_COLORS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_POWER_BAR]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_SPEC_1]);
+        _worldPacket.WriteBits(cufProfile->ProfileName.size(), 8);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_ONLY_DISPELLABLE_DEBUFFS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_KEEP_GROUPS_TOGETHER]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_UNK_145]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_15_PLAYERS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_DISPLAY_PETS]);
+        _worldPacket.WriteBit(cufProfile->BoolOptions[CUF_AUTO_ACTIVATE_PVP]);
+    }
+
+    _worldPacket.FlushBits();
+
+    for (CUFProfile const* cufProfile : CUFProfiles)
+    {
+        // Other Options
+        _worldPacket << uint16(cufProfile->LeftOffset);
+        _worldPacket << uint16(cufProfile->FrameHeight);
+        _worldPacket << uint16(cufProfile->BottomOffset);
+        _worldPacket << uint8(cufProfile->BottomPoint);
+        _worldPacket << uint16(cufProfile->TopOffset);
+        _worldPacket << uint8(cufProfile->TopPoint);
+        _worldPacket << uint8(cufProfile->HealthText);
+        _worldPacket << uint8(cufProfile->SortBy);
+        _worldPacket << uint16(cufProfile->FrameWidth);
+        _worldPacket << uint8(cufProfile->LeftPoint);
+        _worldPacket.WriteString(cufProfile->ProfileName);
+    }
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::DeathReleaseLoc::Write()
+{
+    _worldPacket << int32(MapID);
+    _worldPacket << Loc;
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::BinderConfirm::Write()
+{
+    _worldPacket << Unit;
+
+    return &_worldPacket;
+}
+
+WorldPacket const* WorldPackets::Misc::RequestCemeteryListResponse::Write()
+{
+    _worldPacket.WriteBit(IsGossipTriggered);
+    _worldPacket.WriteBits(CemeteryID.size(), 24);
+    _worldPacket.FlushBits();
+
+    for (uint32 cemetery : CemeteryID)
+        _worldPacket << cemetery;
 
     return &_worldPacket;
 }

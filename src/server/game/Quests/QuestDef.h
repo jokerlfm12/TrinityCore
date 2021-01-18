@@ -26,6 +26,7 @@
 #include <vector>
 
 class Player;
+class WorldPacket;
 
 namespace WorldPackets
 {
@@ -126,10 +127,8 @@ enum QuestGiverStatus
     DIALOG_STATUS_AVAILABLE_REP            = 0x080,
     DIALOG_STATUS_AVAILABLE                = 0x100,
     DIALOG_STATUS_REWARD2                  = 0x200,         // no yellow dot on minimap
-    DIALOG_STATUS_REWARD                   = 0x400,         // yellow dot on minimap
+    DIALOG_STATUS_REWARD                   = 0x400          // yellow dot on minimap
 
-    // Custom value meaning that script call did not return any valid quest status
-    DIALOG_STATUS_SCRIPTED_NO_STATUS       = 0x1000
 };
 
 enum QuestFlags
@@ -373,8 +372,13 @@ class TC_GAME_API Quest
 
         void BuildQuestRewards(WorldPackets::Quest::QuestRewards& rewards, Player* player) const;
 
+        static void AddQuestLevelToTitle(std::string& title, int32 level);
+        void InitializeQueryData();
+        WorldPacket BuildQueryData(LocaleConstant loc) const;
+
         std::vector<uint32> DependentPreviousQuests;
         std::vector<uint32> DependentBreadcrumbQuests;
+        WorldPacket QueryData[TOTAL_LOCALES];
 
         // cached data
     private:

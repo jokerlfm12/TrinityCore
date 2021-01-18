@@ -66,8 +66,8 @@ void RandomMovementGenerator<Creature>::DoInitialize(Creature* owner)
     _reference = owner->GetPosition();
     owner->StopMoving();
 
-    if (_wanderDistance == 0.f)
-        _wanderDistance = owner->GetRespawnRadius();
+    if (_wanderDistance <= 0.1f)
+        _wanderDistance = std::max<float>(_wanderDistance = owner->GetRespawnRadius(), 0.1f);
 
     // Retail seems to let a creature walk 2 up to 10 splines before triggering a pause
     _wanderSteps = urand(2, 10);
@@ -123,11 +123,12 @@ void RandomMovementGenerator<Creature>::SetRandomLocation(Creature* owner)
 
     _path->SetPathLengthLimit(30.0f);
     bool result = _path->CalculatePath(position.GetPositionX(), position.GetPositionY(), position.GetPositionZ());
+    // PATHFIND_FARFROMPOLY shouldn't be checked as creatures in water are most likely far from poly
     if (!result || (_path->GetPathType() & PATHFIND_NOPATH)
         || (_path->GetPathType() & PATHFIND_SHORTCUT)
-        || (_path->GetPathType() & PATHFIND_FARFROMPOLY))
+        /*|| (_path->GetPathType() & PATHFIND_FARFROMPOLY)*/)
     {
-        _timer.Reset(100);
+        _timer.Reset(500);
         return;
     }
 

@@ -333,8 +333,11 @@ public:
                     std::list<Creature*> creatureList;
                     GetCreatureListWithEntryInGrid(creatureList, me, NPC_BLOODMYST_TESLA_COIL, 500.0f);
                     if (!creatureList.empty())
+                    {
                         for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
                             (*itr)->InterruptNonMeleeSpells(true, SPELL_BLOODMYST_TESLA);
+                    }
+                    break;
                 }
                 default:
                     break;
@@ -646,7 +649,7 @@ public:
                             _explosivesGuids.clear();
                             if (Creature* sironas = me->FindNearestCreature(NPC_SIRONAS, SIZE_OF_GRIDS))
                             {
-                                sironas->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                                sironas->SetImmuneToAll(false);
                                 me->SetFacingToObject(sironas);
                             }
                             _moveTimer = 1 * IN_MILLISECONDS;
@@ -678,7 +681,7 @@ public:
                                 if (!target)
                                     target = me;
 
-                                target->AddThreat(sironas, 0.001f);
+                                AddThreat(sironas, 0.001f, target);
                                 sironas->Attack(target, true);
                                 sironas->GetMotionMaster()->MoveChase(target);
                             }

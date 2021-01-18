@@ -183,8 +183,6 @@ class spell_ruby_sanctum_rallying_shout : public SpellScriptLoader
 
         class spell_ruby_sanctum_rallying_shout_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_ruby_sanctum_rallying_shout_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_RALLY });
@@ -198,13 +196,13 @@ class spell_ruby_sanctum_rallying_shout : public SpellScriptLoader
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
                 if (_targetCount && !GetCaster()->HasAura(SPELL_RALLY))
-                    GetCaster()->CastCustomSpell(SPELL_RALLY, SPELLVALUE_AURA_STACK, _targetCount, GetCaster(), TRIGGERED_FULL_MASK);
+                    GetCaster()->CastSpell(GetCaster(), SPELL_RALLY, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_AURA_STACK, _targetCount));
             }
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_ruby_sanctum_rallying_shout_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
-                OnEffectHit += SpellEffectFn(spell_ruby_sanctum_rallying_shout_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_ruby_sanctum_rallying_shout_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnEffectHit.Register(&spell_ruby_sanctum_rallying_shout_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
 
         private:

@@ -269,9 +269,10 @@ class boss_lady_deathwhisper : public CreatureScript
                         scheduler.Schedule(Seconds(27), [this](TaskContext dominate_mind)
                         {
                             Talk(SAY_DOMINATE_MIND);
-                            for (uint8 i = 0; i < _dominateMindCount; i++)
-                                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_DOMINATE_MIND))
-                                    DoCast(target, SPELL_DOMINATE_MIND);
+                            std::list<Unit*> targets;
+                            SelectTargetList(targets, _dominateMindCount, SELECT_TARGET_RANDOM, 0, 0.0f, true, false, -SPELL_DOMINATE_MIND);
+                            for (Unit* target : targets)
+                                DoCast(target, SPELL_DOMINATE_MIND);
                             dominate_mind.Repeat(Seconds(40), Seconds(45));
                         });
                 // phase one only
@@ -342,7 +343,7 @@ class boss_lady_deathwhisper : public CreatureScript
                     Talk(SAY_PHASE_2);
                     Talk(EMOTE_PHASE_2);
                     DoStartMovement(me->GetVictim());
-                    DoResetThreat();
+                    ResetThreatList();
                     damage -= me->GetPower(POWER_MANA);
                     me->SetPower(POWER_MANA, 0);
                     me->RemoveAurasDueToSpell(SPELL_MANA_BARRIER);
@@ -367,7 +368,7 @@ class boss_lady_deathwhisper : public CreatureScript
                         })
                         .Schedule(Seconds(12), GROUP_TWO, [this](TaskContext summonShade)
                         {
-                            me->CastCustomSpell(SPELL_SUMMON_SPIRITS, SPELLVALUE_MAX_TARGETS, Is25ManRaid() ? 2 : 1);
+                            me->CastSpell(nullptr, SPELL_SUMMON_SPIRITS, { SPELLVALUE_MAX_TARGETS, Is25ManRaid() ? 2 : 1 });
                             summonShade.Repeat();
                         });
 
@@ -785,8 +786,6 @@ class spell_deathwhisper_mana_barrier : public SpellScriptLoader
 
         class spell_deathwhisper_mana_barrier_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_deathwhisper_mana_barrier_AuraScript);
-
             void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -800,7 +799,7 @@ class spell_deathwhisper_mana_barrier : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_deathwhisper_mana_barrier_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_deathwhisper_mana_barrier_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -833,8 +832,6 @@ class spell_deathwhisper_dominated_mind : public SpellScriptLoader
 
         class spell_deathwhisper_dominated_mind_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_deathwhisper_dominated_mind_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_DOMINATE_MIND_SCALE });
@@ -848,7 +845,7 @@ class spell_deathwhisper_dominated_mind : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_deathwhisper_dominated_mind_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_deathwhisper_dominated_mind_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -865,8 +862,6 @@ class spell_deathwhisper_summon_spirits : public SpellScriptLoader
 
         class spell_deathwhisper_summon_spirits_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathwhisper_summon_spirits_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_SHADE });
@@ -879,7 +874,7 @@ class spell_deathwhisper_summon_spirits : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_deathwhisper_summon_spirits_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_deathwhisper_summon_spirits_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

@@ -50,6 +50,11 @@ DoorData const doorData[] =
     { 0,                                0,                  DOOR_TYPE_ROOM  } // END
 };
 
+enum HexlordMalacrassTriggerTexts
+{
+    SAY_SPEEDRUN_STARTED = 0
+};
+
 Position const AmanishiGuardianDistanceCheckPos = { 120.223f, 1585.766f, 43.43f  };
 Position const AmanishiSavageDistanceCheckPos   = { 122.176f, 1528.203f, 21.233f };
 
@@ -77,6 +82,13 @@ public:
             packet.Worldstates.emplace_back(uint32(WORLD_STATE_ZULAMAN_TIMER), uint32(_remainingSpeedRunTime));
         }
 
+        void Load(char const* /*data*/) override
+        {
+            // If players enter the instance after a soft-reset, the speedrun is failed
+            if (_speedRunState == IN_PROGRESS)
+                _speedRunState = FAIL;
+        }
+
         void OnCreatureCreate(Creature* creature) override
         {
             InstanceScript::OnCreatureCreate(creature);
@@ -90,6 +102,11 @@ public:
                 case NPC_AMANISHI_SAVAGE:
                     if (creature->GetExactDist2d(AmanishiSavageDistanceCheckPos) < 100.0f)
                         _amanishiSavageGUIDs.push_back(creature->GetGUID());
+                    break;
+                case NPC_AMANI_DRAGONHAWK_HATCHLING:
+                    if (Creature* janalai = GetCreature(DATA_JANALAI))
+                        if (janalai->IsAIEnabled)
+                            janalai->AI()->JustSummoned(creature);
                     break;
                 default:
                     break;
@@ -120,6 +137,11 @@ public:
                     {
                         _remainingSpeedRunTime = 15;
                         _speedRunState = IN_PROGRESS;
+
+                        if (Creature* trigger = GetCreature(DATA_HEXLORD_MALACRASS_TRIGGER))
+                            if (trigger->IsAIEnabled)
+                                trigger->AI()->Talk(SAY_SPEEDRUN_STARTED);
+
                         DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER_ENABLED, 1);
                         DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER, _remainingSpeedRunTime);
                         events.ScheduleEvent(EVENT_UPDATE_SPEED_RUN_TIMER, 1min);
@@ -227,13 +249,6 @@ public:
         {
             data >> _speedRunState;
             data >> _remainingSpeedRunTime;
-
-            if (_speedRunState == IN_PROGRESS && _remainingSpeedRunTime)
-            {
-                events.ScheduleEvent(EVENT_UPDATE_SPEED_RUN_TIMER, 1min);
-                DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER_ENABLED, 1);
-                DoUpdateWorldState(WORLD_STATE_ZULAMAN_TIMER, _remainingSpeedRunTime);
-            }
         }
 
     protected:

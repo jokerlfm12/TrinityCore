@@ -82,7 +82,7 @@ class boss_shazzrah : public CreatureScript
                             DoCastVictim(SPELL_ARCANE_EXPLOSION);
                             break;
                         case EVENT_SHAZZRAH_CURSE:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_SHAZZRAH_CURSE))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_SHAZZRAH_CURSE))
                                 DoCast(target, SPELL_SHAZZRAH_CURSE);
                             events.ScheduleEvent(EVENT_SHAZZRAH_CURSE, urand(25000, 30000));
                             break;
@@ -95,7 +95,7 @@ class boss_shazzrah : public CreatureScript
                             events.ScheduleEvent(EVENT_COUNTERSPELL, urand(16000, 20000));
                             break;
                         case EVENT_SHAZZRAH_GATE:
-                            DoResetThreat();
+                            ResetThreatList();
                             DoCastAOE(SPELL_SHAZZRAH_GATE_DUMMY);
                             events.ScheduleEvent(EVENT_ARCANE_EXPLOSION_TRIGGERED, 2000);
                             events.RescheduleEvent(EVENT_ARCANE_EXPLOSION, urand(3000, 6000));
@@ -127,8 +127,6 @@ class spell_shazzrah_gate_dummy : public SpellScriptLoader
 
         class spell_shazzrah_gate_dummy_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_shazzrah_gate_dummy_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_SHAZZRAH_GATE });
@@ -156,8 +154,8 @@ class spell_shazzrah_gate_dummy : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_shazzrah_gate_dummy_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_shazzrah_gate_dummy_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_shazzrah_gate_dummy_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_shazzrah_gate_dummy_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

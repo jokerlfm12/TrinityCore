@@ -90,11 +90,11 @@ struct boss_earthrager_ptah : public BossAI
 {
     boss_earthrager_ptah(Creature* creature) : BossAI(creature, DATA_EARTHRAGER_PTAH), _hasDispersed(false), _summonCount(0), _summonsDeadCount(0) { }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me, 1);
         Talk(SAY_AGGRO);
-        _JustEngagedWith();
         events.SetPhase(PHASE_FIGHT);
         events.ScheduleEvent(EVENT_RAGING_SMASH, 7s, 0, PHASE_FIGHT); // Seconds(12)
         events.ScheduleEvent(EVENT_FLAME_BOLT, 8s, 0, PHASE_FIGHT);
@@ -301,8 +301,6 @@ private:
 
 class spell_earthrager_ptah_flame_bolt : public SpellScript
 {
-    PrepareSpellScript(spell_earthrager_ptah_flame_bolt);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -316,14 +314,12 @@ class spell_earthrager_ptah_flame_bolt : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_earthrager_ptah_flame_bolt::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_earthrager_ptah_flame_bolt::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
 class spell_earthrager_ptah_sandstorm : public SpellScript
 {
-    PrepareSpellScript(spell_earthrager_ptah_sandstorm);
-
     void PlaySoundID(SpellEffIndex /*effIndex*/)
     {
         if (Player* player = GetHitUnit()->ToPlayer())
@@ -332,40 +328,35 @@ class spell_earthrager_ptah_sandstorm : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_earthrager_ptah_sandstorm::PlaySoundID, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+        OnEffectHitTarget.Register(&spell_earthrager_ptah_sandstorm::PlaySoundID, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
     }
 };
 
 class spell_earthrager_ptah_explosion : public AuraScript
 {
-    PrepareAuraScript(spell_earthrager_ptah_explosion);
-
     void SetFlags(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* target = GetTarget();
-        target->SetFlag(UNIT_FIELD_FLAGS, uint32(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29 | UNIT_FLAG_UNK_31));
+        target->SetFlag(UNIT_FIELD_FLAGS, uint32(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29 | UNIT_FLAG_IMMUNE));
         target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
     }
 
     void RemoveFlags(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-
         Unit* target = GetTarget();
-        target->RemoveFlag(UNIT_FIELD_FLAGS, uint32(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29 | UNIT_FLAG_UNK_31));
+        target->RemoveFlag(UNIT_FIELD_FLAGS, uint32(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29 | UNIT_FLAG_IMMUNE));
         target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
     }
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_earthrager_ptah_explosion::SetFlags, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_earthrager_ptah_explosion::RemoveFlags, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_earthrager_ptah_explosion::SetFlags, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_earthrager_ptah_explosion::RemoveFlags, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_earthrager_ptah_consume : public SpellScript
 {
-    PrepareSpellScript(spell_earthrager_ptah_consume);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -393,7 +384,7 @@ class spell_earthrager_ptah_consume : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_earthrager_ptah_consume::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_earthrager_ptah_consume::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
@@ -417,7 +408,7 @@ void AddSC_boss_earthrager_ptah()
     RegisterHallsOfOriginationCreatureAI(npc_ptah_beetle_stalker);
     RegisterSpellScript(spell_earthrager_ptah_flame_bolt);
     RegisterSpellScript(spell_earthrager_ptah_sandstorm);
-    RegisterAuraScript(spell_earthrager_ptah_explosion);
+    RegisterSpellScript(spell_earthrager_ptah_explosion);
     RegisterSpellScript(spell_earthrager_ptah_consume);
     new achievement_straw_broke_camels_back();
 }

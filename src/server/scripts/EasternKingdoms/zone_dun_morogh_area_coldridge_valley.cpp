@@ -410,8 +410,6 @@ public:
 
     class spell_a_trip_to_ironforge_quest_complete_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_a_trip_to_ironforge_quest_complete_SpellScript);
-
         void HandleForceCast(SpellEffIndex effIndex)
         {
             PreventHitDefaultEffect(effIndex);
@@ -420,7 +418,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_a_trip_to_ironforge_quest_complete_SpellScript::HandleForceCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+            OnEffectHitTarget.Register(&spell_a_trip_to_ironforge_quest_complete_SpellScript::HandleForceCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
         }
     };
 
@@ -442,8 +440,6 @@ public:
 
     class spell_follow_that_gyrocopter_quest_start_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_follow_that_gyrocopter_quest_start_SpellScript);
-
         void HandleForceCast(SpellEffIndex effIndex)
         {
             PreventHitDefaultEffect(effIndex);
@@ -452,7 +448,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_follow_that_gyrocopter_quest_start_SpellScript::HandleForceCast, EFFECT_1, SPELL_EFFECT_FORCE_CAST);
+            OnEffectHitTarget.Register(&spell_follow_that_gyrocopter_quest_start_SpellScript::HandleForceCast, EFFECT_1, SPELL_EFFECT_FORCE_CAST);
         }
     };
 
@@ -474,8 +470,6 @@ public:
 
     class spell_low_health_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_low_health_SpellScript);
-
         void HandleDummyEffect(SpellEffIndex /*eff*/)
         {
             if (Creature* target = GetHitCreature())
@@ -487,7 +481,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_low_health_SpellScript::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+            OnEffectHitTarget.Register(&spell_low_health_SpellScript::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
         }
     };
 

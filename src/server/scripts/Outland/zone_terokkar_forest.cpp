@@ -96,8 +96,8 @@ public:
             me->SetFaction(FACTION_FRIENDLY);
             me->SetStandState(UNIT_STAND_STATE_SIT);
             me->RemoveAllAuras();
-            me->DeleteThreatList();
             me->CombatStop(true);
+            EngagementOver();
             UnkorUnfriendly_Timer = 60000;
         }
 
@@ -406,7 +406,7 @@ public:
                         player->GroupEventHappens(ESCAPE_FROM_FIREWING_POINT_A, me);
                     else if (player->GetTeam() == HORDE)
                         player->GroupEventHappens(ESCAPE_FROM_FIREWING_POINT_H, me);
-                    me->SetInFront(player);
+                    me->SetOrientationTowards(player);
                     break;
                 case 30:
                     me->HandleEmoteCommand(EMOTE_ONESHOT_WAVE);

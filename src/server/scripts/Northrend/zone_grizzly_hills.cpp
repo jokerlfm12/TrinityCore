@@ -368,7 +368,7 @@ public:
                 if (me->FindNearestGameObject(OBJECT_HAUNCH, 2.0f))
                 {
                     me->SetStandState(UNIT_STAND_STATE_DEAD);
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(true);
                     me->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);
                 }
                 _phase = 0;
@@ -568,7 +568,8 @@ public:
         {
             _playerGUID.Clear();
 
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(false);
             me->SetReactState(REACT_AGGRESSIVE);
         }
 
@@ -617,7 +618,8 @@ public:
         {
             if (spell->Id == SPELL_SMOKE_BOMB && caster->GetTypeId() == TYPEID_PLAYER)
             {
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                me->SetImmuneToPC(true);
                 me->SetReactState(REACT_PASSIVE);
                 me->CombatStop(false);
                 _playerGUID = caster->GetGUID();
@@ -793,8 +795,6 @@ class spell_shredder_delivery : public SpellScriptLoader
 
         class spell_shredder_delivery_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_shredder_delivery_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -808,7 +808,7 @@ class spell_shredder_delivery : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_shredder_delivery_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_shredder_delivery_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -831,8 +831,6 @@ class spell_infected_worgen_bite : public SpellScriptLoader
 
         class spell_infected_worgen_bite_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_infected_worgen_bite_AuraScript);
-
             void HandleAfterEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 Unit* target = GetTarget();
@@ -846,7 +844,7 @@ class spell_infected_worgen_bite : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_infected_worgen_bite_AuraScript::HandleAfterEffectApply, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAPPLY);
+                AfterEffectApply.Register(&spell_infected_worgen_bite_AuraScript::HandleAfterEffectApply, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAPPLY);
             }
         };
 
@@ -951,9 +949,7 @@ public:
 
     class spell_vehicle_warhead_fuse_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_vehicle_warhead_fuse_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+             bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_WARHEAD_Z_CHECK, SPELL_WARHEAD_SEEKING_LUMBERSHIP, SPELL_WARHEAD_FUSE });
         }
@@ -969,7 +965,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_vehicle_warhead_fuse_SpellScript::HandleDummy, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_vehicle_warhead_fuse_SpellScript::HandleDummy, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -993,9 +989,7 @@ public:
 
     class spell_warhead_detonate_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_warhead_detonate_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+             bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_PARACHUTE, SPELL_TORPEDO_EXPLOSION });
         }
@@ -1021,7 +1015,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_warhead_detonate_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_warhead_detonate_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -1039,8 +1033,6 @@ public:
 
     class spell_z_check_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_z_check_AuraScript);
-
         void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             _posZ = GetTarget()->GetPositionZ();
@@ -1059,8 +1051,8 @@ public:
 
         void Register() override
         {
-            OnEffectApply += AuraEffectApplyFn(spell_z_check_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_z_check_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+            OnEffectApply.Register(&spell_z_check_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+            OnEffectPeriodic.Register(&spell_z_check_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
         }
     };
 
@@ -1078,8 +1070,6 @@ public:
 
     class spell_warhead_fuse_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_warhead_fuse_AuraScript);
-
         void HandleOnEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* rocketUnit = GetTarget()->GetVehicleBase())
@@ -1089,7 +1079,7 @@ public:
 
         void Register() override
         {
-            OnEffectRemove += AuraEffectRemoveFn(spell_warhead_fuse_AuraScript::HandleOnEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+            OnEffectRemove.Register(&spell_warhead_fuse_AuraScript::HandleOnEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
         }
     };
 

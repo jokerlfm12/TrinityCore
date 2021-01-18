@@ -182,8 +182,6 @@ class spell_mark_of_kazzak : public SpellScriptLoader
 
         class spell_mark_of_kazzak_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mark_of_kazzak_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_MARK_OF_KAZZAK_DAMAGE });
@@ -201,7 +199,7 @@ class spell_mark_of_kazzak : public SpellScriptLoader
 
                 if (target->GetPower(POWER_MANA) == 0)
                 {
-                    target->CastSpell(target, SPELL_MARK_OF_KAZZAK_DAMAGE, true, nullptr, aurEff);
+                    target->CastSpell(target, SPELL_MARK_OF_KAZZAK_DAMAGE, aurEff);
                     // Remove aura
                     SetDuration(0);
                 }
@@ -209,8 +207,8 @@ class spell_mark_of_kazzak : public SpellScriptLoader
 
             void Register() override
             {
-                DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_mark_of_kazzak_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mark_of_kazzak_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
+                DoEffectCalcAmount.Register(&spell_mark_of_kazzak_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
+                OnEffectPeriodic.Register(&spell_mark_of_kazzak_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
             }
         };
 
@@ -227,8 +225,6 @@ class spell_twisted_reflection : public SpellScriptLoader
 
         class spell_twisted_reflection_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_twisted_reflection_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_TWISTED_REFLECTION_HEAL });
@@ -241,12 +237,12 @@ class spell_twisted_reflection : public SpellScriptLoader
                 if (!damageInfo || !damageInfo->GetDamage())
                     return;
 
-                eventInfo.GetActionTarget()->CastSpell(eventInfo.GetActor(), SPELL_TWISTED_REFLECTION_HEAL, true, nullptr, aurEff);
+                eventInfo.GetActionTarget()->CastSpell(eventInfo.GetActor(), SPELL_TWISTED_REFLECTION_HEAL, aurEff);
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_twisted_reflection_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_twisted_reflection_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 

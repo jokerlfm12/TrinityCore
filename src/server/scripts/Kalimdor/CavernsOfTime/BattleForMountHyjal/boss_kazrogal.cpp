@@ -98,7 +98,7 @@ public:
             {
                 Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                 if (target && target->IsAlive())
-                    me->AddThreat(target, 0.0f);
+                    AddThreat(target, 0.0f);
             }
         }
 
@@ -187,8 +187,6 @@ class spell_mark_of_kazrogal : public SpellScriptLoader
 
         class spell_mark_of_kazrogal_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mark_of_kazrogal_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(MarkTargetFilter());
@@ -196,14 +194,12 @@ class spell_mark_of_kazrogal : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mark_of_kazrogal_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_mark_of_kazrogal_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
         class spell_mark_of_kazrogal_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mark_of_kazrogal_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_MARK_DAMAGE });
@@ -215,7 +211,7 @@ class spell_mark_of_kazrogal : public SpellScriptLoader
 
                 if (target->GetPower(POWER_MANA) == 0)
                 {
-                    target->CastSpell(target, SPELL_MARK_DAMAGE, true, nullptr, aurEff);
+                    target->CastSpell(target, SPELL_MARK_DAMAGE, aurEff);
                     // Remove aura
                     SetDuration(0);
                 }
@@ -223,7 +219,7 @@ class spell_mark_of_kazrogal : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mark_of_kazrogal_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
+                OnEffectPeriodic.Register(&spell_mark_of_kazrogal_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_MANA_LEECH);
             }
         };
 

@@ -157,7 +157,7 @@ public:
             DoCast(me, SPELL_SUBMERGE); // submerge anim
             me->SetVisible(false); // we start invis under water, submerged
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetImmuneToPC(true);
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -218,7 +218,7 @@ public:
                     {
                         WaitTimer = 3000;
                         CanStartEvent = true; // fresh fished from pool
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetImmuneToPC(false);
                         me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     }
                     else
@@ -227,9 +227,9 @@ public:
                 return;
             }
 
-            if (me->getThreatManager().getThreatList().empty()) // check if should evade
+            if (!me->IsThreatened()) // check if should evade
             {
-                if (me->IsInCombat())
+                if (me->IsEngaged())
                     EnterEvadeMode();
                 return;
             }
@@ -348,7 +348,7 @@ public:
                     Submerged = false;
                     me->InterruptNonMeleeSpells(false); // shouldn't be any
                     me->RemoveAllAuras();
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
                     me->RemoveFlag(UNIT_NPC_EMOTESTATE, EMOTE_STATE_SUBMERGED);
                     DoCast(me, SPELL_EMERGE, true);
                     Spawned = false;
@@ -359,7 +359,7 @@ public:
                 else
                     PhaseTimer -= diff;
 
-                if (me->getThreatManager().getThreatList().empty()) // check if should evade
+                if (!me->IsThreatened()) // check if should evade
                 {
                     EnterEvadeMode();
                     return;
@@ -439,7 +439,7 @@ public:
             {
                 int bp0 = 1100;
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                    me->CastCustomSpell(target, SPELL_SHOOT, &bp0, nullptr, nullptr, true);
+                    DoCast(target, SPELL_SHOOT, CastSpellExtraArgs(true).AddSpellBP0(bp0));
                 ShootBowTimer = 4000 + rand32() % 5000;
                 MultiShotTimer += 1500; // add global cooldown
             } else ShootBowTimer -= diff;

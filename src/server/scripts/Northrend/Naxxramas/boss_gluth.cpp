@@ -103,9 +103,9 @@ public:
             me->SetSpeed(UnitMoveType::MOVE_RUN, 12.0f / baseMoveSpeed[MOVE_RUN]);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             events.ScheduleEvent(EVENT_WOUND, Seconds(10));
             events.ScheduleEvent(EVENT_ENRAGE, randtime(Seconds(16), Seconds(22)));
             events.ScheduleEvent(EVENT_DECIMATE, randtime(Minutes(1)+Seconds(50), Minutes(2)));
@@ -304,8 +304,6 @@ public:
 
     class spell_gluth_decimate_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_gluth_decimate_SpellScript);
-
         // handles the damaging effect of the decimate spell.
         void HandleScriptEffect(SpellEffIndex /* index */)
         {
@@ -313,7 +311,7 @@ public:
             {
                 int32 damage = int32(unit->GetHealth()) - int32(unit->CountPctFromMaxHealth(5));
                 if (damage > 0)
-                    GetCaster()->CastCustomSpell(SPELL_DECIMATE_DMG, SPELLVALUE_BASE_POINT0, damage, unit);
+                    GetCaster()->CastSpell(unit, SPELL_DECIMATE_DMG, { SPELLVALUE_BASE_POINT0, damage });
             }
         }
 
@@ -330,8 +328,8 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_gluth_decimate_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-            OnEffectHit += SpellEffectFn(spell_gluth_decimate_SpellScript::HandleEvent, EFFECT_2, SPELL_EFFECT_SEND_EVENT);
+            OnEffectHitTarget.Register(&spell_gluth_decimate_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHit.Register(&spell_gluth_decimate_SpellScript::HandleEvent, EFFECT_2, SPELL_EFFECT_SEND_EVENT);
         }
 
         bool Load() override
@@ -356,8 +354,6 @@ public:
 
     class spell_gluth_zombiechow_search_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_gluth_zombiechow_search_SpellScript);
-
         void HealForEachTargetHit()
         {
             GetCaster()->ModifyHealth(int32(GetCaster()->CountPctFromMaxHealth(5)));
@@ -365,7 +361,7 @@ public:
 
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_gluth_zombiechow_search_SpellScript::HealForEachTargetHit);
+            AfterHit.Register(&spell_gluth_zombiechow_search_SpellScript::HealForEachTargetHit);
         }
 
         bool Load() override

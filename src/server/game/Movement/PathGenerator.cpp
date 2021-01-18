@@ -19,6 +19,7 @@
 #include "PathGenerator.h"
 #include "Map.h"
 #include "Creature.h"
+#include "G3DPosition.hpp"
 #include "MMapFactory.h"
 #include "MMapManager.h"
 #include "Log.h"
@@ -55,21 +56,20 @@ PathGenerator::~PathGenerator()
     TC_LOG_DEBUG("maps.mmaps", "++ PathGenerator::~PathGenerator() for %u", _source->GetGUID().GetCounter());
 }
 
-bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool forceDest)
+bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool forceDest /*= false*/)
 {
-    float x, y, z;
-    _source->GetPosition(x, y, z);
+    return CalculatePath(PositionToVector3(_source->GetPosition()), G3D::Vector3(destX, destY, destZ), forceDest);
+}
 
-    if (!Trinity::IsValidMapCoord(destX, destY, destZ) || !Trinity::IsValidMapCoord(x, y, z))
+bool PathGenerator::CalculatePath(G3D::Vector3 const& startPoint, G3D::Vector3 const& endPoint, bool forceDest /*= false*/)
+{
+    if (!Trinity::IsValidMapCoord(startPoint.x, startPoint.y, startPoint.z) || !Trinity::IsValidMapCoord(endPoint.x, endPoint.y, endPoint.z))
         return false;
 
     TC_METRIC_EVENT("mmap_events", "CalculatePath", "");
 
-    G3D::Vector3 dest(destX, destY, destZ);
-    SetEndPosition(dest);
-
-    G3D::Vector3 start(x, y, z);
-    SetStartPosition(start);
+    SetEndPosition(endPoint);
+    SetStartPosition(startPoint);
 
     _forceDestination = forceDest;
 
@@ -79,7 +79,7 @@ bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool fo
     // check if the start and end point have a .mmtile loaded (can we pass via not loaded tile on the way?)
     const Unit* _sourceUnit = _source->ToUnit();
     if (!_navMesh || !_navMeshQuery || (_sourceUnit && _sourceUnit->HasUnitState(UNIT_STATE_IGNORE_PATHFINDING)) ||
-        !HaveTile(start) || !HaveTile(dest))
+        !HaveTile(startPoint) || !HaveTile(endPoint))
     {
         BuildShortcut();
         _type = PathType(PATHFIND_NORMAL | PATHFIND_NOT_USING_PATH);
@@ -88,7 +88,7 @@ bool PathGenerator::CalculatePath(float destX, float destY, float destZ, bool fo
 
     UpdateFilter();
 
-    BuildPolyPath(start, dest);
+    BuildPolyPath(startPoint, endPoint);
     return true;
 }
 
@@ -98,8 +98,7 @@ dtPolyRef PathGenerator::GetPathPolyByPosition(dtPolyRef const* polyPath, uint32
         return INVALID_POLYREF;
 
     dtPolyRef nearestPoly = INVALID_POLYREF;
-    float minDist2d = FLT_MAX;
-    float minDist3d = 0.0f;
+    float minDist = FLT_MAX;
 
     for (uint32 i = 0; i < polyPathSize; ++i)
     {
@@ -107,22 +106,21 @@ dtPolyRef PathGenerator::GetPathPolyByPosition(dtPolyRef const* polyPath, uint32
         if (dtStatusFailed(_navMeshQuery->closestPointOnPoly(polyPath[i], point, closestPoint, nullptr)))
             continue;
 
-        float d = dtVdist2DSqr(point, closestPoint);
-        if (d < minDist2d)
+        float d = dtVdistSqr(point, closestPoint);
+        if (d < minDist)
         {
-            minDist2d = d;
+            minDist = d;
             nearestPoly = polyPath[i];
-            minDist3d = dtVdistSqr(point, closestPoint);
         }
 
-        if (minDist2d < 1.0f) // shortcut out - close enough for us
+        if (minDist < 1.0f) // shortcut out - close enough for us
             break;
     }
 
     if (distance)
-        *distance = dtMathSqrtf(minDist3d);
+        *distance = dtMathSqrtf(minDist);
 
-    return (minDist2d < 3.0f) ? nearestPoly : INVALID_POLYREF;
+    return (minDist < 3.0f) ? nearestPoly : INVALID_POLYREF;
 }
 
 dtPolyRef PathGenerator::GetPolyByLocation(float const* point, float* distance) const
@@ -660,7 +658,7 @@ void PathGenerator::CreateFilter()
             includeFlags |= NAV_GROUND;          // walk
 
         // creatures don't take environmental damage
-        if (creature->CanSwim())
+        if (creature->CanEnterWater())
             includeFlags |= (NAV_WATER | NAV_MAGMA_SLIME);                 // swim
     }
     else // assume Player
@@ -1029,6 +1027,14 @@ void PathGenerator::ShortenPathUntilDist(G3D::Vector3 const& target, float dist)
 bool PathGenerator::IsInvalidDestinationZ(Unit const* target) const
 {
     return (target->GetPositionZ() - GetActualEndPosition().z) > 5.0f;
+}
+
+void PathGenerator::SetPathLengthLimit(float length)
+{
+    if (!(uint32(length) % uint32(SMOOTH_PATH_STEP_SIZE)))
+        _pointPathLimit = std::min<uint32>(length / SMOOTH_PATH_STEP_SIZE, MAX_POINT_PATH_LENGTH);
+    else
+        _pointPathLimit = std::min<uint32>((length + SMOOTH_PATH_STEP_SIZE) / SMOOTH_PATH_STEP_SIZE, MAX_POINT_PATH_LENGTH);
 }
 
 void PathGenerator::AddFarFromPolyFlags(bool startFarFromPoly, bool endFarFromPoly)

@@ -70,10 +70,10 @@ class boss_salramm : public CreatureScript
                     me->RemoveLootMode(LOOT_MODE_DEFAULT);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_AGGRO);
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 events.ScheduleEvent(EVENT_SUMMON_GHOULS, randtime(Seconds(19),Seconds(24)));
                 events.ScheduleEvent(EVENT_SHADOW_BOLT, Seconds(2));
@@ -141,8 +141,6 @@ class boss_salramm : public CreatureScript
 
 class spell_salramm_steal_flesh : public AuraScript
 {
-    PrepareAuraScript(spell_salramm_steal_flesh);
-
     void HandlePeriodic(AuraEffect const* /*eff*/)
     {
         GetCaster()->CastSpell(GetCaster(), SPELL_STEAL_FLESH_BUFF, true);
@@ -151,12 +149,12 @@ class spell_salramm_steal_flesh : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_salramm_steal_flesh::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_salramm_steal_flesh::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
 void AddSC_boss_salramm()
 {
     new boss_salramm();
-    RegisterAuraScript(spell_salramm_steal_flesh);
+    RegisterSpellScript(spell_salramm_steal_flesh);
 }

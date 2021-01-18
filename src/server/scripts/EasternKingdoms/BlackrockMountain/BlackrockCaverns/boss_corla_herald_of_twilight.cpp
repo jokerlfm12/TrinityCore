@@ -18,6 +18,7 @@
 #include "ScriptMgr.h"
 #include "blackrock_caverns.h"
 #include "GameEventMgr.h"
+#include "Map.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
 #include "Spell.h"
@@ -100,7 +101,8 @@ enum Data
 
 enum Misc
 {
-    GAME_EVENT_WINTER_VEIL = 2
+    GAME_EVENT_WINTER_VEIL              = 2,
+    SPELL_VISUAL_KIT_EVOLUTION_WARNING  = 16957
 };
 
 Position const TwilightZealotSummonPositions[] =
@@ -126,9 +128,9 @@ struct boss_corla_herald_of_twilight : public BossAI
             DoCastSelf(SPELL_WEAR_CHRISTMAS_HAT_RED_SELF_DND);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         Talk(SAY_AGGRO);
         me->CastStop();
@@ -309,7 +311,7 @@ struct npc_corla_twilight_zealot : public ScriptedAI
                     DoCastAOE(SPELL_INVISIBILITY_AND_STEALTH_DETECTION, true);
                     break;
                 case EVENT_FORCE_BLAST:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, 0))
                         DoCast(target, SPELL_FORCE_BLAST);
                     _events.Repeat(14s, 17s);
                     break;
@@ -330,8 +332,6 @@ private:
 
 class spell_corla_nether_dragon_essence : public AuraScript
 {
-    PrepareAuraScript(spell_corla_nether_dragon_essence);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -350,14 +350,12 @@ class spell_corla_nether_dragon_essence : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_corla_nether_dragon_essence::HandleTriggerSpell, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_corla_nether_dragon_essence::HandleTriggerSpell, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_corla_nether_dragon_essence_visual : public SpellScript
 {
-    PrepareSpellScript(spell_corla_nether_dragon_essence_visual);
-
     void ModDestHeight(SpellDestination& dest)
     {
         Position offset = { frand(-35.0f, 35.0f), frand(-25.0f, 25.0f), 0.0f, 0.0f };
@@ -382,21 +380,28 @@ class spell_corla_nether_dragon_essence_visual : public SpellScript
 
     void Register() override
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_corla_nether_dragon_essence_visual::ModDestHeight, EFFECT_0, TARGET_DEST_CASTER_RANDOM);
+        OnDestinationTargetSelect.Register(&spell_corla_nether_dragon_essence_visual::ModDestHeight, EFFECT_0, TARGET_DEST_CASTER_RANDOM);
     }
 };
 
 class spell_corla_nether_beam : public SpellScript
 {
-    PrepareSpellScript(spell_corla_nether_beam);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
             {
                 SPELL_NETHER_BEAM_VISUAL,
-                SPELL_EVOLUTION_STACKS_N
+                SPELL_EVOLUTION_STACKS_N,
+                SPELL_EVOLUTION_STACKS_HC,
             });
+    }
+
+    bool Load() override
+    {
+        if (GetCaster()->GetMap()->IsHeroic())
+            _evolutionSpellId = SPELL_EVOLUTION_STACKS_HC;
+
+        return true;
     }
 
     void FilterTargets(std::list<WorldObject*>& targets)
@@ -406,12 +411,18 @@ class spell_corla_nether_beam : public SpellScript
             if (Unit* caster = GetCaster())
             {
                 caster->CastSpell(caster, SPELL_NETHER_BEAM_VISUAL, true);
-                caster->CastSpell(caster, SPELL_EVOLUTION_STACKS_N, true);
+                caster->CastSpell(caster, _evolutionSpellId, true);
+
+                if (_evolutionSpellId == SPELL_EVOLUTION_STACKS_HC)
+                    caster->CastSpell(caster, _evolutionSpellId, true);
+
+                if (Aura const* aura = caster->GetAura(_evolutionSpellId))
+                    if (aura->GetStackAmount() >= 75)
+                        caster->SendPlaySpellVisualKit(SPELL_VISUAL_KIT_EVOLUTION_WARNING, 0, 0);
             }
             return;
         }
-
-        if (targets.size() > 1)
+        else if (targets.size() > 1)
         {
             if (Unit* caster = GetCaster())
             {
@@ -425,20 +436,27 @@ class spell_corla_nether_beam : public SpellScript
     {
         Unit* target = GetHitUnit();
         target->CastSpell(target, SPELL_NETHER_BEAM_VISUAL, true);
-        target->CastSpell(target, SPELL_EVOLUTION_STACKS_N, true);
+        target->CastSpell(target, _evolutionSpellId, true);
+
+        if (_evolutionSpellId == SPELL_EVOLUTION_STACKS_HC)
+            target->CastSpell(target, _evolutionSpellId, true);
+
+        if (Aura const* aura = target->GetAura(_evolutionSpellId))
+            if (aura->GetStackAmount() >= 75)
+                target->SendPlaySpellVisualKit(SPELL_VISUAL_KIT_EVOLUTION_WARNING, 0, 0);
     }
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_corla_nether_beam::FilterTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_corla_nether_beam::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectAreaTargetSelect.Register(&spell_corla_nether_beam::FilterTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY);
+        OnEffectHitTarget.Register(&spell_corla_nether_beam::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
+private:
+    uint32 _evolutionSpellId = SPELL_EVOLUTION_STACKS_N;
 };
 
 class spell_corla_evolution : public SpellScript
 {
-    PrepareSpellScript(spell_corla_evolution);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_TWILIGHT_EVOLUTION });
@@ -481,14 +499,12 @@ class spell_corla_evolution : public SpellScript
 
     void Register() override
     {
-        AfterHit += SpellHitFn(spell_corla_evolution::HandleEvolve);
+        AfterHit.Register(&spell_corla_evolution::HandleEvolve);
     }
 };
 
 class spell_corla_grievous_whirl : public AuraScript
 {
-    PrepareAuraScript(spell_corla_grievous_whirl);
-
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& /*eventInfo*/)
     {
         if (GetTarget()->GetHealth() == GetTarget()->GetMaxHealth())
@@ -497,7 +513,7 @@ class spell_corla_grievous_whirl : public AuraScript
 
     void Register() override
     {
-        OnEffectProc += AuraEffectProcFn(spell_corla_grievous_whirl::HandleProc, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectProc.Register(&spell_corla_grievous_whirl::HandleProc, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
@@ -523,10 +539,10 @@ void AddSC_boss_corla()
 {
     RegisterBlackrockCavernsCreatureAI(boss_corla_herald_of_twilight);
     RegisterBlackrockCavernsCreatureAI(npc_corla_twilight_zealot);
-    RegisterAuraScript(spell_corla_nether_dragon_essence);
+    RegisterSpellScript(spell_corla_nether_dragon_essence);
     RegisterSpellScript(spell_corla_nether_dragon_essence_visual);
     RegisterSpellScript(spell_corla_nether_beam);
     RegisterSpellScript(spell_corla_evolution);
-    RegisterAuraScript(spell_corla_grievous_whirl);
+    RegisterSpellScript(spell_corla_grievous_whirl);
     new achievement_arrested_development();
 }

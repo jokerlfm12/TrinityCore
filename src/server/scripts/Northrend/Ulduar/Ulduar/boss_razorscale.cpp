@@ -244,7 +244,7 @@ class boss_razorscale_controller : public CreatureScript
 
             void DoAction(int32 action) override
             {
-                if (instance->GetBossState(BOSS_RAZORSCALE) != IN_PROGRESS)
+                if (instance->GetBossState(DATA_RAZORSCALE) != IN_PROGRESS)
                     return;
 
                 switch (action)
@@ -331,7 +331,7 @@ class go_razorscale_harpoon : public GameObjectScript
 
             bool GossipHello(Player* /*player*/) override
             {
-                if (instance->GetCreature(BOSS_RAZORSCALE))
+                if (instance->GetCreature(DATA_RAZORSCALE))
                     me->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
                 return true;
             }
@@ -350,7 +350,7 @@ class boss_razorscale : public CreatureScript
 
         struct boss_razorscaleAI : public BossAI
         {
-            boss_razorscaleAI(Creature* creature) : BossAI(creature, BOSS_RAZORSCALE)
+            boss_razorscaleAI(Creature* creature) : BossAI(creature, DATA_RAZORSCALE)
             {
                 Initialize();
                 // Do not let Razorscale be affected by Battle Shout buff
@@ -386,9 +386,9 @@ class boss_razorscale : public CreatureScript
                     commander->AI()->DoAction(ACTION_COMMANDER_RESET);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 if (Creature* controller = instance->GetCreature(DATA_RAZORSCALE_CONTROL))
                     controller->AI()->DoAction(ACTION_HARPOON_BUILD);
                 me->SetSpeedRate(MOVE_FLIGHT, 3.0f);
@@ -554,7 +554,7 @@ class boss_razorscale : public CreatureScript
                                 return;
                             case EVENT_DEVOURING:
                                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true))
-                                    me->CastSpell(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), SPELL_DEVOURING_FLAME, true);
+                                    me->CastSpell({ target->GetPositionX(), target->GetPositionY(), target->GetPositionZ() }, SPELL_DEVOURING_FLAME, true);
                                 events.ScheduleEvent(EVENT_DEVOURING, 10000, 0, PHASE_FLIGHT);
                                 return;
                             case EVENT_SUMMON:
@@ -608,7 +608,7 @@ class boss_razorscale : public CreatureScript
                     case ACTION_EVENT_START:
                         me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
                         me->SetReactState(REACT_AGGRESSIVE);
-                        DoZoneInCombat(me, 150.0f);
+                        DoZoneInCombat(me);
                         break;
                 }
             }
@@ -691,7 +691,7 @@ class npc_expedition_commander : public CreatureScript
                     switch (Phase)
                     {
                         case 1:
-                            instance->SetBossState(BOSS_RAZORSCALE, IN_PROGRESS);
+                            instance->SetBossState(DATA_RAZORSCALE, IN_PROGRESS);
                             summons.DespawnAll();
                             AttackStartTimer = 1000;
                             Phase = 2;
@@ -738,7 +738,7 @@ class npc_expedition_commander : public CreatureScript
                             Phase = 5;
                             break;
                         case 5:
-                            if (Creature* razorscale = instance->GetCreature(BOSS_RAZORSCALE))
+                            if (Creature* razorscale = instance->GetCreature(DATA_RAZORSCALE))
                             {
                                 razorscale->AI()->DoAction(ACTION_EVENT_START);
                                 me->SetInCombatWith(razorscale);
@@ -769,7 +769,7 @@ class npc_expedition_commander : public CreatureScript
             bool GossipHello(Player* player) override
             {
                 InstanceScript* instance = me->GetInstanceScript();
-                if (instance && instance->GetBossState(BOSS_RAZORSCALE) == NOT_STARTED)
+                if (instance && instance->GetBossState(DATA_RAZORSCALE) == NOT_STARTED)
                 {
                     player->PrepareGossipMenu(me);
 
@@ -1094,8 +1094,6 @@ class spell_razorscale_devouring_flame : public SpellScriptLoader
 
         class spell_razorscale_devouring_flame_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_razorscale_devouring_flame_SpellScript);
-
             void HandleSummon(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1110,7 +1108,7 @@ class spell_razorscale_devouring_flame : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_razorscale_devouring_flame_SpellScript::HandleSummon, EFFECT_0, SPELL_EFFECT_SUMMON);
+                OnEffectHit.Register(&spell_razorscale_devouring_flame_SpellScript::HandleSummon, EFFECT_0, SPELL_EFFECT_SUMMON);
             }
         };
 
@@ -1127,8 +1125,6 @@ class spell_razorscale_flame_breath : public SpellScriptLoader
 
         class spell_razorscale_flame_breath_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_razorscale_flame_breath_SpellScript);
-
             void CheckDamage()
             {
                 Creature* target = GetHitCreature();
@@ -1141,7 +1137,7 @@ class spell_razorscale_flame_breath : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_razorscale_flame_breath_SpellScript::CheckDamage);
+                OnHit.Register(&spell_razorscale_flame_breath_SpellScript::CheckDamage);
             }
         };
 

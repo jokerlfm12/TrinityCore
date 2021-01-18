@@ -44,12 +44,8 @@ void GuardAI::UpdateAI(uint32 /*diff*/)
 
 bool GuardAI::CanSeeAlways(WorldObject const* obj)
 {
-    if (!obj->isType(TYPEMASK_UNIT))
-        return false;
-
-    ThreatContainer::StorageType threatList = me->getThreatManager().getThreatList();
-    for (ThreatContainer::StorageType::const_iterator itr = threatList.begin(); itr != threatList.end(); ++itr)
-        if ((*itr)->getUnitGuid() == obj->GetGUID())
+    if (Unit const* unit = obj->ToUnit())
+        if (unit->IsControlledByPlayer() && me->IsEngagedBy(unit))
             return true;
 
     return false;
@@ -61,15 +57,15 @@ void GuardAI::EnterEvadeMode(EvadeReason /*why*/)
     {
         me->GetMotionMaster()->MoveIdle();
         me->CombatStop(true);
-        me->DeleteThreatList();
+        EngagementOver();
         return;
     }
 
     TC_LOG_DEBUG("entities.unit", "Guard entry: %u enters evade mode.", me->GetEntry());
 
     me->RemoveAllAuras();
-    me->DeleteThreatList();
     me->CombatStop(true);
+    EngagementOver();
 
     // Remove ChaseMovementGenerator from MotionMaster stack list, and add HomeMovementGenerator instead
     if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)

@@ -29,6 +29,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "Timer.h"
+#include "Unit.h"
 #include "UnitDefines.h"
 #include "WaypointDefines.h"
 
@@ -80,8 +81,8 @@ void SmartWaypointMgr::LoadFromDB()
         ++lastId;
 
         WaypointPath& path = _waypointStore[entry];
-        path.id = entry;
-        path.nodes.emplace_back(id, x, y, z);
+        path.Id = entry;
+        path.Nodes.emplace_back(id, x, y, z);
 
         lastEntry = entry;
         ++total;
@@ -1196,7 +1197,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u has invoker cast action, but event does not provide any invoker!", e.entryOrGuid, e.GetScriptType(), e.GetEventType(), e.GetActionType());
                 return false;
             }
-            /* fallthrough */
+            [[fallthrough]];
         case SMART_ACTION_SELF_CAST:
         case SMART_ACTION_ADD_AURA:
             if (!IsSpellValid(e, e.action.cast.spell))
@@ -1377,7 +1378,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_WP_START:
             {
                 WaypointPath const* path = sSmartWaypointMgr->GetPath(e.action.wpStart.pathID);
-                if (!path || path->nodes.empty())
+                if (!path || path->Nodes.empty())
                 {
                     TC_LOG_ERROR("sql.sql", "SmartAIMgr: Creature %d Event %u Action %u uses non-existent WaypointPath id %u, skipped.", e.entryOrGuid, e.event_id, e.GetActionType(), e.action.wpStart.pathID);
                     return false;
@@ -1554,6 +1555,75 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 return false;
             }
             break;
+        case SMART_ACTION_SET_MOVEMENT_SPEED:
+        {
+            if (e.action.movementSpeed.movementType >= MAX_MOVE_TYPE)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %u SourceType %u Event %u Action %u uses invalid movementType %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.movementSpeed.movementType);
+                return false;
+            }
+
+            if (!e.action.movementSpeed.speedInteger && !e.action.movementSpeed.speedFraction)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %u SourceType %u Event %u Action %u uses speed 0, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
+                return false;
+            }
+
+            break;
+        }
+        case SMART_ACTION_OVERRIDE_LIGHT:
+        {
+            AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(e.action.overrideLight.zoneId);
+            if (!areaEntry)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent zoneId %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideLight.zoneId);
+                return false;
+            }
+
+            if (areaEntry->ParentAreaID != 0)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses subzone (ID: %u) instead of zone, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideLight.zoneId);
+                return false;
+            }
+
+            if (!sLightStore.LookupEntry(e.action.overrideLight.areaLightId))
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent areaLightId %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideLight.areaLightId);
+                return false;
+            }
+
+            if (e.action.overrideLight.overrideLightId && !sLightStore.LookupEntry(e.action.overrideLight.overrideLightId))
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent overrideLightId %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideLight.overrideLightId);
+                return false;
+            }
+
+            break;
+        }
+        case SMART_ACTION_OVERRIDE_WEATHER:
+        {
+            AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(e.action.overrideWeather.zoneId);
+            if (!areaEntry)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent zoneId %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideWeather.zoneId);
+                return false;
+            }
+
+            if (areaEntry->ParentAreaID != 0)
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses subzone (ID: %u) instead of zone, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.overrideWeather.zoneId);
+                return false;
+            }
+
+            break;
+        }
+        case SMART_ACTION_SET_AI_ANIM_KIT:
+            if (!sAnimKitStore.LookupEntry(e.action.setAIAnimKit.animKitId))
+            {
+                TC_LOG_ERROR("sql.sql", "SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent AI anim Kit %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), e.action.setAIAnimKit.animKitId);
+                return false;
+            }
+            break;
         case SMART_ACTION_START_CLOSEST_WAYPOINT:
         case SMART_ACTION_FOLLOW:
         case SMART_ACTION_SET_ORIENTATION:
@@ -1634,6 +1704,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_SPAWN_SPAWNGROUP:
         case SMART_ACTION_DESPAWN_SPAWNGROUP:
         case SMART_ACTION_PLAY_CINEMATIC:
+        case SMART_ACTION_SET_HOVER:
             break;
         default:
             TC_LOG_ERROR("sql.sql", "SmartAIMgr: Not handled action_type(%u), event_type(%u), Entry %d SourceType %u Event %u, skipped.", e.GetActionType(), e.GetEventType(), e.entryOrGuid, e.GetScriptType(), e.event_id);

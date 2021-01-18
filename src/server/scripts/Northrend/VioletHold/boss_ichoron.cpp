@@ -305,8 +305,6 @@ class spell_ichoron_drained : public SpellScriptLoader
 
         class spell_ichoron_drained_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_ichoron_drained_AuraScript);
-
             bool Load() override
             {
                 return GetOwner()->GetEntry() == NPC_ICHORON || GetOwner()->GetEntry() == NPC_DUMMY_ICHORON;
@@ -314,13 +312,13 @@ class spell_ichoron_drained : public SpellScriptLoader
 
             void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_31);
+                GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 GetTarget()->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
             }
 
             void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_31);
+                GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
 
                 if (GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
@@ -330,8 +328,8 @@ class spell_ichoron_drained : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_ichoron_drained_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_ichoron_drained_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_ichoron_drained_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_ichoron_drained_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -349,8 +347,6 @@ class spell_ichoron_merge : public SpellScriptLoader
 
         class spell_ichoron_merge_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_ichoron_merge_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_SHRINK });
@@ -369,7 +365,7 @@ class spell_ichoron_merge : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_ichoron_merge_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_ichoron_merge_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -387,8 +383,6 @@ class spell_ichoron_protective_bubble : public SpellScriptLoader
 
         class spell_ichoron_protective_bubble_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_ichoron_protective_bubble_AuraScript);
-
             bool Load() override
             {
                 return GetOwner()->GetEntry() == NPC_ICHORON || GetOwner()->GetEntry() == NPC_DUMMY_ICHORON;
@@ -404,7 +398,7 @@ class spell_ichoron_protective_bubble : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_ichoron_protective_bubble_AuraScript::HandleShatter, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_ichoron_protective_bubble_AuraScript::HandleShatter, EFFECT_0, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -422,8 +416,6 @@ class spell_ichoron_splatter : public SpellScriptLoader
 
         class spell_ichoron_splatter_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_ichoron_splatter_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -452,8 +444,8 @@ class spell_ichoron_splatter : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_ichoron_splatter_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_ichoron_splatter_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_ichoron_splatter_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                AfterEffectRemove.Register(&spell_ichoron_splatter_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

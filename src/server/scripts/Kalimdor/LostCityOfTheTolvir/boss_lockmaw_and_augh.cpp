@@ -145,9 +145,9 @@ class boss_lockmaw : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*victim*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
                 events.ScheduleEvent(EVENT_VISCOUS_POISON, Seconds(6));
                 events.ScheduleEvent(EVENT_SCENT_OF_BLOOD, Seconds(6));
@@ -274,9 +274,9 @@ class boss_augh : public CreatureScript
                 me->SetReactState(REACT_PASSIVE);
             }
 
-            void JustEngagedWith(Unit* /*victim*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->HandleEmoteCommand(EMOTE_ONESHOT_NONE);
                 DoCastSelf(SPELL_FRENZY);
                 events.Reset();
@@ -421,7 +421,7 @@ class npc_lockmaw_frenzied_crocolisk : public CreatureScript
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, ScentOfBloodTargetSelector()))
                             {
                                 DoCastSelf(SPELL_STEALTHED);
-                                me->AddThreat(target, 50000000.0f);
+                                AddThreat(target, 50000000.0f);
                                 AttackStart(target);
                             }
                             break;
@@ -531,8 +531,6 @@ class spell_lockmaw_scent_of_blood : public SpellScriptLoader
 
         class spell_lockmaw_scent_of_blood_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_lockmaw_scent_of_blood_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -543,7 +541,7 @@ class spell_lockmaw_scent_of_blood : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_lockmaw_scent_of_blood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_lockmaw_scent_of_blood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -560,8 +558,6 @@ class spell_lockmaw_paralytic_blow_dart : public SpellScriptLoader
 
         class spell_lockmaw_paralytic_blow_dart_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_lockmaw_paralytic_blow_dart_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -572,7 +568,7 @@ class spell_lockmaw_paralytic_blow_dart : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_lockmaw_paralytic_blow_dart_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_lockmaw_paralytic_blow_dart_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -589,8 +585,6 @@ class spell_lockmaw_random_aggro_taunt : public SpellScriptLoader
 
         class spell_lockmaw_random_aggro_taunt_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_lockmaw_random_aggro_taunt_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -606,8 +600,8 @@ class spell_lockmaw_random_aggro_taunt : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_lockmaw_random_aggro_taunt_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_lockmaw_random_aggro_taunt_SpellScript::EffectScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_lockmaw_random_aggro_taunt_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_lockmaw_random_aggro_taunt_SpellScript::EffectScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

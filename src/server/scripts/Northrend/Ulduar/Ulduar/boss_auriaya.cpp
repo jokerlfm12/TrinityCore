@@ -107,7 +107,7 @@ class boss_auriaya : public CreatureScript
 
         struct boss_auriayaAI : public BossAI
         {
-            boss_auriayaAI(Creature* creature) : BossAI(creature, BOSS_AURIAYA)
+            boss_auriayaAI(Creature* creature) : BossAI(creature, DATA_AURIAYA)
             {
                 Initialize();
             }
@@ -126,9 +126,9 @@ class boss_auriaya : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
 
                 events.ScheduleEvent(EVENT_SCREECH, urand(45000, 65000));
@@ -152,7 +152,7 @@ class boss_auriaya : public CreatureScript
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                 {
                     summoned->AI()->AttackStart(target);
-                    summoned->AddThreat(target, 250.0f);
+                    AddThreat(target, 250.0f, summoned);
                     DoZoneInCombat(summoned);
                 }
 
@@ -316,7 +316,7 @@ class npc_auriaya_seeping_trigger : public CreatureScript
 
             void UpdateAI(uint32 /*diff*/) override
             {
-                if (instance->GetBossState(BOSS_AURIAYA) != IN_PROGRESS)
+                if (instance->GetBossState(DATA_AURIAYA) != IN_PROGRESS)
                     me->DespawnOrUnsummon();
             }
 
@@ -374,7 +374,7 @@ class npc_sanctum_sentry : public CreatureScript
                         case EVENT_POUNCE:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                             {
-                                me->AddThreat(target, 100.0f);
+                                AddThreat(target, 100.0f);
                                 AttackStart(target);
                                 DoCast(target, SPELL_SAVAGE_POUNCE);
                             }
@@ -393,7 +393,7 @@ class npc_sanctum_sentry : public CreatureScript
 
             void JustDied(Unit* /*killer*/) override
             {
-                if (Creature* auriaya = instance->GetCreature(BOSS_AURIAYA))
+                if (Creature* auriaya = instance->GetCreature(DATA_AURIAYA))
                     auriaya->AI()->DoAction(ACTION_CRAZY_CAT_LADY);
             }
 
@@ -443,7 +443,7 @@ class npc_feral_defender : public CreatureScript
                         case EVENT_FERAL_POUNCE:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                             {
-                                me->AddThreat(target, 100.0f);
+                                AddThreat(target, 100.0f);
                                 AttackStart(target);
                                 DoCast(target, SPELL_FERAL_POUNCE);
                             }
@@ -452,7 +452,7 @@ class npc_feral_defender : public CreatureScript
                         case EVENT_RUSH:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                             {
-                                me->AddThreat(target, 100.0f);
+                                AddThreat(target, 100.0f);
                                 AttackStart(target);
                                 DoCast(target, SPELL_FERAL_RUSH);
                             }
@@ -472,7 +472,7 @@ class npc_feral_defender : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 DoCast(me, SPELL_SUMMON_ESSENCE);
-                if (Creature* auriaya = instance->GetCreature(BOSS_AURIAYA))
+                if (Creature* auriaya = instance->GetCreature(DATA_AURIAYA))
                     auriaya->AI()->DoAction(ACTION_RESPAWN_DEFENDER);
             }
 
@@ -506,8 +506,6 @@ class spell_auriaya_strenght_of_the_pack : public SpellScriptLoader
 
         class spell_auriaya_strenght_of_the_pack_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_auriaya_strenght_of_the_pack_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& unitList)
             {
                 unitList.remove_if(SanctumSentryCheck());
@@ -515,7 +513,7 @@ class spell_auriaya_strenght_of_the_pack : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_auriaya_strenght_of_the_pack_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnObjectAreaTargetSelect.Register(&spell_auriaya_strenght_of_the_pack_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
             }
         };
 
@@ -532,8 +530,6 @@ class spell_auriaya_sentinel_blast : public SpellScriptLoader
 
         class spell_auriaya_sentinel_blast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_auriaya_sentinel_blast_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& unitList)
             {
                 unitList.remove_if(PlayerOrPetCheck());
@@ -541,8 +537,8 @@ class spell_auriaya_sentinel_blast : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_auriaya_sentinel_blast_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_auriaya_sentinel_blast_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_auriaya_sentinel_blast_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_auriaya_sentinel_blast_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 

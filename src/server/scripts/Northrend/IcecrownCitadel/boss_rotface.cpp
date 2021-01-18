@@ -258,7 +258,7 @@ class npc_little_ooze : public CreatureScript
                 DoCast(me, SPELL_WEAK_RADIATING_OOZE, true);
                 DoCast(me, SPELL_GREEN_ABOMINATION_HITTIN__YA_PROC, true);
                 events.ScheduleEvent(EVENT_STICKY_OOZE, 5000);
-                me->AddThreat(summoner, 500000.0f);
+                AddThreat(summoner, 500000.0f);
             }
 
             void JustDied(Unit* /*killer*/) override
@@ -343,6 +343,7 @@ class npc_big_ooze : public CreatureScript
                         case EVENT_STICKY_OOZE:
                             DoCastVictim(SPELL_STICKY_OOZE);
                             events.ScheduleEvent(EVENT_STICKY_OOZE, 15000);
+                            break;
                         default:
                             break;
                     }
@@ -459,8 +460,6 @@ class spell_rotface_ooze_flood : public SpellScriptLoader
 
         class spell_rotface_ooze_flood_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_ooze_flood_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (!GetHitUnit())
@@ -473,7 +472,7 @@ class spell_rotface_ooze_flood : public SpellScriptLoader
                     return;
 
                 triggers.sort(Trinity::ObjectDistanceOrderPred(GetHitUnit()));
-                GetHitUnit()->CastSpell(triggers.back(), uint32(GetEffectValue()), false, nullptr, nullptr, GetOriginalCaster() ? GetOriginalCaster()->GetGUID() : ObjectGuid::Empty);
+                GetHitUnit()->CastSpell(triggers.back(), uint32(GetEffectValue()), GetOriginalCaster() ? GetOriginalCaster()->GetGUID() : ObjectGuid::Empty);
             }
 
             void FilterTargets(std::list<WorldObject*>& targets)
@@ -491,8 +490,8 @@ class spell_rotface_ooze_flood : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_ooze_flood_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rotface_ooze_flood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_rotface_ooze_flood_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_rotface_ooze_flood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
             }
         };
 
@@ -509,8 +508,6 @@ class spell_rotface_mutated_infection : public SpellScriptLoader
 
         class spell_rotface_mutated_infection_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_mutated_infection_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 // remove targets with this aura already
@@ -533,15 +530,13 @@ class spell_rotface_mutated_infection : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rotface_mutated_infection_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
-                AfterHit += SpellHitFn(spell_rotface_mutated_infection_SpellScript::NotifyTargets);
+                OnObjectAreaTargetSelect.Register(&spell_rotface_mutated_infection_SpellScript::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
+                AfterHit.Register(&spell_rotface_mutated_infection_SpellScript::NotifyTargets);
             }
         };
 
         class spell_rotface_mutated_infection_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_rotface_mutated_infection_AuraScript);
-
             bool Validate(SpellInfo const* spellInfo) override
             {
                 return ValidateSpellInfo({ uint32(spellInfo->Effects[EFFECT_2].CalcValue()) });
@@ -550,12 +545,12 @@ class spell_rotface_mutated_infection : public SpellScriptLoader
             void HandleEffectRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
             {
                 Unit* target = GetTarget();
-                target->CastSpell(target, uint32(GetSpellInfo()->Effects[EFFECT_2].CalcValue()), true, nullptr, aurEff, GetCasterGUID());
+                target->CastSpell(target, uint32(GetSpellInfo()->Effects[EFFECT_2].CalcValue()), { aurEff, GetCasterGUID() });
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_rotface_mutated_infection_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_rotface_mutated_infection_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -577,8 +572,6 @@ class spell_rotface_little_ooze_combine : public SpellScriptLoader
 
         class spell_rotface_little_ooze_combine_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_little_ooze_combine_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (!(GetHitCreature() && GetHitUnit()->IsAlive()))
@@ -592,7 +585,7 @@ class spell_rotface_little_ooze_combine : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_little_ooze_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_rotface_little_ooze_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -609,8 +602,6 @@ class spell_rotface_large_ooze_combine : public SpellScriptLoader
 
         class spell_rotface_large_ooze_combine_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_large_ooze_combine_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (!(GetHitCreature() && GetHitCreature()->IsAlive()))
@@ -634,7 +625,7 @@ class spell_rotface_large_ooze_combine : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_large_ooze_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_rotface_large_ooze_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -651,8 +642,6 @@ class spell_rotface_large_ooze_buff_combine : public SpellScriptLoader
 
         class spell_rotface_large_ooze_buff_combine_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_large_ooze_buff_combine_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (!(GetHitCreature() && GetHitCreature()->IsAlive()))
@@ -678,7 +667,7 @@ class spell_rotface_large_ooze_buff_combine : public SpellScriptLoader
 
                         if (Creature* cre = GetCaster()->ToCreature())
                             cre->AI()->DoAction(EVENT_STICKY_OOZE);
-                        GetCaster()->CastSpell(GetCaster(), SPELL_UNSTABLE_OOZE_EXPLOSION, false, nullptr, nullptr, GetCaster()->GetGUID());
+                        GetCaster()->CastSpell(GetCaster(), SPELL_UNSTABLE_OOZE_EXPLOSION, CastSpellExtraArgs(false).SetOriginalCaster(GetCaster()->GetGUID()));
                         if (InstanceScript* instance = GetCaster()->GetInstanceScript())
                             instance->SetData(DATA_OOZE_DANCE_ACHIEVEMENT, uint32(false));
                     }
@@ -689,7 +678,7 @@ class spell_rotface_large_ooze_buff_combine : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_large_ooze_buff_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_rotface_large_ooze_buff_combine_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -706,8 +695,6 @@ class spell_rotface_unstable_ooze_explosion_init : public SpellScriptLoader
 
         class spell_rotface_unstable_ooze_explosion_init_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_unstable_ooze_explosion_init_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_UNSTABLE_OOZE_EXPLOSION_TRIGGER });
@@ -727,7 +714,7 @@ class spell_rotface_unstable_ooze_explosion_init : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_unstable_ooze_explosion_init_SpellScript::HandleCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+                OnEffectHitTarget.Register(&spell_rotface_unstable_ooze_explosion_init_SpellScript::HandleCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
             }
         };
 
@@ -744,8 +731,6 @@ class spell_rotface_unstable_ooze_explosion : public SpellScriptLoader
 
         class spell_rotface_unstable_ooze_explosion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_unstable_ooze_explosion_SpellScript);
-
             void CheckTarget(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(EFFECT_0);
@@ -759,12 +744,12 @@ class spell_rotface_unstable_ooze_explosion : public SpellScriptLoader
                 // let Rotface handle the cast - caster dies before this executes
                 if (InstanceScript* script = GetCaster()->GetInstanceScript())
                     if (Creature* rotface = script->instance->GetCreature(script->GetGuidData(DATA_ROTFACE)))
-                        rotface->CastSpell(x, y, z, triggered_spell_id, true, nullptr, nullptr, GetCaster()->GetGUID());
+                        rotface->CastSpell({ x, y, z }, triggered_spell_id, GetCaster()->GetGUID());
             }
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_rotface_unstable_ooze_explosion_SpellScript::CheckTarget, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
+                OnEffectHit.Register(&spell_rotface_unstable_ooze_explosion_SpellScript::CheckTarget, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
             }
         };
 
@@ -781,8 +766,6 @@ class spell_rotface_unstable_ooze_explosion_suicide : public SpellScriptLoader
 
         class spell_rotface_unstable_ooze_explosion_suicide_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_rotface_unstable_ooze_explosion_suicide_AuraScript);
-
             void DespawnSelf(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -797,7 +780,7 @@ class spell_rotface_unstable_ooze_explosion_suicide : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_rotface_unstable_ooze_explosion_suicide_AuraScript::DespawnSelf, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_rotface_unstable_ooze_explosion_suicide_AuraScript::DespawnSelf, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -814,8 +797,6 @@ class spell_rotface_vile_gas_trigger : public SpellScriptLoader
 
         class spell_rotface_vile_gas_trigger_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_rotface_vile_gas_trigger_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.sort(Trinity::ObjectDistanceOrderPred(GetCaster()));
@@ -861,8 +842,8 @@ class spell_rotface_vile_gas_trigger : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rotface_vile_gas_trigger_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_rotface_vile_gas_trigger_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_rotface_vile_gas_trigger_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_rotface_vile_gas_trigger_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

@@ -514,9 +514,9 @@ void World::LoadConfigSettings(bool reload)
 
     m_defaultDbcLocale = LocaleConstant(sConfigMgr->GetIntDefault("DBC.Locale", 0));
 
-    if (m_defaultDbcLocale >= TOTAL_LOCALES || m_defaultDbcLocale < LOCALE_enUS)
+    if (m_defaultDbcLocale >= TOTAL_LOCALES || m_defaultDbcLocale < LOCALE_enUS || m_defaultDbcLocale == LOCALE_NONE)
     {
-        TC_LOG_ERROR("server.loading", "Incorrect DBC.Locale! Must be >= 0 and < %d (set to 0)", TOTAL_LOCALES);
+        TC_LOG_ERROR("server.loading", "Incorrect DBC.Locale! Must be >= 0 and < %d and not %d (set to 0)", TOTAL_LOCALES, LOCALE_NONE);
         m_defaultDbcLocale = LOCALE_enUS;
     }
 
@@ -946,7 +946,7 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_START_PLAYER_MONEY] = sConfigMgr->GetIntDefault("StartPlayerMoney", 0);
     if (int32(m_int_configs[CONFIG_START_PLAYER_MONEY]) < 0)
     {
-        TC_LOG_ERROR("server.loading", "StartPlayerMoney (%i) must be in range 0.." UI64FMTD ". Set to %u.", m_int_configs[CONFIG_START_PLAYER_MONEY], uint64(MAX_MONEY_AMOUNT), 0);
+        TC_LOG_ERROR("server.loading", "StartPlayerMoney (%i) must be in range 0.." UI64FMTD ". Set to %u.", m_int_configs[CONFIG_START_PLAYER_MONEY], MAX_MONEY_AMOUNT, 0);
         m_int_configs[CONFIG_START_PLAYER_MONEY] = 0;
     }
     else if (m_int_configs[CONFIG_START_PLAYER_MONEY] > 0x7FFFFFFF-1) // TODO: (See MAX_MONEY_AMOUNT)
@@ -1257,6 +1257,15 @@ void World::LoadConfigSettings(bool reload)
     m_int_configs[CONFIG_BATTLEGROUND_PREMATURE_FINISH_TIMER]        = sConfigMgr->GetIntDefault ("Battleground.PrematureFinishTimer", 5 * MINUTE * IN_MILLISECONDS);
     m_int_configs[CONFIG_BATTLEGROUND_PREMADE_GROUP_WAIT_FOR_MATCH]  = sConfigMgr->GetIntDefault ("Battleground.PremadeGroupWaitForMatch", 30 * MINUTE * IN_MILLISECONDS);
     m_bool_configs[CONFIG_BG_XP_FOR_KILL]                            = sConfigMgr->GetBoolDefault("Battleground.GiveXPForKills", false);
+
+    m_int_configs[CONFIG_RATED_BATTLEGROUND_ENABLE]                  = sConfigMgr->GetIntDefault ("RatedBattleground.Enable", 0);
+    if (m_int_configs[CONFIG_RATED_BATTLEGROUND_ENABLE] < 0 || m_int_configs[CONFIG_RATED_BATTLEGROUND_ENABLE] > 3)
+    {
+        TC_LOG_ERROR("server.loading", "RatedBattleground.Enable (%d) must be >= 0 and <= 3. Using 0 instead.", m_int_configs[CONFIG_RATED_BATTLEGROUND_ENABLE]);
+        m_int_configs[CONFIG_RATED_BATTLEGROUND_ENABLE] = 0;
+    }
+    m_int_configs[CONFIG_RATED_BATTLEGROUND_REWARD]                  = sConfigMgr->GetIntDefault ("RatedBattleground.Reward", 40000);
+
     m_int_configs[CONFIG_ARENA_MAX_RATING_DIFFERENCE]                = sConfigMgr->GetIntDefault ("Arena.MaxRatingDifference", 150);
     m_int_configs[CONFIG_ARENA_RATING_DISCARD_TIMER]                 = sConfigMgr->GetIntDefault ("Arena.RatingDiscardTimer", 10 * MINUTE * IN_MILLISECONDS);
     m_int_configs[CONFIG_ARENA_RATED_UPDATE_TIMER]                   = sConfigMgr->GetIntDefault ("Arena.RatedUpdateTimer", 5 * IN_MILLISECONDS);
@@ -1434,7 +1443,7 @@ void World::LoadConfigSettings(bool reload)
         TC_LOG_INFO("server.loading", "Using DataDir %s", m_dataPath.c_str());
     }
 
-    m_bool_configs[CONFIG_ENABLE_MMAPS] = sConfigMgr->GetBoolDefault("mmap.enablePathFinding", false);
+    m_bool_configs[CONFIG_ENABLE_MMAPS] = sConfigMgr->GetBoolDefault("mmap.enablePathFinding", true);
     TC_LOG_INFO("server.loading", "WORLD: MMap data directory is: %smmaps", m_dataPath.c_str());
 
     m_bool_configs[CONFIG_VMAP_INDOOR_CHECK] = sConfigMgr->GetBoolDefault("vmap.enableIndoorCheck", 0);
@@ -1601,6 +1610,9 @@ void World::LoadConfigSettings(bool reload)
     // Whether to use LoS from game objects
     m_bool_configs[CONFIG_CHECK_GOBJECT_LOS] = sConfigMgr->GetBoolDefault("CheckGameObjectLoS", true);
 
+    // Allow to cache data queries
+    m_bool_configs[CONFIG_CACHE_DATA_QUERIES] = sConfigMgr->GetBoolDefault("CacheDataQueries", true);
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);
@@ -1619,11 +1631,9 @@ void World::SetInitialWorldSettings()
     dtAllocSetCustom(dtCustomAlloc, dtCustomFree);
 
     ///- Initialize VMapManager function pointers (to untangle game/collision circular deps)
-    if (VMAP::VMapManager2* vmmgr2 = dynamic_cast<VMAP::VMapManager2*>(VMAP::VMapFactory::createOrGetVMapManager()))
-    {
-        vmmgr2->GetLiquidFlagsPtr = &DBCManager::GetLiquidFlags;
-        vmmgr2->IsVMAPDisabledForPtr = &DisableMgr::IsVMAPDisabledFor;
-    }
+    VMAP::VMapManager2* vmmgr2 = VMAP::VMapFactory::createOrGetVMapManager();
+    vmmgr2->GetLiquidFlagsPtr = &DBCManager::GetLiquidFlags;
+    vmmgr2->IsVMAPDisabledForPtr = &DisableMgr::IsVMAPDisabledFor;
 
     ///- Initialize config settings
     LoadConfigSettings();
@@ -1704,9 +1714,7 @@ void World::SetInitialWorldSettings()
     }
 
     sMapMgr->InitializeParentMapData(mapData);
-
-    if (VMAP::VMapManager2* vmmgr2 = dynamic_cast<VMAP::VMapManager2*>(VMAP::VMapFactory::createOrGetVMapManager()))
-        vmmgr2->InitializeThreadUnsafe(mapData);
+    vmmgr2->InitializeThreadUnsafe(mapData);
 
     MMAP::MMapManager* mmmgr = MMAP::MMapFactory::createOrGetMMapManager();
     mmmgr->InitializeThreadUnsafe(mapData);
@@ -2091,20 +2099,23 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Trainers...");       // must be after LoadCreatureTemplates
     sObjectMgr->LoadTrainers();
 
-    TC_LOG_INFO("server.loading", "Loading Creature default trainers...");
-    sObjectMgr->LoadCreatureDefaultTrainers();
-
     TC_LOG_INFO("server.loading", "Loading Gossip menu...");
     sObjectMgr->LoadGossipMenu();
 
     TC_LOG_INFO("server.loading", "Loading Gossip menu options...");
     sObjectMgr->LoadGossipMenuItems();
 
+    TC_LOG_INFO("server.loading", "Loading Creature trainers...");
+    sObjectMgr->LoadCreatureTrainers();                         // must be after LoadGossipMenuItems
+
     TC_LOG_INFO("server.loading", "Loading Vendors...");
     sObjectMgr->LoadVendors();                                   // must be after load CreatureTemplate and ItemTemplate
 
     TC_LOG_INFO("server.loading", "Loading Waypoints...");
     sWaypointMgr->Load();
+
+    TC_LOG_INFO("server.loading", "Loading Waypoint Addons...");
+    sWaypointMgr->LoadWaypointAddons();
 
     TC_LOG_INFO("server.loading", "Loading SmartAI Waypoints...");
     sSmartWaypointMgr->LoadFromDB();
@@ -2186,6 +2197,12 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Item loot...");
     sLootItemStorage->LoadStorageFromDB();
+
+    TC_LOG_INFO("server.loading", "Initialize query data...");
+    sObjectMgr->InitializeQueriesData(QUERY_DATA_ALL);
+
+    TC_LOG_INFO("server.loading", "Initialize commands...");
+    ChatHandler::InitializeCommandTable();
 
     ///- Initialize game time and timers
     TC_LOG_INFO("server.loading", "Initialize game time and timers");
@@ -2377,6 +2394,8 @@ void World::Update(uint32 diff)
         sWhoListStorageMgr->Update();
     }
 
+    CheckQuestResetTimes();
+
     if (currentGameTime  > m_NextRandomBGReset)
         ResetRandomBG();
 
@@ -2566,7 +2585,7 @@ void World::ForceGameEventUpdate()
 }
 
 /// Send a packet to all players (except self if mentioned)
-void World::SendGlobalMessage(WorldPacket* packet, WorldSession* self, uint32 team)
+void World::SendGlobalMessage(WorldPacket const* packet, WorldSession* self, uint32 team)
 {
     SessionMap::const_iterator itr;
     for (itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
@@ -2583,7 +2602,7 @@ void World::SendGlobalMessage(WorldPacket* packet, WorldSession* self, uint32 te
 }
 
 /// Send a packet to all GMs (except self if mentioned)
-void World::SendGlobalGMMessage(WorldPacket* packet, WorldSession* self, uint32 team)
+void World::SendGlobalGMMessage(WorldPacket const* packet, WorldSession* self, uint32 team)
 {
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
     {
@@ -2711,7 +2730,7 @@ void World::SendGlobalText(char const* text, WorldSession* self)
 }
 
 /// Send a packet to all players (or players selected team) in the zone (except self if mentioned)
-bool World::SendZoneMessage(uint32 zone, WorldPacket* packet, WorldSession* self, uint32 team)
+bool World::SendZoneMessage(uint32 zone, WorldPacket const* packet, WorldSession* self, uint32 team)
 {
     bool foundPlayerToSend = false;
     SessionMap::const_iterator itr;
@@ -3231,6 +3250,11 @@ void World::ResetDailyQuestsAndRewards()
     // reset all saved quest status
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_RESET_CHARACTER_QUESTSTATUS_DAILY);
     CharacterDatabase.Execute(stmt);
+
+    // Reset daily lfg rewards
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_RESET_CHARACTER_REWARDSTATUS_LFG_DAILY);
+    CharacterDatabase.Execute(stmt);
+
     // reset all quest status in memory
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
     {
@@ -3272,6 +3296,11 @@ void World::ResetWeeklyQuestsAndRewards()
     // reset all saved quest status
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_RESET_CHARACTER_QUESTSTATUS_WEEKLY);
     CharacterDatabase.Execute(stmt);
+
+    // Reset weekly lfg rewards
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_RESET_CHARACTER_REWARDSTATUS_LFG_WEEKLY);
+    CharacterDatabase.Execute(stmt);
+
     // reset all quest status in memory
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
     {

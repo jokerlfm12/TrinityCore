@@ -260,7 +260,7 @@ class boss_anubarak_trial : public CreatureScript
                         summoned->SetDisplayId(summoned->GetCreatureTemplate()->Modelid1);
                         if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                         {
-                            summoned->CombatStart(target);
+                            summoned->EngageWithTarget(target);
                             Talk(EMOTE_SPIKE, target);
                         }
                         break;
@@ -270,9 +270,9 @@ class boss_anubarak_trial : public CreatureScript
                 summons.Summon(summoned);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
 
@@ -309,12 +309,12 @@ class boss_anubarak_trial : public CreatureScript
                             events.ScheduleEvent(EVENT_FREEZE_SLASH, 15*IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
                         case EVENT_PENETRATING_COLD:
-                            me->CastCustomSpell(SPELL_PENETRATING_COLD, SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 5));
+                            DoCastAOE(SPELL_PENETRATING_COLD, { SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 5) });
                             events.ScheduleEvent(EVENT_PENETRATING_COLD, 20*IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
                         case EVENT_SUMMON_NERUBIAN:
                             if (IsHeroic() || !_reachedPhase3)
-                                me->CastCustomSpell(SPELL_SUMMON_BURROWER, SPELLVALUE_MAX_TARGETS, RAID_MODE(1, 2, 2, 4));
+                                DoCastAOE(SPELL_SUMMON_BURROWER, { SPELLVALUE_MAX_TARGETS, RAID_MODE(1, 2, 2, 4) });
                             events.ScheduleEvent(EVENT_SUMMON_NERUBIAN, 45*IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
                         case EVENT_NERUBIAN_SHADOW_STRIKE:
@@ -814,12 +814,11 @@ class npc_anubarak_spike : public CreatureScript
                 DoCast(who, SPELL_MARK);
                 me->SetSpeedRate(MOVE_RUN, 0.5f);
                 // make sure the Spine will really follow the one he should
-                me->getThreatManager().clearReferences();
+                me->GetThreatManager().ResetAllThreat();
                 me->SetInCombatWithZone();
-                me->getThreatManager().addThreat(who, std::numeric_limits<float>::max());
+                AddThreat(who, 1000000.0f);
                 me->GetMotionMaster()->Clear(true);
                 me->GetMotionMaster()->MoveChase(who);
-                me->TauntApply(who);
             }
 
             private:
@@ -840,8 +839,6 @@ class spell_impale : public SpellScriptLoader
 
         class spell_impale_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_impale_SpellScript);
-
             void HandleDamageCalc(SpellEffIndex /*effIndex*/)
             {
                 Unit* target = GetHitUnit();
@@ -854,7 +851,7 @@ class spell_impale : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_impale_SpellScript::HandleDamageCalc, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_impale_SpellScript::HandleDamageCalc, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
             }
         };
 
@@ -871,8 +868,6 @@ class spell_anubarak_leeching_swarm : public SpellScriptLoader
 
         class spell_anubarak_leeching_swarm_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_anubarak_leeching_swarm_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_LEECHING_SWARM_DMG, SPELL_LEECHING_SWARM_HEAL });
@@ -886,16 +881,17 @@ class spell_anubarak_leeching_swarm : public SpellScriptLoader
                     int32 lifeLeeched = target->CountPctFromCurHealth(aurEff->GetAmount());
                     if (lifeLeeched < 250)
                         lifeLeeched = 250;
+
                     // Damage
-                    caster->CastCustomSpell(target, SPELL_LEECHING_SWARM_DMG, &lifeLeeched, 0, 0, true);
+                    caster->CastSpell(target, SPELL_LEECHING_SWARM_DMG, CastSpellExtraArgs(true).AddSpellBP0(lifeLeeched));
                     // Heal
-                    caster->CastCustomSpell(caster, SPELL_LEECHING_SWARM_HEAL, &lifeLeeched, 0, 0, true);
+                    caster->CastSpell(caster, SPELL_LEECHING_SWARM_HEAL, CastSpellExtraArgs(true).AddSpellBP0(lifeLeeched));
                 }
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_anubarak_leeching_swarm_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_anubarak_leeching_swarm_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 

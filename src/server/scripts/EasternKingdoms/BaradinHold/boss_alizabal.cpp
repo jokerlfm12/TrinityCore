@@ -73,9 +73,9 @@ struct boss_alizabal : public BossAI
 {
     boss_alizabal(Creature* creature) : BossAI(creature, DATA_ALIZABAL), _bladeDanceChargeCount(0) { }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_SEETHING_HATE, 9s + 500ms);
@@ -204,8 +204,6 @@ private:
 
 class spell_alizabal_seething_hate : public SpellScript
 {
-    PrepareSpellScript(spell_alizabal_seething_hate);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -233,8 +231,8 @@ class spell_alizabal_seething_hate : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_alizabal_seething_hate::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_alizabal_seething_hate::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnObjectAreaTargetSelect.Register(&spell_alizabal_seething_hate::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_alizabal_seething_hate::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 

@@ -164,9 +164,9 @@ struct boss_zanzil : public BossAI
             DoSummon(NPC_ZANZILI_BERSERKER, ZanziliBerserkerPositions[i], 4000);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_ZANZILI_FIRE, 13s, 14s);
         events.ScheduleEvent(EVENT_TERRIBLE_TONIC, 10s, 11s);
@@ -245,7 +245,7 @@ struct boss_zanzil : public BossAI
                 float z = _zanzilPosition.GetPositionZ();
 
                 if (_zanzilPosition.GetExactDist2d(x, y) <= 30.0f)
-                    me->CastSpell(x, y, z, SPELL_ZANZILI_FIRE_TRIGGERED, true);
+                    me->CastSpell({ x, y, z }, SPELL_ZANZILI_FIRE_TRIGGERED, true);
                 else
                     me->RemoveAurasDueToSpell(SPELL_ZANZILI_FIRE);
                 break;
@@ -276,12 +276,12 @@ struct boss_zanzil : public BossAI
             {
                 case EVENT_ZANZILI_FIRE:
                     _zanziliFireCount = 0;
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 30.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 30.0f, true))
                         DoCast(target, SPELL_ZANZILI_FIRE);
                     events.Repeat(13s, 14s);
                     break;
                 case EVENT_TERRIBLE_TONIC:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         DoCast(target, SPELL_TERRIBLE_TONIC);
                     events.Repeat(10s, 11s);
                     break;
@@ -321,7 +321,7 @@ struct boss_zanzil : public BossAI
 
                             Talk(SAY_ANNOUNCE_ZANZILI_BERSEKER);
                             Talk(SAY_ZANZILI_BERSEKER);
-                            me->CastSpell(nearestPos.GetPositionX(), nearestPos.GetPositionY(), nearestPos.GetPositionZ(), SPELL_ZANZILS_RESURRECTION_ELIXIR_BLUE);
+                            me->CastSpell({ nearestPos.GetPositionX(), nearestPos.GetPositionY(), nearestPos.GetPositionZ() }, SPELL_ZANZILS_RESURRECTION_ELIXIR_BLUE);
                             events.ScheduleEvent(EVENT_RESPAWN_BERSERKER, 13s);
                             break;
                         }
@@ -340,7 +340,7 @@ struct boss_zanzil : public BossAI
 
                             Talk(SAY_ANNOUNCE_ZANZIL_ZOMBIES);
                             Talk(SAY_ZANZILI_ZOMBIES);
-                            me->CastSpell(nearestPos.GetPositionX(), nearestPos.GetPositionY(), nearestPos.GetPositionZ(), SPELL_ZANZILS_RESURRECTION_ELIXIR_RED);
+                            me->CastSpell({ nearestPos.GetPositionX(), nearestPos.GetPositionY(), nearestPos.GetPositionZ() }, SPELL_ZANZILS_RESURRECTION_ELIXIR_RED);
                             events.ScheduleEvent(EVENT_RESPAWN_ZOMBIE_GROUP, 13s);
                             break;
                         }
@@ -433,8 +433,8 @@ struct npc_zanzil_zanzili_berserker : public ScriptedAI
 
         if (spellInfo->Id == SPELL_PURSUIT)
         {
-            me->getThreatManager().resetAllAggro();
-            me->AddThreat(victim, spellInfo->Effects[EFFECT_1].BasePoints);
+            me->GetThreatManager().ResetAllThreat();
+            AddThreat(victim, spellInfo->Effects[EFFECT_1].BasePoints);
             Talk(SAY_WHISPER_PURSUIT_PLAYER, victim);
             Talk(SAY_ANNOUNCE_PURSUIT_PLAYER, victim);
         }
@@ -480,8 +480,6 @@ private:
 
 class spell_zanzil_zanzili_fire : public AuraScript
 {
-    PrepareAuraScript(spell_zanzil_zanzili_fire);
-
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
     {
         if (Creature* zanzil = GetTarget()->ToCreature())
@@ -491,14 +489,12 @@ class spell_zanzil_zanzili_fire : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_zanzil_zanzili_fire::HandlePeriodic, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_zanzil_zanzili_fire::HandlePeriodic, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
 class spell_zanzil_zanzils_resurrection_elixir : public AuraScript
 {
-    PrepareAuraScript(spell_zanzil_zanzils_resurrection_elixir);
-
     bool Validate(SpellInfo const* /*spell*/) override
     {
         return ValidateSpellInfo(
@@ -518,12 +514,12 @@ class spell_zanzil_zanzils_resurrection_elixir : public AuraScript
         if (!object)
             return;
 
-        GetTarget()->CastSpell(object->GetPositionX(), object->GetPositionY(), object->GetPositionZ(), GetSpellInfo()->Effects[EFFECT_1].TriggerSpell, true);
+        GetTarget()->CastSpell({ object->GetPositionX(), object->GetPositionY(), object->GetPositionZ() }, GetSpellInfo()->Effects[EFFECT_1].TriggerSpell, true);
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_zanzil_zanzils_resurrection_elixir::HandlePeriodic, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_zanzil_zanzils_resurrection_elixir::HandlePeriodic, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
@@ -546,8 +542,6 @@ class UnusedGuidTargetSelector
 
 class spell_zanzil_zanzils_resurrection_elixir_red_script : public SpellScript
 {
-    PrepareSpellScript(spell_zanzil_zanzils_resurrection_elixir_red_script);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -595,16 +589,14 @@ class spell_zanzil_zanzils_resurrection_elixir_red_script : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_zanzil_zanzils_resurrection_elixir_red_script::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_zanzil_zanzils_resurrection_elixir_red_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-        OnEffectLaunchTarget += SpellEffectFn(spell_zanzil_zanzils_resurrection_elixir_red_script::HandleGuidReservation, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectAreaTargetSelect.Register(&spell_zanzil_zanzils_resurrection_elixir_red_script::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
+        OnEffectHitTarget.Register(&spell_zanzil_zanzils_resurrection_elixir_red_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectLaunchTarget.Register(&spell_zanzil_zanzils_resurrection_elixir_red_script::HandleGuidReservation, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_zanzil_zanzils_graveyard_gas : public SpellScript
 {
-    PrepareSpellScript(spell_zanzil_zanzils_graveyard_gas);
-
     bool Validate(SpellInfo const* /*spell*/) override
     {
         return ValidateSpellInfo(
@@ -652,16 +644,14 @@ class spell_zanzil_zanzils_graveyard_gas : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_zanzil_zanzils_graveyard_gas::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_zanzil_zanzils_graveyard_gas::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
-        OnEffectLaunchTarget += SpellEffectFn(spell_zanzil_zanzils_graveyard_gas::HandleGuidReservation, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectAreaTargetSelect.Register(&spell_zanzil_zanzils_graveyard_gas::FilterTargets, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
+        OnEffectHitTarget.Register(&spell_zanzil_zanzils_graveyard_gas::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectLaunchTarget.Register(&spell_zanzil_zanzils_graveyard_gas::HandleGuidReservation, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_zanzil_frostburn_formula : public AuraScript
 {
-    PrepareAuraScript(spell_zanzil_frostburn_formula);
-
     bool CheckProc(ProcEventInfo& eventInfo)
     {
         if (Unit* target = eventInfo.GetProcTarget())
@@ -673,7 +663,7 @@ class spell_zanzil_frostburn_formula : public AuraScript
 
     void Register() override
     {
-        DoCheckProc += AuraCheckProcFn(spell_zanzil_frostburn_formula::CheckProc);
+        DoCheckProc.Register(&spell_zanzil_frostburn_formula::CheckProc);
     }
 };
 
@@ -681,9 +671,9 @@ void AddSC_boss_zanzil()
 {
     RegisterZulGurubCreatureAI(boss_zanzil);
     RegisterZulGurubCreatureAI(npc_zanzil_zanzili_berserker);
-    RegisterAuraScript(spell_zanzil_zanzili_fire);
-    RegisterAuraScript(spell_zanzil_zanzils_resurrection_elixir);
+    RegisterSpellScript(spell_zanzil_zanzili_fire);
+    RegisterSpellScript(spell_zanzil_zanzils_resurrection_elixir);
     RegisterSpellScript(spell_zanzil_zanzils_resurrection_elixir_red_script);
     RegisterSpellScript(spell_zanzil_zanzils_graveyard_gas);
-    RegisterAuraScript(spell_zanzil_frostburn_formula);
+    RegisterSpellScript(spell_zanzil_frostburn_formula);
 }

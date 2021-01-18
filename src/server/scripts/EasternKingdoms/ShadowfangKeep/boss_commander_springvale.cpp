@@ -130,10 +130,10 @@ public:
             */
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
-            _JustEngagedWith();
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             events.ScheduleEvent(EVENT_MALEFIC_STRIKE, Seconds(5));
             events.ScheduleEvent(EVENT_DESECRATION, Seconds(9) + Milliseconds(500));
@@ -179,6 +179,7 @@ public:
                     me->StopMoving();
                     me->SetFacingToObject(summon);
                     DoCast(summon, SPELL_SHIELD_OF_THE_PERFIDIOUS);
+                    break;
                 default:
                     break;
             }
@@ -264,7 +265,7 @@ public:
                     case EVENT_WORD_OF_SHAME:
                         me->RemoveAurasDueToSpell(SPELL_UNHOLY_POWER);
                         me->RemoveAurasDueToSpell(SPELL_UNHOLY_POWER_HC);
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_WORD_OF_SHAME))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -SPELL_WORD_OF_SHAME))
                             DoCast(target, SPELL_WORD_OF_SHAME, true);
                         else
                             events.ScheduleEvent(EVENT_SHIELD_OF_THE_PERFIDIOUS, Milliseconds(1));
@@ -375,7 +376,7 @@ public:
                 switch (eventId)
                 {
                     case EVENT_FORSAKEN_ABILITY:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                             DoCast(target, SPELL_FORSAKEN_ABILITY);
                         break;
                     case EVENT_UNHOLY_EMPOWERMENT:
@@ -407,10 +408,6 @@ class spell_sfk_forsaken_ability : public SpellScriptLoader
 
         class spell_sfk_forsaken_ability_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_sfk_forsaken_ability_AuraScript);
-
-
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -450,7 +447,7 @@ class spell_sfk_forsaken_ability : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_sfk_forsaken_ability_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_sfk_forsaken_ability_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -467,8 +464,6 @@ public:
 
     class spell_sfk_unholy_power_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_sfk_unholy_power_SpellScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo(
@@ -497,7 +492,7 @@ public:
         void Register() override
         {
             
-            AfterHit += SpellHitFn(spell_sfk_unholy_power_SpellScript::HandleStacks);
+            AfterHit.Register(&spell_sfk_unholy_power_SpellScript::HandleStacks);
         }
     };
 
@@ -514,8 +509,6 @@ public:
 
     class spell_sfk_unholy_empowerment_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_sfk_unholy_empowerment_SpellScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo(
@@ -548,7 +541,7 @@ public:
 
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_sfk_unholy_empowerment_SpellScript::HandleStacks);
+            AfterHit.Register(&spell_sfk_unholy_empowerment_SpellScript::HandleStacks);
         }
     };
 

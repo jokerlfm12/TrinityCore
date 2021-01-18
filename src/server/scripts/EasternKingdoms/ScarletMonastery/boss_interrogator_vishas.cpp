@@ -49,10 +49,10 @@ struct boss_interrogator_vishas : public BossAI
         _Reset();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
-        _JustEngagedWith();
 
         events.ScheduleEvent(EVENT_SHADOW_WORD_PAIN, 6s, 8s);
     }
@@ -90,7 +90,7 @@ struct boss_interrogator_vishas : public BossAI
             switch (eventId)
             {
                 case EVENT_SHADOW_WORD_PAIN:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 30.f, true, -SPELL_SHADOW_WORD_PAIN))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 30.f, true, true, -SPELL_SHADOW_WORD_PAIN))
                         DoCast(target, SPELL_SHADOW_WORD_PAIN);
                     events.Repeat(7s, 11s);
                     break;
@@ -108,5 +108,5 @@ private:
 
 void AddSC_boss_interrogator_vishas()
 {
-    RegisterScarletMonastryCreatureAI(boss_interrogator_vishas);
+    RegisterScarletMonasteryCreatureAI(boss_interrogator_vishas);
 }

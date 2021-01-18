@@ -204,7 +204,8 @@ class boss_gormok : public CreatureScript
                 {
                     case 0:
                         instance->DoUseDoorOrButton(instance->GetGuidData(GO_MAIN_GATE_DOOR));
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToPC(false);
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->SetInCombatWithZone();
                         break;
@@ -226,9 +227,9 @@ class boss_gormok : public CreatureScript
                 me->DespawnOrUnsummon();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 instance->SetData(TYPE_NORTHREND_BEASTS, GORMOK_IN_PROGRESS);
             }
 
@@ -562,9 +563,9 @@ struct boss_jormungarAI : public BossAI
         me->DespawnOrUnsummon();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         me->SetInCombatWithZone();
         instance->SetData(TYPE_NORTHREND_BEASTS, SNAKES_IN_PROGRESS);
     }
@@ -613,7 +614,8 @@ struct boss_jormungarAI : public BossAI
                 case EVENT_SUMMON_ACIDMAW:
                     if (Creature* acidmaw = me->SummonCreature(NPC_ACIDMAW, ToCCommonLoc[9].GetPositionX(), ToCCommonLoc[9].GetPositionY(), ToCCommonLoc[9].GetPositionZ(), 5, TEMPSUMMON_MANUAL_DESPAWN))
                     {
-                        acidmaw->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        acidmaw->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        acidmaw->SetImmuneToPC(false);
                         acidmaw->SetReactState(REACT_AGGRESSIVE);
                         acidmaw->SetInCombatWithZone();
                         acidmaw->CastSpell(acidmaw, SPELL_EMERGE);
@@ -770,7 +772,8 @@ class boss_dreadscale : public CreatureScript
                 {
                     case 0:
                         instance->DoCloseDoorOrButton(instance->GetGuidData(GO_MAIN_GATE_DOOR));
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToPC(false);
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->SetInCombatWithZone();
                         break;
@@ -853,8 +856,6 @@ class spell_gormok_fire_bomb : public SpellScriptLoader
 
         class spell_gormok_fire_bomb_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_gormok_fire_bomb_SpellScript);
-
             void TriggerFireBomb(SpellEffIndex /*effIndex*/)
             {
                 if (const WorldLocation* pos = GetExplTargetDest())
@@ -866,7 +867,7 @@ class spell_gormok_fire_bomb : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_gormok_fire_bomb_SpellScript::TriggerFireBomb, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
+                OnEffectHit.Register(&spell_gormok_fire_bomb_SpellScript::TriggerFireBomb, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
             }
         };
 
@@ -943,7 +944,8 @@ class boss_icehowl : public CreatureScript
                         break;
                     case 2:
                         instance->DoUseDoorOrButton(instance->GetGuidData(GO_MAIN_GATE_DOOR));
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToPC(false);
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->SetInCombatWithZone();
                         break;
@@ -965,9 +967,9 @@ class boss_icehowl : public CreatureScript
                 me->DespawnOrUnsummon();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 instance->SetData(TYPE_NORTHREND_BEASTS, ICEHOWL_IN_PROGRESS);
             }
 
@@ -1170,8 +1172,6 @@ public:
 
     class spell_gormok_jump_to_hand_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_gormok_jump_to_hand_AuraScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_RIDE_PLAYER });
@@ -1202,7 +1202,7 @@ public:
 
         void Register() override
         {
-            AfterEffectRemove += AuraEffectRemoveFn(spell_gormok_jump_to_hand_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_gormok_jump_to_hand_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -1219,8 +1219,6 @@ public:
 
     class spell_gormok_ride_player_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_gormok_ride_player_AuraScript);
-
         bool Load() override
         {
             if (GetCaster() && GetCaster()->GetEntry() == NPC_SNOBOLD_VASSAL)
@@ -1248,8 +1246,8 @@ public:
 
         void Register() override
         {
-            OnEffectApply += AuraEffectApplyFn(spell_gormok_ride_player_AuraScript::OnApply, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
-            AfterEffectRemove += AuraEffectRemoveFn(spell_gormok_ride_player_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
+            OnEffectApply.Register(&spell_gormok_ride_player_AuraScript::OnApply, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_gormok_ride_player_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_CONTROL_VEHICLE, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -1266,8 +1264,6 @@ public:
 
     class spell_gormok_snobolled_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_gormok_snobolled_AuraScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_RIDE_PLAYER });
@@ -1281,7 +1277,7 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_gormok_snobolled_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            OnEffectPeriodic.Register(&spell_gormok_snobolled_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
@@ -1298,8 +1294,6 @@ public:
 
     class spell_jormungars_paralytic_toxin_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_jormungars_paralytic_toxin_AuraScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_PARALYSIS });
@@ -1338,16 +1332,16 @@ public:
                 slowEff->ChangeAmount(newAmount);
 
                 if (newAmount <= -100 && !GetTarget()->HasAura(SPELL_PARALYSIS))
-                    GetTarget()->CastSpell(GetTarget(), SPELL_PARALYSIS, true, nullptr, slowEff, GetCasterGUID());
+                    GetTarget()->CastSpell(GetTarget(), SPELL_PARALYSIS, { slowEff, GetCasterGUID() });
             }
         }
 
         void Register() override
         {
-            AfterEffectApply += AuraEffectApplyFn(spell_jormungars_paralytic_toxin_AuraScript::OnApply, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
-            AfterEffectRemove += AuraEffectRemoveFn(spell_jormungars_paralytic_toxin_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
-            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_jormungars_paralytic_toxin_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_jormungars_paralytic_toxin_AuraScript::HandleDummy, EFFECT_2, SPELL_AURA_PERIODIC_DUMMY);
+            AfterEffectApply.Register(&spell_jormungars_paralytic_toxin_AuraScript::OnApply, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_jormungars_paralytic_toxin_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED, AURA_EFFECT_HANDLE_REAL);
+            DoEffectCalcAmount.Register(&spell_jormungars_paralytic_toxin_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_DECREASE_SPEED);
+            OnEffectPeriodic.Register(&spell_jormungars_paralytic_toxin_AuraScript::HandleDummy, EFFECT_2, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
@@ -1364,9 +1358,7 @@ public:
 
     class spell_jormungars_snakes_spray_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_jormungars_snakes_spray_SpellScript);
-
-    public:
+         public:
         spell_jormungars_snakes_spray_SpellScript(uint32 spellId) : SpellScript(), _spellId(spellId) { }
 
         bool Validate(SpellInfo const* /*spell*/) override
@@ -1382,7 +1374,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_jormungars_snakes_spray_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+            OnEffectHitTarget.Register(&spell_jormungars_snakes_spray_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
         }
 
     private:
@@ -1405,8 +1397,6 @@ public:
 
     class spell_jormungars_paralysis_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_jormungars_paralysis_AuraScript);
-
         void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (Unit* caster = GetCaster())
@@ -1419,7 +1409,7 @@ public:
 
         void Register() override
         {
-            AfterEffectApply += AuraEffectApplyFn(spell_jormungars_paralysis_AuraScript::OnApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectApply.Register(&spell_jormungars_paralysis_AuraScript::OnApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
         }
     };
 

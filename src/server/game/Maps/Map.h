@@ -273,9 +273,15 @@ struct ZoneDynamicInfo
     uint32 MusicId;
     std::unique_ptr<Weather> DefaultWeather;
     WeatherState WeatherId;
-    float WeatherGrade;
-    uint32 OverrideLightId;
-    uint32 LightFadeInTime;
+    float Intensity;
+
+    struct LightOverride
+    {
+        uint32 AreaLightId;
+        uint32 OverrideLightId;
+        uint32 TransitionMilliseconds;
+    };
+    std::vector<LightOverride> LightOverrides;
 };
 
 #pragma pack(pop)
@@ -294,10 +300,10 @@ struct CompareRespawnInfo
 {
     bool operator()(RespawnInfo const* a, RespawnInfo const* b) const;
 };
-typedef std::unordered_map<uint32 /*zoneId*/, ZoneDynamicInfo> ZoneDynamicInfoMap;
-typedef boost::heap::fibonacci_heap<RespawnInfo*, boost::heap::compare<CompareRespawnInfo>> RespawnListContainer;
-typedef RespawnListContainer::handle_type RespawnListHandle;
-typedef std::unordered_map<uint32, RespawnInfo*> RespawnInfoMap;
+using ZoneDynamicInfoMap = std::unordered_map<uint32 /*zoneId*/, ZoneDynamicInfo>;
+using RespawnListContainer = boost::heap::fibonacci_heap<RespawnInfo*, boost::heap::compare<CompareRespawnInfo>>;
+using RespawnListHandle = RespawnListContainer::handle_type;
+using RespawnInfoMap = std::unordered_map<ObjectGuid::LowType, RespawnInfo*>;
 struct RespawnInfo
 {
     SpawnObjectType type;
@@ -643,8 +649,8 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
 
         void SetZoneMusic(uint32 zoneId, uint32 musicId);
         Weather* GetOrGenerateZoneDefaultWeather(uint32 zoneId);
-        void SetZoneWeather(uint32 zoneId, WeatherState weatherId, float weatherGrade);
-        void SetZoneOverrideLight(uint32 zoneId, uint32 lightId, uint32 fadeInTime);
+        void SetZoneWeather(uint32 zoneId, WeatherState weatherId, float intensity);
+        void SetZoneOverrideLight(uint32 zoneId, uint32 areaLightId, uint32 overrideLightId, uint32 transitionMilliseconds);
 
         void UpdateAreaDependentAuras();
 
@@ -803,18 +809,18 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         void DoRespawn(SpawnObjectType type, ObjectGuid::LowType spawnId, uint32 gridId);
         bool AddRespawnInfo(RespawnInfo const& info);
         void UnloadAllRespawnInfos();
+        RespawnInfo* GetRespawnInfo(SpawnObjectType type, ObjectGuid::LowType spawnId) const;
+        void Respawn(RespawnInfo* info, CharacterDatabaseTransaction dbTrans = nullptr);
         void DeleteRespawnInfo(RespawnInfo* info, CharacterDatabaseTransaction dbTrans = nullptr);
         void DeleteRespawnInfoFromDB(SpawnObjectType type, ObjectGuid::LowType spawnId, CharacterDatabaseTransaction dbTrans = nullptr);
 
     public:
-        void GetRespawnInfo(std::vector<RespawnInfo*>& respawnData, SpawnObjectTypeMask types) const;
-        RespawnInfo* GetRespawnInfo(SpawnObjectType type, ObjectGuid::LowType spawnId) const;
+        void GetRespawnInfo(std::vector<RespawnInfo const*>& respawnData, SpawnObjectTypeMask types) const;
         void Respawn(SpawnObjectType type, ObjectGuid::LowType spawnId, CharacterDatabaseTransaction dbTrans = nullptr)
         {
             if (RespawnInfo* info = GetRespawnInfo(type, spawnId))
                 Respawn(info, dbTrans);
         }
-        void Respawn(RespawnInfo* info, CharacterDatabaseTransaction dbTrans = nullptr);
         void RemoveRespawnTime(SpawnObjectType type, ObjectGuid::LowType spawnId, CharacterDatabaseTransaction dbTrans = nullptr, bool alwaysDeleteFromDB = false)
         {
             if (RespawnInfo* info = GetRespawnInfo(type, spawnId))
@@ -909,7 +915,6 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
 
         ZoneDynamicInfoMap _zoneDynamicInfo;
         IntervalTimer _weatherUpdateTimer;
-        uint32 _defaultLight;
 
         template<HighGuid high>
         inline ObjectGuidGeneratorBase& GetGuidSequenceGenerator()
@@ -945,7 +950,7 @@ enum InstanceResetMethod
 class TC_GAME_API InstanceMap : public Map
 {
     public:
-        InstanceMap(uint32 id, time_t, uint32 InstanceId, uint8 SpawnMode, Map* _parent);
+        InstanceMap(uint32 id, time_t, uint32 InstanceId, uint8 SpawnMode, Map* _parent, TeamId InstanceTeam);
         ~InstanceMap();
         bool AddPlayerToMap(Player*) override;
         void RemovePlayerFromMap(Player*, bool) override;
@@ -967,6 +972,8 @@ class TC_GAME_API InstanceMap : public Map
         bool HasPermBoundPlayers() const;
         uint32 GetMaxPlayers() const;
         uint32 GetMaxResetDelay() const;
+        TeamId GetTeamIdInInstance() const { return i_script_team; }
+        Team GetTeamInInstance() const { return i_script_team == TEAM_ALLIANCE ? ALLIANCE : HORDE; }
 
         virtual void InitVisibilityDistance() override;
     private:
@@ -974,6 +981,7 @@ class TC_GAME_API InstanceMap : public Map
         bool m_unloadWhenEmpty;
         InstanceScript* i_data;
         uint32 i_script_id;
+        TeamId i_script_team;
 };
 
 class TC_GAME_API BattlegroundMap : public Map

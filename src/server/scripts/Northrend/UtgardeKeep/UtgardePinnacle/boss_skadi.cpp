@@ -265,7 +265,8 @@ public:
                     Talk(SAY_DRAKE_DEATH);
                     DoCast(me, SPELL_SKADI_TELEPORT, true);
                     summons.DespawnEntry(NPC_WORLD_TRIGGER);
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    me->SetImmuneToPC(false);
                     me->SetReactState(REACT_AGGRESSIVE);
                     _phase = PHASE_GROUND;
 
@@ -603,7 +604,7 @@ public:
             _scheduler
                 .Schedule(Seconds(13), [this](TaskContext net)
                 {
-                    if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 30, true))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 30, true))
                         DoCast(target, SPELL_NET);
                     net.Repeat();
                 })
@@ -633,8 +634,6 @@ class spell_freezing_cloud_area_right : public SpellScriptLoader
 
         class spell_freezing_cloud_area_right_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_freezing_cloud_area_right_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_FREEZING_CLOUD });
@@ -652,8 +651,8 @@ class spell_freezing_cloud_area_right : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_freezing_cloud_area_right_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_freezing_cloud_area_right_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnObjectAreaTargetSelect.Register(&spell_freezing_cloud_area_right_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_freezing_cloud_area_right_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -670,8 +669,6 @@ class spell_freezing_cloud_area_left : public SpellScriptLoader
 
         class spell_freezing_cloud_area_left_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_freezing_cloud_area_left_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_FREEZING_CLOUD });
@@ -689,8 +686,8 @@ class spell_freezing_cloud_area_left : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_freezing_cloud_area_left_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_freezing_cloud_area_left_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnObjectAreaTargetSelect.Register(&spell_freezing_cloud_area_left_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_freezing_cloud_area_left_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -707,8 +704,6 @@ class spell_freezing_cloud_damage : public SpellScriptLoader
 
         class spell_freezing_cloud_damage_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_freezing_cloud_damage_AuraScript);
-
             bool CanBeAppliedOn(Unit* target)
             {
                 if (Aura* aur = target->GetAura(GetId()))
@@ -720,7 +715,7 @@ class spell_freezing_cloud_damage : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckAreaTarget += AuraCheckAreaTargetFn(spell_freezing_cloud_damage_AuraScript::CanBeAppliedOn);
+                DoCheckAreaTarget.Register(&spell_freezing_cloud_damage_AuraScript::CanBeAppliedOn);
             }
         };
 
@@ -737,8 +732,6 @@ class spell_skadi_reset_check : public SpellScriptLoader
 
         class spell_skadi_reset_check_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_skadi_reset_check_SpellScript);
-
             void CountTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(Trinity::UnitAuraCheck(false, SPELL_UTGARDE_PINNACLE_GAUNTLET_EFFECT));
@@ -761,8 +754,8 @@ class spell_skadi_reset_check : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_skadi_reset_check_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_skadi_reset_check_SpellScript::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_skadi_reset_check_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_skadi_reset_check_SpellScript::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
             }
 
         private:
@@ -782,8 +775,6 @@ class spell_skadi_launch_harpoon : public SpellScriptLoader
 
         class spell_skadi_launch_harpoon_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_skadi_launch_harpoon_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.size() >= 2)
@@ -798,8 +789,8 @@ class spell_skadi_launch_harpoon : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_skadi_launch_harpoon_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY);
-                OnHit += SpellHitFn(spell_skadi_launch_harpoon_SpellScript::HandleDamageCalc);
+                OnObjectAreaTargetSelect.Register(&spell_skadi_launch_harpoon_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_CONE_ENTRY);
+                OnHit.Register(&spell_skadi_launch_harpoon_SpellScript::HandleDamageCalc);
             }
         };
 
@@ -816,8 +807,6 @@ class spell_skadi_poisoned_spear : public SpellScriptLoader
 
         class spell_skadi_poisoned_spear_left_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_skadi_poisoned_spear_left_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_POISONED_SPEAR_PERIODIC });
@@ -830,7 +819,7 @@ class spell_skadi_poisoned_spear : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_skadi_poisoned_spear_left_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_skadi_poisoned_spear_left_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
             }
         };
 
@@ -847,8 +836,6 @@ class spell_summon_gauntlet_mobs_periodic : public SpellScriptLoader
 
         class spell_summon_gauntlet_mobs_periodic_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_summon_gauntlet_mobs_periodic_AuraScript);
-
             void CastTheNextTwoSpells()
             {
                 for (uint8 i = 0; i < 2; ++i)
@@ -896,7 +883,7 @@ class spell_summon_gauntlet_mobs_periodic : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_summon_gauntlet_mobs_periodic_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_summon_gauntlet_mobs_periodic_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 

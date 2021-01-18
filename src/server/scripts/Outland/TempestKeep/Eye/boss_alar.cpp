@@ -142,9 +142,9 @@ class boss_alar : public CreatureScript
                 me->setActive(false);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->SetDisableGravity(true); // after enterevademode will be set walk movement
                 me->setActive(true);
             }
@@ -210,7 +210,7 @@ class boss_alar : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                if (!me->IsInCombat()) // sometimes IsInCombat but !incombat, faction bug?
+                if (!me->IsEngaged())
                     return;
 
                 if (Berserk_Timer <= diff)
@@ -327,7 +327,7 @@ class boss_alar : public CreatureScript
 
                 if (Phase1)
                 {
-                    if (me->getThreatManager().getThreatList().empty())
+                    if (!me->IsThreatened())
                     {
                         EnterEvadeMode();
                         return;

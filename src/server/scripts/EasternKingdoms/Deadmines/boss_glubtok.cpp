@@ -139,9 +139,9 @@ struct boss_glubtok : public BossAI
         }
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.SetPhase(PHASE_1);
@@ -241,11 +241,11 @@ struct boss_glubtok : public BossAI
             switch (eventId)
             {
                 case EVENT_BLINK:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, true))
                     {
                         DoCast(target, SPELL_BLINK);
                         if (IsHeroic())
-                            me->getThreatManager().resetAllAggro();
+                            me->GetThreatManager().ResetAllThreat();
 
                         events.ScheduleEvent(EVENT_ELEMENTAL_FISTS, 800ms, 0, PHASE_1);
                         events.Repeat(13s, 14s);
@@ -345,8 +345,6 @@ private:
 
 class spell_glubtok_blossom_targeting : public SpellScript
 {
-    PrepareSpellScript(spell_glubtok_blossom_targeting);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -385,8 +383,8 @@ class spell_glubtok_blossom_targeting : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_glubtok_blossom_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_glubtok_blossom_targeting::HandleBlossomEffect, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+        OnObjectAreaTargetSelect.Register(&spell_glubtok_blossom_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnEffectHitTarget.Register(&spell_glubtok_blossom_targeting::HandleBlossomEffect, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
     }
 };
 

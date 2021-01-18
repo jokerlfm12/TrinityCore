@@ -106,9 +106,9 @@ struct boss_ascendant_lord_obsidius : public BossAI
         }
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_STONE_BLOW, 8s);
@@ -217,7 +217,7 @@ struct boss_ascendant_lord_obsidius : public BossAI
                     events.Repeat(12s);
                     break;
                 case EVENT_TWILIGHT_CORRUPTION:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_TWILIGHT_CORRUPTION))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -SPELL_TWILIGHT_CORRUPTION))
                         DoCast(target, SPELL_TWILIGHT_CORRUPTION);
                     events.Repeat(12s);
                     break;
@@ -240,8 +240,6 @@ private:
 
 class spell_obsidius_twitchy : public AuraScript
 {
-    PrepareAuraScript(spell_obsidius_twitchy);
-
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
@@ -252,22 +250,20 @@ class spell_obsidius_twitchy : public AuraScript
             if (Unit* attacker = damage->GetAttacker())
             {
                 target->SendPlaySpellVisualKit(SPELL_VISUAL_SPOTTED, 0, 0);
-                target->getThreatManager().resetAllAggro();
-                target->AddThreat(attacker, 100000000.0f);
+                target->GetThreatManager().ResetAllThreat();
+                target->GetThreatManager().AddThreat(attacker, 100000000.0f);
             }
         }
     }
 
     void Register() override
     {
-        OnEffectProc += AuraEffectProcFn(spell_obsidius_twitchy::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+        OnEffectProc.Register(&spell_obsidius_twitchy::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
 class spell_obsidius_transformation : public SpellScript
 {
-    PrepareSpellScript(spell_obsidius_transformation);
-
     void HandleEffect(SpellEffIndex /*effIndex*/)
     {
         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; i++)
@@ -278,14 +274,12 @@ class spell_obsidius_transformation : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_obsidius_transformation::HandleEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_obsidius_transformation::HandleEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_obsidius_transformation_not_selectable : public AuraScript
 {
-    PrepareAuraScript(spell_obsidius_transformation_not_selectable);
-
     void AfterRemmove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Unit* caster = GetCaster();
@@ -304,14 +298,12 @@ class spell_obsidius_transformation_not_selectable : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_obsidius_transformation_not_selectable::AfterRemmove, EFFECT_0, SPELL_AURA_MOD_UNATTACKABLE, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_obsidius_transformation_not_selectable::AfterRemmove, EFFECT_0, SPELL_AURA_MOD_UNATTACKABLE, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_obsidius_transformation_scale : public AuraScript
 {
-    PrepareAuraScript(spell_obsidius_transformation_scale);
-
     void HandlePeriodic(AuraEffect const* aurEff)
     {
         if (SpellInfo const* spell = sSpellMgr->GetSpellInfo(GetSpellInfo()->Effects[aurEff->GetEffIndex()].BasePoints))
@@ -322,14 +314,12 @@ class spell_obsidius_transformation_scale : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_obsidius_transformation_scale::HandlePeriodic, EFFECT_2, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_obsidius_transformation_scale::HandlePeriodic, EFFECT_2, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
 class spell_obsidius_crepuscular_veil : public SpellScript
 {
-    PrepareSpellScript(spell_obsidius_crepuscular_veil);
-
     void HandleAchievement()
     {
         Unit* target = GetHitUnit();
@@ -353,14 +343,12 @@ class spell_obsidius_crepuscular_veil : public SpellScript
 
     void Register() override
     {
-        AfterHit += SpellHitFn(spell_obsidius_crepuscular_veil::HandleAchievement);
+        AfterHit.Register(&spell_obsidius_crepuscular_veil::HandleAchievement);
     }
 };
 
 class spell_obsidius_shadow_of_obsidius : public AuraScript
 {
-    PrepareAuraScript(spell_obsidius_shadow_of_obsidius);
-
     void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
         amount = -1;
@@ -373,8 +361,8 @@ class spell_obsidius_shadow_of_obsidius : public AuraScript
 
     void Register() override
     {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_obsidius_shadow_of_obsidius::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
-        OnEffectAbsorb += AuraEffectAbsorbFn(spell_obsidius_shadow_of_obsidius::Absorb, EFFECT_0);
+        DoEffectCalcAmount.Register(&spell_obsidius_shadow_of_obsidius::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
+        OnEffectAbsorb.Register(&spell_obsidius_shadow_of_obsidius::Absorb, EFFECT_0);
     }
 };
 
@@ -398,11 +386,11 @@ class achievement_ascendant_descending : public AchievementCriteriaScript
 void AddSC_boss_ascendant_lord_obsidius()
 {
     RegisterBlackrockCavernsCreatureAI(boss_ascendant_lord_obsidius);
-    RegisterAuraScript(spell_obsidius_twitchy);
+    RegisterSpellScript(spell_obsidius_twitchy);
     RegisterSpellScript(spell_obsidius_transformation);
-    RegisterAuraScript(spell_obsidius_transformation_not_selectable);
-    RegisterAuraScript(spell_obsidius_transformation_scale);
+    RegisterSpellScript(spell_obsidius_transformation_not_selectable);
+    RegisterSpellScript(spell_obsidius_transformation_scale);
     RegisterSpellScript(spell_obsidius_crepuscular_veil);
-    RegisterAuraScript(spell_obsidius_shadow_of_obsidius);
+    RegisterSpellScript(spell_obsidius_shadow_of_obsidius);
     new achievement_ascendant_descending();
 }

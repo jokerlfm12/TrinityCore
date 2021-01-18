@@ -44,6 +44,7 @@ enum GuildMisc
     GUILD_BANK_MAX_TABS                 = 8,                    // send by client for money log also
     GUILD_BANK_MAX_SLOTS                = 98,
     GUILD_BANK_MONEY_LOGS_TAB           = 100,                  // used for money log in DB
+    GUILD_MASTER_DETHRONE_INACTIVE_DAYS = 90,
     GUILD_RANKS_MIN_COUNT               = 2,
     GUILD_RANKS_MAX_COUNT               = 10,
     GUILD_RANK_NONE                     = 0xFF,
@@ -409,8 +410,10 @@ private:
         inline bool IsRankNotLower(uint8 rankId) const { return m_rankId <= rankId; }
         inline bool IsSamePlayer(ObjectGuid guid) const { return m_guid == guid; }
 
-        void UpdateBankWithdrawValue(CharacterDatabaseTransaction& trans, uint8 tabId, uint32 amount);
-        int32 GetBankWithdrawValue(uint8 tabId) const;
+        void UpdateBankTabWithdrawValue(CharacterDatabaseTransaction& trans, uint8 tabId, uint32 amount);
+        void UpdateBankMoneyWithdrawValue(CharacterDatabaseTransaction& trans, uint64 amount);
+        uint32 GetBankTabWithdrawValue(uint8 tabId) const { return m_bankWithdraw[tabId]; };
+        uint64 GetBankMoneyWithdrawValue() const { return m_bankWithdrawMoney; };
         void ResetValues(bool weekly = false);
         void ResetWeekActivityAndReputation();
 
@@ -436,7 +439,8 @@ private:
 
         std::set<uint32> m_trackedCriteriaIds;
 
-        int32 m_bankWithdraw[GUILD_BANK_MAX_TABS + 1];
+        uint32 m_bankWithdraw[GUILD_BANK_MAX_TABS];
+        uint64 m_bankWithdrawMoney;
         uint32 m_achievementPoints;
         uint64 m_totalActivity;
         uint64 m_weekActivity;
@@ -595,8 +599,7 @@ private:
         RankInfo(): m_guildId(0), m_rankId(GUILD_RANK_NONE), m_rights(GR_RIGHT_EMPTY), m_bankMoneyPerDay(0) { }
         RankInfo(ObjectGuid::LowType guildId) : m_guildId(guildId), m_rankId(GUILD_RANK_NONE), m_rights(GR_RIGHT_EMPTY), m_bankMoneyPerDay(0) { }
         RankInfo(ObjectGuid::LowType guildId, uint8 rankId, std::string const& name, uint32 rights, uint32 money) :
-            m_guildId(guildId), m_rankId(rankId), m_name(name), m_rights(rights),
-            m_bankMoneyPerDay(rankId != GR_GUILDMASTER ? money : GUILD_WITHDRAW_MONEY_UNLIMITED) { }
+            m_guildId(guildId), m_rankId(rankId), m_name(name), m_rights(rights), m_bankMoneyPerDay(money) { }
 
         void LoadFromDB(Field* fields);
         void SaveToDB(CharacterDatabaseTransaction& trans) const;
@@ -609,7 +612,10 @@ private:
         uint32 GetRights() const { return m_rights; }
         void SetRights(uint32 rights);
 
-        int32 GetBankMoneyPerDay() const { return m_bankMoneyPerDay; }
+        uint32 GetBankMoneyPerDay() const
+        {
+            return m_rankId != GR_GUILDMASTER ? m_bankMoneyPerDay : GUILD_WITHDRAW_MONEY_UNLIMITED;
+        }
 
         void SetBankMoneyPerDay(uint32 money);
 
@@ -789,7 +795,7 @@ public:
     void HandleSetMOTD(WorldSession* session, std::string const& motd);
     void HandleSetInfo(WorldSession* session, std::string const& info);
     void HandleSetEmblem(WorldSession* session, EmblemInfo const& emblemInfo);
-    void HandleSetNewGuildMaster(WorldSession* session, std::string const& name);
+    void HandleSetNewGuildMaster(WorldSession* session, std::string const& name, bool isSelfPromote);
     void HandleSetBankTabInfo(WorldSession* session, uint8 tabId, std::string const& name, std::string const& icon);
     void HandleSetMemberNote(WorldSession* session, std::string const& note, ObjectGuid guid, bool isPublic);
     void HandleSetRankInfo(WorldSession* session, uint8 rankId, std::string const& name, uint32 rights, uint32 moneyPerDay, GuildBankRightsAndSlotsVec const& rightsAndSlots);
@@ -983,23 +989,23 @@ private:
     bool _IsLeader(Player* player) const;
     void _DeleteBankItems(CharacterDatabaseTransaction& trans, bool removeItemsFromDB = false);
     bool _ModifyBankMoney(CharacterDatabaseTransaction& trans, uint64 amount, bool add);
-    void _SetLeaderGUID(Member* pLeader);
+    void _SetLeader(CharacterDatabaseTransaction& trans, Member* pLeader);
 
     void _SetRankBankMoneyPerDay(uint8 rankId, uint32 moneyPerDay);
     void _SetRankBankTabRightsAndSlots(uint8 rankId, GuildBankRightsAndSlots rightsAndSlots, bool saveToDB = true);
     int8 _GetRankBankTabRights(uint8 rankId, uint8 tabId) const;
     uint32 _GetRankRights(uint8 rankId) const;
-    int32 _GetRankBankMoneyPerDay(uint8 rankId) const;
+    uint32 _GetRankBankMoneyPerDay(uint8 rankId) const;
     int32 _GetRankBankTabSlotsPerDay(uint8 rankId, uint8 tabId) const;
     std::string _GetRankName(uint8 rankId) const;
 
     int32 _GetMemberRemainingSlots(Member const* member, uint8 tabId) const;
-    int32 _GetMemberRemainingMoney(Member const* member) const;
+    int64 _GetMemberRemainingMoney(Member const* member) const;
     void _UpdateMemberWithdrawSlots(CharacterDatabaseTransaction& trans, ObjectGuid guid, uint8 tabId);
     bool _MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
 
     void _LogEvent(GuildEventLogTypes eventType, ObjectGuid::LowType playerGuid1, ObjectGuid::LowType playerGuid2 = 0, uint8 newRank = 0);
-    void _LogBankEvent(CharacterDatabaseTransaction& trans, GuildBankEventLogTypes eventType, uint8 tabId, ObjectGuid::LowType playerGuid, uint32 itemOrMoney, uint16 itemStackCount = 0, uint8 destTabId = 0);
+    void _LogBankEvent(CharacterDatabaseTransaction& trans, GuildBankEventLogTypes eventType, uint8 tabId, ObjectGuid::LowType playerGuid, uint64 itemOrMoney, uint16 itemStackCount = 0, uint8 destTabId = 0);
 
     Item* _GetItem(uint8 tabId, uint8 slotId) const;
     void _RemoveItem(CharacterDatabaseTransaction& trans, uint8 tabId, uint8 slotId);

@@ -131,9 +131,10 @@ void EscortAI::ReturnToLastPoint()
 void EscortAI::EnterEvadeMode(EvadeReason /*why*/)
 {
     me->RemoveAllAuras();
-    me->DeleteThreatList();
     me->CombatStop(true);
     me->SetLootRecipient(nullptr);
+
+    EngagementOver();
 
     if (HasEscortState(STATE_ESCORT_ESCORTING))
     {
@@ -145,7 +146,7 @@ void EscortAI::EnterEvadeMode(EvadeReason /*why*/)
     {
         me->GetMotionMaster()->MoveTargetedHome();
         if (_hasImmuneToNPCFlags)
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
+            me->SetImmuneToNPC(true);
         Reset();
     }
 }
@@ -291,13 +292,13 @@ void EscortAI::MovementInform(uint32 type, uint32 id)
     }
     else if (type == WAYPOINT_MOTION_TYPE)
     {
-        ASSERT(id < _path.nodes.size(), "EscortAI::MovementInform: referenced movement id (%u) points to non-existing node in loaded path", id);
-        WaypointNode waypoint = _path.nodes[id];
+        ASSERT(id < _path.Nodes.size(), "EscortAI::MovementInform: referenced movement id (%u) points to non-existing node in loaded path", id);
+        WaypointNode waypoint = _path.Nodes[id];
 
-        TC_LOG_DEBUG("scripts", "EscortAI::MovementInform: waypoint node %u reached", waypoint.id);
+        TC_LOG_DEBUG("scripts", "EscortAI::MovementInform: waypoint node %u reached", waypoint.Id);
 
         // last point
-        if (id == _path.nodes.size() - 1)
+        if (id == _path.Nodes.size() - 1)
         {
             _started = false;
             _ended = true;
@@ -319,16 +320,16 @@ void EscortAI::AddWaypoint(uint32 id, float x, float y, float z, float orientati
     Trinity::NormalizeMapCoord(y);
 
     WaypointNode waypoint;
-    waypoint.id = id;
-    waypoint.x = x;
-    waypoint.y = y;
-    waypoint.z = z;
-    waypoint.orientation = orientation;
-    waypoint.moveType = _running ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
-    waypoint.delay = waitTime;
-    waypoint.eventId = 0;
-    waypoint.eventChance = 100;
-    _path.nodes.push_back(std::move(waypoint));
+    waypoint.Id = id;
+    waypoint.X = x;
+    waypoint.Y = y;
+    waypoint.Z = z;
+    waypoint.Orientation = orientation;
+    waypoint.MoveType = _running ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
+    waypoint.Delay = waitTime;
+    waypoint.EventId = 0;
+    waypoint.EventChance = 100;
+    _path.Nodes.push_back(std::move(waypoint));
 
     _manualPath = true;
 }
@@ -339,14 +340,14 @@ void EscortAI::FillPointMovementListForCreature()
     if (!path)
         return;
 
-    for (WaypointNode const& value : path->nodes)
+    for (WaypointNode const& value : path->Nodes)
     {
         WaypointNode node = value;
-        Trinity::NormalizeMapCoord(node.x);
-        Trinity::NormalizeMapCoord(node.y);
-        node.moveType = _running ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
+        Trinity::NormalizeMapCoord(node.X);
+        Trinity::NormalizeMapCoord(node.Y);
+        node.MoveType = _running ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
 
-        _path.nodes.push_back(std::move(node));
+        _path.Nodes.push_back(std::move(node));
     }
 }
 
@@ -355,8 +356,8 @@ void EscortAI::SetRun(bool on)
     if (on == _running)
         return;
 
-    for (auto& node : _path.nodes)
-        node.moveType = on ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
+    for (auto& node : _path.Nodes)
+        node.MoveType = on ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
 
     me->SetWalk(!on);
 
@@ -394,7 +395,7 @@ void EscortAI::Start(bool isActiveAttacker /* = true*/, bool run /* = false */, 
     if (!_manualPath && resetWaypoints)
         FillPointMovementListForCreature();
 
-    if (_path.nodes.empty())
+    if (_path.Nodes.empty())
     {
         TC_LOG_ERROR("scripts", "EscortAI::Start: (script: %s, creature entry: %u) starts with 0 waypoints (possible missing entry in script_waypoint. Quest: %u).", me->GetScriptName().c_str(), me->GetEntry(), quest ? quest->GetQuestId() : 0);
         return;
@@ -415,13 +416,13 @@ void EscortAI::Start(bool isActiveAttacker /* = true*/, bool run /* = false */, 
 
     // disable npcflags
     me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
-    if (me->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC))
+    if (me->IsImmuneToNPC())
     {
         _hasImmuneToNPCFlags = true;
-        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
+        me->SetImmuneToNPC(false);
     }
 
-    TC_LOG_DEBUG("scripts", "EscortAI::Start: (script: %s, creature entry: %u) started with %u waypoints. ActiveAttacker = %d, Run = %d, Player = %s", me->GetScriptName().c_str(), me->GetEntry(), uint32(_path.nodes.size()), _activeAttacker, _running, _playerGUID.ToString().c_str());
+    TC_LOG_DEBUG("scripts", "EscortAI::Start: (script: %s, creature entry: %u) started with %u waypoints. ActiveAttacker = %d, Run = %d, Player = %s", me->GetScriptName().c_str(), me->GetEntry(), uint32(_path.Nodes.size()), _activeAttacker, _running, _playerGUID.ToString().c_str());
 
     // set initial speed
     me->SetWalk(!_running);

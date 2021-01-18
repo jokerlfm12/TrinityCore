@@ -97,7 +97,7 @@ class boss_baron_geddon : public CreatureScript
                             events.ScheduleEvent(EVENT_INFERNO, 45000);
                             break;
                         case EVENT_IGNITE_MANA:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_IGNITE_MANA))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_IGNITE_MANA))
                                 DoCast(target, SPELL_IGNITE_MANA);
                             events.ScheduleEvent(EVENT_IGNITE_MANA, 30000);
                             break;
@@ -131,18 +131,16 @@ class spell_baron_geddon_inferno : public SpellScriptLoader
 
         class spell_baron_geddon_inferno_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_baron_geddon_inferno_AuraScript);
-
             void OnPeriodic(AuraEffect const* aurEff)
             {
                 PreventDefaultAction();
                 int32 damageForTick[8] = { 500, 500, 1000, 1000, 2000, 2000, 3000, 5000 };
-                GetTarget()->CastCustomSpell(SPELL_INFERNO_DMG, SPELLVALUE_BASE_POINT0, damageForTick[aurEff->GetTickNumber() - 1], (Unit*)nullptr, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                GetTarget()->CastSpell(nullptr, SPELL_INFERNO_DMG, CastSpellExtraArgs(aurEff).AddSpellBP0(damageForTick[aurEff->GetTickNumber() - 1]));
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_baron_geddon_inferno_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_baron_geddon_inferno_AuraScript::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 

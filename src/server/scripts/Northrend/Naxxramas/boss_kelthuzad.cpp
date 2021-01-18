@@ -189,7 +189,7 @@ class KelThuzadCharmedPlayerAI : public SimpleCharmedPlayerAI
             {
                 if (Unit* target = charmer->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0, CharmedPlayerTargetSelectPred()))
                     return target;
-                if (Unit* target = charmer->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_CHAINS))
+                if (Unit* target = charmer->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_CHAINS))
                     return target;
             }
             return nullptr;
@@ -224,15 +224,20 @@ public:
                     return;
                 _Reset();
                 me->SetReactState(REACT_PASSIVE);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToPC(true);
                 _skeletonCount = 0;
                 _bansheeCount = 0;
                 _abominationCount = 0;
                 _abominationDeathCount = 0;
                 _phaseThree = false;
             }
+
             void EnterEvadeMode(EvadeReason /*why*/) override
             {
+                if (!me->IsAlive())
+                    return;
+
                 for (NAXData64 portalData : portalList)
                     if (GameObject* portal = ObjectAccessor::GetGameObject(*me, instance->GetGuidData(portalData)))
                         portal->SetGoState(GO_STATE_READY);
@@ -283,10 +288,9 @@ public:
                 {
                     Talk(SAY_CHAINS);
                     std::list<Unit*> targets;
-                    SelectTargetList(targets, 3, SELECT_TARGET_RANDOM, 0.0f, true);
+                    SelectTargetList(targets, 3, SELECT_TARGET_RANDOM, 0, 0.0f, true, false);
                     for (Unit* target : targets)
-                        if (me->GetVictim() != target) // skip MT
-                            DoCast(target, SPELL_CHAINS);
+                        DoCast(target, SPELL_CHAINS);
                 }
             }
 
@@ -425,8 +429,9 @@ public:
                         case EVENT_PHASE_TWO:
                             me->CastStop();
                             events.SetPhase(PHASE_TWO);
-                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
-                            me->getThreatManager().resetAllAggro();
+                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                            me->SetImmuneToPC(false);
+                            ResetThreatList();
                             me->SetReactState(REACT_AGGRESSIVE);
                             Talk(EMOTE_PHASE_TWO);
 
@@ -522,7 +527,7 @@ public:
                     case ACTION_BEGIN_ENCOUNTER:
                         if (instance->GetBossState(BOSS_KELTHUZAD) != NOT_STARTED)
                             return;
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetImmuneToPC(false);
                         instance->SetBossState(BOSS_KELTHUZAD, IN_PROGRESS);
                         events.SetPhase(PHASE_ONE);
                         DoZoneInCombat();
@@ -806,9 +811,10 @@ public:
                         me->RemoveAllAuras();
                         me->CombatStop();
                         me->StopMoving();
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetImmuneToPC(true);
                         me->DespawnOrUnsummon(30 * IN_MILLISECONDS); // just in case anything interrupts the movement
                         me->GetMotionMaster()->MoveTargetedHome();
+                        break;
                     default:
                         break;
                 }
@@ -879,8 +885,6 @@ public:
 
     class spell_kelthuzad_chains_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_kelthuzad_chains_AuraScript);
-
         void HandleApply(AuraEffect const* /*eff*/, AuraEffectHandleModes /*mode*/)
         {
             Unit* target = GetTarget();
@@ -899,8 +903,8 @@ public:
 
         void Register() override
         {
-            AfterEffectApply += AuraEffectApplyFn(spell_kelthuzad_chains_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
-            AfterEffectRemove += AuraEffectApplyFn(spell_kelthuzad_chains_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectApply.Register(&spell_kelthuzad_chains_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_kelthuzad_chains_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_AOE_CHARM, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -917,8 +921,6 @@ public:
 
     class spell_kelthuzad_detonate_mana_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_kelthuzad_detonate_mana_AuraScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_MANA_DETONATION_DAMAGE });
@@ -932,13 +934,13 @@ public:
             if (int32 mana = int32(target->GetMaxPower(POWER_MANA) / 10))
             {
                 mana = target->ModifyPower(POWER_MANA, -mana);
-                target->CastCustomSpell(SPELL_MANA_DETONATION_DAMAGE, SPELLVALUE_BASE_POINT0, -mana * 10, target, true, nullptr, aurEff);
+                target->CastSpell(target, SPELL_MANA_DETONATION_DAMAGE, CastSpellExtraArgs(aurEff).AddSpellBP0(int32(-mana * 10)));
             }
         }
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_kelthuzad_detonate_mana_AuraScript::HandleScript, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+            OnEffectPeriodic.Register(&spell_kelthuzad_detonate_mana_AuraScript::HandleScript, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
         }
     };
 

@@ -93,9 +93,9 @@ struct boss_karsh_steelbender : public BossAI
         DoCastSelf(SPELL_SUPERHEATED_QUICKSILVER_ARMOR_PROC_AURA);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_CLEAVE, 10s, 12s);
@@ -171,8 +171,6 @@ struct boss_karsh_steelbender : public BossAI
 
 class spell_karsh_quicksilver_armor : public AuraScript
 {
-    PrepareAuraScript(spell_karsh_quicksilver_armor);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -198,14 +196,12 @@ class spell_karsh_quicksilver_armor : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_karsh_quicksilver_armor::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_karsh_quicksilver_armor::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
 class spell_karsh_superheated_quicksilver_armor : public SpellScript
 {
-    PrepareSpellScript(spell_karsh_superheated_quicksilver_armor);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HEAT_WAVE });
@@ -222,20 +218,18 @@ class spell_karsh_superheated_quicksilver_armor : public SpellScript
             SpellInfo const* spell = sSpellMgr->AssertSpellInfo(SPELL_HEAT_WAVE);
             uint8 stacks = superheatedArmor->GetStackAmount();
             int32 bp = spell->Effects[EFFECT_0].CalcValue() * stacks;
-            target->CastCustomSpell(SPELL_HEAT_WAVE, SPELLVALUE_BASE_POINT0, bp, target, true, nullptr);
+            target->CastSpell(target, SPELL_HEAT_WAVE, CastSpellExtraArgs(true).AddSpellBP0(bp));
         }
     }
 
     void Register() override
     {
-        AfterHit += SpellHitFn(spell_karsh_superheated_quicksilver_armor::HandleHeatWave);
+        AfterHit.Register(&spell_karsh_superheated_quicksilver_armor::HandleHeatWave);
     }
 };
 
 class spell_karsh_superheated_quicksilver_armor_AuraScript : public AuraScript
 {
-    PrepareAuraScript(spell_karsh_superheated_quicksilver_armor_AuraScript);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -267,15 +261,13 @@ class spell_karsh_superheated_quicksilver_armor_AuraScript : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_karsh_superheated_quicksilver_armor_AuraScript::AfterApply, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_karsh_superheated_quicksilver_armor_AuraScript::AfterRemmove, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_karsh_superheated_quicksilver_armor_AuraScript::AfterApply, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_karsh_superheated_quicksilver_armor_AuraScript::AfterRemmove, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_karsh_superheated_quicksilver_armor_proc : public AuraScript
 {
-    PrepareAuraScript(spell_karsh_superheated_quicksilver_armor_proc);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_SUPERHEATED_QUICKSILVER_ARMOR });
@@ -299,14 +291,14 @@ class spell_karsh_superheated_quicksilver_armor_proc : public AuraScript
                 return;
 
             int32 bp = spell->Effects[EFFECT_0].CalcValue() * stacks;
-            target->CastCustomSpell(spell->Id, SPELLVALUE_BASE_POINT0, bp, eventInfo.GetProcTarget(), true, nullptr, aurEff);
+            target->CastSpell(eventInfo.GetProcTarget(), spell->Id, CastSpellExtraArgs(aurEff).AddSpellBP0(bp));
         }
     }
 
     void Register() override
     {
-        DoCheckProc += AuraCheckProcFn(spell_karsh_superheated_quicksilver_armor_proc::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_karsh_superheated_quicksilver_armor_proc::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+        DoCheckProc.Register(&spell_karsh_superheated_quicksilver_armor_proc::CheckProc);
+        OnEffectProc.Register(&spell_karsh_superheated_quicksilver_armor_proc::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
     }
 };
 
@@ -330,8 +322,8 @@ class achievement_too_hot_to_handle : public AchievementCriteriaScript
 void AddSC_boss_karsh_steelbender()
 {
     RegisterBlackrockCavernsCreatureAI(boss_karsh_steelbender);
-    RegisterAuraScript(spell_karsh_quicksilver_armor);
+    RegisterSpellScript(spell_karsh_quicksilver_armor);
     RegisterSpellAndAuraScriptPair(spell_karsh_superheated_quicksilver_armor, spell_karsh_superheated_quicksilver_armor_AuraScript);
-    RegisterAuraScript(spell_karsh_superheated_quicksilver_armor_proc);
+    RegisterSpellScript(spell_karsh_superheated_quicksilver_armor_proc);
     new achievement_too_hot_to_handle();
 }

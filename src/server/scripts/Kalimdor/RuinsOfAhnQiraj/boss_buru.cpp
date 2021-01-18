@@ -86,7 +86,7 @@ class boss_buru : public CreatureScript
 
             void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(EMOTE_TARGET, who);
                 DoCast(me, SPELL_THORNS);
 
@@ -122,7 +122,7 @@ class boss_buru : public CreatureScript
 
                 if (Unit* victim = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                 {
-                    DoResetThreat();
+                    ResetThreatList();
                     AttackStart(victim);
                     Talk(EMOTE_TARGET, victim);
                 }
@@ -249,8 +249,6 @@ class spell_egg_explosion : public SpellScriptLoader
 
         class spell_egg_explosion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_egg_explosion_SpellScript);
-
             void HandleAfterCast()
             {
                 if (Creature* buru = GetCaster()->FindNearestCreature(NPC_BURU, 5.f))
@@ -265,8 +263,8 @@ class spell_egg_explosion : public SpellScriptLoader
 
             void Register() override
             {
-                AfterCast += SpellCastFn(spell_egg_explosion_SpellScript::HandleAfterCast);
-                OnEffectHitTarget += SpellEffectFn(spell_egg_explosion_SpellScript::HandleDummyHitTarget, EFFECT_0, SPELL_EFFECT_DUMMY);
+                AfterCast.Register(&spell_egg_explosion_SpellScript::HandleAfterCast);
+                OnEffectHitTarget.Register(&spell_egg_explosion_SpellScript::HandleDummyHitTarget, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

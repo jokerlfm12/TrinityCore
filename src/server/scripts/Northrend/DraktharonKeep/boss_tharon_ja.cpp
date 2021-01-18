@@ -88,10 +88,10 @@ class boss_tharon_ja : public CreatureScript
                 me->RestoreDisplayId();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_AGGRO);
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 events.ScheduleEvent(EVENT_DECAY_FLESH, 20000);
                 events.ScheduleEvent(EVENT_CURSE_OF_LIFE, 1000);
@@ -213,8 +213,6 @@ class spell_tharon_ja_clear_gift_of_tharon_ja : public SpellScriptLoader
 
         class spell_tharon_ja_clear_gift_of_tharon_ja_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_tharon_ja_clear_gift_of_tharon_ja_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_GIFT_OF_THARON_JA });
@@ -228,7 +226,7 @@ class spell_tharon_ja_clear_gift_of_tharon_ja : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_tharon_ja_clear_gift_of_tharon_ja_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_tharon_ja_clear_gift_of_tharon_ja_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

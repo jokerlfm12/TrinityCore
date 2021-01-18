@@ -436,9 +436,10 @@ struct TC_GAME_API InstanceSpawnGroupInfo
     {
         FLAG_ACTIVATE_SPAWN = 0x01,
         FLAG_BLOCK_SPAWN    = 0x02,
-        FLAG_FORCE_DESPAWN  = 0x04,
+        FLAG_ALLIANCE_ONLY  = 0x04,
+        FLAG_HORDE_ONLY     = 0x08,
 
-        FLAG_ALL = (FLAG_ACTIVATE_SPAWN | FLAG_BLOCK_SPAWN | FLAG_FORCE_DESPAWN)
+        FLAG_ALL = (FLAG_ACTIVATE_SPAWN | FLAG_BLOCK_SPAWN | FLAG_ALLIANCE_ONLY | FLAG_HORDE_ONLY)
     };
     uint8 BossStateId;
     uint8 BossStates;
@@ -569,7 +570,7 @@ struct GossipMenuItemsLocale
     std::vector<std::string> BoxText;
 };
 
-typedef std::unordered_map<uint32, GossipMenuItemsLocale> GossipMenuItemsLocaleContainer;
+typedef std::unordered_map<std::pair<uint32, uint32>, GossipMenuItemsLocale> GossipMenuItemsLocaleContainer;
 
 struct PointOfInterestLocale
 {
@@ -791,7 +792,6 @@ struct GossipMenuItems
     uint32              BoxMoney;
     std::string         BoxText;
     uint32              BoxBroadcastTextID;
-    uint32              TrainerId;
     ConditionContainer  Conditions;
 };
 
@@ -809,32 +809,42 @@ typedef std::multimap<uint32, GossipMenuItems> GossipMenuItemsContainer;
 typedef std::pair<GossipMenuItemsContainer::const_iterator, GossipMenuItemsContainer::const_iterator> GossipMenuItemsMapBounds;
 typedef std::pair<GossipMenuItemsContainer::iterator, GossipMenuItemsContainer::iterator> GossipMenuItemsMapBoundsNonConst;
 
-struct QuestPOIPoint
+struct QuestPOIBlobPoint
 {
-    int32 x;
-    int32 y;
-
-    QuestPOIPoint() : x(0), y(0) { }
-    QuestPOIPoint(int32 _x, int32 _y) : x(_x), y(_y) { }
+    int32 X = 0;
+    int32 Y = 0;
 };
 
-struct QuestPOI
+struct QuestPOIBlobData
 {
-    uint32 Id;
-    int32 ObjectiveIndex;
-    uint32 MapId;
-    uint32 AreaId;
-    uint32 FloorId;
-    uint32 Unk3;
-    uint32 Unk4;
-    std::vector<QuestPOIPoint> points;
-
-    QuestPOI() : Id(0), ObjectiveIndex(0), MapId(0), AreaId(0), FloorId(0), Unk3(0), Unk4(0) { }
-    QuestPOI(uint32 id, int32 objIndex, uint32 mapId, uint32 areaId, uint32 floorId, uint32 unk3, uint32 unk4) : Id(id), ObjectiveIndex(objIndex), MapId(mapId), AreaId(areaId), FloorId(floorId), Unk3(unk3), Unk4(unk4) { }
+    uint32 BlobIndex = 0;
+    int32 ObjectiveIndex = 0;
+    uint32 MapID = 0;
+    uint32 WorldMapAreaID = 0;
+    uint32 Floor = 0;
+    uint32 Priority = 0;
+    uint32 Flags = 0;
+    std::vector<QuestPOIBlobPoint> QuestPOIBlobPointStats;
 };
 
-typedef std::vector<QuestPOI> QuestPOIVector;
-typedef std::unordered_map<uint32, QuestPOIVector> QuestPOIContainer;
+struct QuestPOIData
+{
+    uint32 QuestID = 0;
+    std::vector<QuestPOIBlobData> QuestPOIBlobDataStats;
+};
+
+struct QuestPOIWrapper
+{
+    QuestPOIData POIData;
+    ByteBuffer QueryDataBuffer;
+
+    void InitializeQueryData();
+    ByteBuffer BuildQueryData() const;
+    
+    QuestPOIWrapper() : QueryDataBuffer(0) { }
+};
+
+typedef std::unordered_map<uint32, QuestPOIWrapper> QuestPOIContainer;
 
 struct QuestGreeting
 {
@@ -934,6 +944,16 @@ struct PhaseAreaInfo
     ConditionContainer Conditions;
 };
 
+enum QueryDataGroup
+{
+    QUERY_DATA_CREATURES        = 0x01,
+    QUERY_DATA_GAMEOBJECTS      = 0x02,
+    QUERY_DATA_QUESTS           = 0x04,
+    QUERY_DATA_POIS             = 0x08,
+
+    QUERY_DATA_ALL              = 0xFF
+};
+
 class PlayerDumpReader;
 
 class TC_GAME_API ObjectMgr
@@ -973,7 +993,7 @@ class TC_GAME_API ObjectMgr
 
         GameObjectTemplate const* GetGameObjectTemplate(uint32 entry) const;
         GameObjectTemplateContainer const* GetGameObjectTemplates() const { return &_gameObjectTemplateStore; }
-        int LoadReferenceVendor(int32 vendor, int32 item, uint8 type, std::set<uint32> *skip_vendors);
+        int LoadReferenceVendor(int32 vendor, int32 item, std::set<uint32>* skip_vendors);
 
         void LoadGameObjectTemplate();
         void LoadGameObjectTemplateAddons();
@@ -1103,7 +1123,7 @@ class TC_GAME_API ObjectMgr
             return nullptr;
         }
 
-        QuestPOIVector const* GetQuestPOIVector(uint32 questId)
+        QuestPOIWrapper const* GetQuestPOIWrapper(uint32 questId)
         {
             QuestPOIContainer::const_iterator itr = _questPOIStore.find(questId);
             if (itr != _questPOIStore.end())
@@ -1224,7 +1244,9 @@ class TC_GAME_API ObjectMgr
 
         void LoadVendors();
         void LoadTrainers();
-        void LoadCreatureDefaultTrainers();
+        void LoadCreatureTrainers();
+
+        void InitializeQueriesData(QueryDataGroup mask);
 
         void LoadPhases();
         void UnloadPhaseConditions();
@@ -1399,9 +1421,9 @@ class TC_GAME_API ObjectMgr
             if (itr == _pageTextLocaleStore.end()) return nullptr;
             return &itr->second;
         }
-        GossipMenuItemsLocale const* GetGossipMenuItemsLocale(uint32 entry) const
+        GossipMenuItemsLocale const* GetGossipMenuItemsLocale(uint32 menuId, uint32 optionIndex) const
         {
-            GossipMenuItemsLocaleContainer::const_iterator itr = _gossipMenuItemsLocaleStore.find(entry);
+            GossipMenuItemsLocaleContainer::const_iterator itr = _gossipMenuItemsLocaleStore.find(std::make_pair(menuId, optionIndex));
             if (itr == _gossipMenuItemsLocaleStore.end()) return nullptr;
             return &itr->second;
         }
@@ -1473,7 +1495,11 @@ class TC_GAME_API ObjectMgr
         bool DeleteGameTele(std::string const& name);
 
         Trainer::Trainer const* GetTrainer(uint32 trainerId) const;
-        uint32 GetCreatureDefaultTrainer(uint32 creatureId) const;
+        uint32 GetCreatureDefaultTrainer(uint32 creatureId) const
+        {
+            return GetCreatureTrainerForGossipOption(creatureId, 0, 0);
+        }
+        uint32 GetCreatureTrainerForGossipOption(uint32 creatureId, uint32 gossipMenuId, uint32 gossipOptionIndex) const;
 
         VendorItemData const* GetNpcVendorItemList(uint32 entry) const
         {
@@ -1493,9 +1519,9 @@ class TC_GAME_API ObjectMgr
             return nullptr;
         }
 
-        void AddVendorItem(uint32 entry, uint32 item, int32 maxcount, uint32 incrtime, uint32 extendedCost, uint8 type, bool persist = true); // for event
+        void AddVendorItem(uint32 entry, VendorItem const& vItem, bool persist = true); // for event
         bool RemoveVendorItem(uint32 entry, uint32 item, uint8 type, bool persist = true); // for event
-        bool IsVendorItemValid(uint32 vendor_entry, uint32 id, int32 maxcount, uint32 ptime, uint32 ExtendedCost, uint8 type, Player* player = nullptr, std::set<uint32>* skip_vendors = nullptr, uint32 ORnpcflag = 0) const;
+        bool IsVendorItemValid(uint32 vendor_entry, VendorItem const& vItem, Player* player = nullptr, std::set<uint32>* skip_vendors = nullptr, uint32 ORnpcflag = 0) const;
 
         void LoadScriptNames();
         ScriptNameContainer const& GetAllScriptNames() const;
@@ -1734,7 +1760,7 @@ class TC_GAME_API ObjectMgr
 
         CacheVendorItemContainer _cacheVendorItemStore;
         std::unordered_map<uint32, Trainer::Trainer> _trainers;
-        std::unordered_map<uint32, uint32> _creatureDefaultTrainers;
+        std::map<std::tuple<uint32, uint32, uint32>, uint32> _creatureDefaultTrainers;
 
         GraveyardOrientationContainer _graveyardOrientations;
 

@@ -112,9 +112,9 @@ public:
             instance->SetBossState(BOSS_RAZUVIOUS, DONE);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             me->StopMoving();
             summons.DoZoneInCombat();
             Talk(SAY_AGGRO);
@@ -188,7 +188,7 @@ class npc_dk_understudy : public CreatureScript
             {
                 me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_ONESHOT_NONE);
                 if (Creature* razuvious = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_RAZUVIOUS)))
-                    razuvious->AI()->DoZoneInCombat(nullptr, 250.0f);
+                    razuvious->AI()->DoZoneInCombat();
             }
 
             void JustReachedHome() override
@@ -230,8 +230,8 @@ class npc_dk_understudy : public CreatureScript
                 {
                     me->SetReactState(REACT_AGGRESSIVE);
                     if (Unit* charmer = ObjectAccessor::GetUnit(*me, _charmer))
-                        me->AddThreat(charmer, 100000.0f);
-                    DoZoneInCombat(nullptr, 250.0f);
+                        AddThreat(charmer, 100000.0f);
+                    DoZoneInCombat();
                 }
             }
         private:

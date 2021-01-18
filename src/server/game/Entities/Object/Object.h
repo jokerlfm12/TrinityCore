@@ -89,7 +89,7 @@ class TC_GAME_API Object
         void BuildValuesUpdateBlockForPlayer(UpdateData* data, Player* target) const;
         void BuildOutOfRangeUpdateBlock(UpdateData* data) const;
 
-        virtual void DestroyForPlayer(Player* target, bool onDeath = false) const;
+        virtual void DestroyForPlayer(Player* target, bool isDead = false) const;
 
         int32 GetInt32Value(uint16 index) const;
         uint32 GetUInt32Value(uint16 index) const;
@@ -308,10 +308,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
 
         uint32 GetInstanceId() const { return m_InstanceId; }
 
-        bool IsInPhase(WorldObject const* obj) const
-        {
-            return GetPhaseShift().CanSee(obj->GetPhaseShift());
-        }
+        bool IsInPhase(WorldObject const* obj) const { return obj ? GetPhaseShift().CanSee(obj->GetPhaseShift()) : false; }
 
         PhaseShift& GetPhaseShift() { return _phaseShift; }
         PhaseShift const& GetPhaseShift() const { return _phaseShift; }
@@ -327,6 +324,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         void GetZoneAndAreaId(uint32& zoneid, uint32& areaid) const { zoneid = m_zoneId, areaid = m_areaId; }
         bool IsOutdoors() const { return m_outdoors; }
         ZLiquidStatus GetLiquidStatus() const { return m_liquidStatus; }
+        uint32 GetWMOGroupId() const { return m_wmoGroupID; }
 
         InstanceScript* GetInstanceScript() const;
 
@@ -350,7 +348,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         bool IsWithinDist2d(Position const* pos, float dist) const;
         // use only if you will sure about placing both object at same map
         bool IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D = true) const;
-        bool IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D = true) const;
+        bool IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D = true, bool incOwnRadius = true, bool incTargetRadius = true) const;
         bool IsWithinLOS(float x, float y, float z, LineOfSightChecks checks = LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags ignoreFlags = VMAP::ModelIgnoreFlags::Nothing) const;
         bool IsWithinLOSInMap(WorldObject const* obj, LineOfSightChecks checks = LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags ignoreFlags = VMAP::ModelIgnoreFlags::Nothing) const;
         Position GetHitSpherePointFor(Position const& dest) const;
@@ -440,9 +438,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         void AddToNotify(uint16 f) { m_notifyflags |= f;}
         bool isNeedNotify(uint16 f) const { return (m_notifyflags & f) != 0; }
         uint16 GetNotifyFlags() const { return m_notifyflags; }
-        bool NotifyExecuted(uint16 f) const { return (m_executed_notifies & f) != 0; }
-        void SetNotified(uint16 f) { m_executed_notifies |= f;}
-        void ResetAllNotifies() { m_notifyflags = 0; m_executed_notifies = 0; }
+        void ResetAllNotifies() { m_notifyflags = 0; }
 
         bool isActiveObject() const { return m_isActive; }
         void setActive(bool isActiveObject);
@@ -507,6 +503,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         float m_staticFloorZ;
         bool m_outdoors;
         ZLiquidStatus m_liquidStatus;
+        uint32 m_wmoGroupID;
 
         //these functions are used mostly for Relocate() and Corpse/Player specific stuff...
         //use them ONLY in LoadFromDB()/Create() funcs and nowhere else!
@@ -529,8 +526,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
         int32 _dbPhase;
 
         uint16 m_notifyflags;
-        uint16 m_executed_notifies;
-        virtual bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const;
+        virtual bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, bool incOwnRadius = true, bool incTargetRadius = true) const;
 
         bool CanNeverSee(WorldObject const* obj) const;
         virtual bool CanAlwaysSee(WorldObject const* /*obj*/) const { return false; }

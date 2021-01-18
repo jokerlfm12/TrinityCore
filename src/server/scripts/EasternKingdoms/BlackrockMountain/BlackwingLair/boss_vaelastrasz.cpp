@@ -93,9 +93,9 @@ public:
             Initialize();
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
 
             DoCast(me, SPELL_ESSENCEOFTHERED);
             me->SetHealth(me->CountPctFromMaxHealth(30));
@@ -252,8 +252,6 @@ public:
 
     class spell_vael_burning_adrenaline_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_vael_burning_adrenaline_AuraScript);
-
         void OnAuraRemoveHandler(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             //The tooltip says the on death the AoE occurs. According to information: http://qaliaresponse.stage.lithium.com/t5/WoW-Mayhem/Surviving-Burning-Adrenaline-For-tanks/td-p/48609
@@ -264,7 +262,7 @@ public:
 
         void Register() override
         {
-            AfterEffectRemove += AuraEffectRemoveFn(spell_vael_burning_adrenaline_AuraScript::OnAuraRemoveHandler, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_vael_burning_adrenaline_AuraScript::OnAuraRemoveHandler, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
         }
     };
 

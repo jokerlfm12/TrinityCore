@@ -162,13 +162,9 @@ public:
 
         bool IsInCombatWithPlayer() const
         {
-            std::list<HostileReference*> const& refs = me->getThreatManager().getThreatList();
-            for (HostileReference const* hostileRef : refs)
-            {
-                if (Unit const* target = hostileRef->getTarget())
-                    if (target->IsControlledByPlayer())
-                        return true;
-            }
+            for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
+                if (pair.second->GetOther(me)->IsControlledByPlayer())
+                    return true;
             return false;
         }
 
@@ -178,10 +174,10 @@ public:
                 return;
 
             _step = step;
+            me->SetReactState(REACT_PASSIVE);
             me->SetHomePosition(hadronoxStep[step]);
             me->GetMotionMaster()->Clear();
             me->AttackStop();
-            SetCombatMovement(false);
             me->GetMotionMaster()->MovePoint(0, hadronoxStep[step]);
         }
 
@@ -200,8 +196,7 @@ public:
         {
             if (type != POINT_MOTION_TYPE)
                 return;
-            SetCombatMovement(true);
-            AttackStart(me->GetVictim());
+            me->SetReactState(REACT_AGGRESSIVE);
             if (_step < NUM_STEPS-1)
                 return;
             DoCastAOE(SPELL_WEB_FRONT_DOORS);
@@ -281,6 +276,7 @@ public:
         void InitializeAI() override
         {
             BossAI::InitializeAI();
+            me->SetReactState(REACT_AGGRESSIVE);
             me->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, 9.0f);
             me->SetFloatValue(UNIT_FIELD_COMBATREACH, 9.0f);
             _enteredCombat = false;
@@ -946,7 +942,6 @@ class spell_hadronox_periodic_summon_template_AuraScript : public AuraScript
 {
     public:
         spell_hadronox_periodic_summon_template_AuraScript(uint32 topSpellId, uint32 bottomSpellId) : AuraScript(), _topSpellId(topSpellId), _bottomSpellId(bottomSpellId) { }
-        PrepareAuraScript(spell_hadronox_periodic_summon_template_AuraScript);
 
         bool Validate(SpellInfo const* /*spell*/) override
         {
@@ -982,8 +977,8 @@ class spell_hadronox_periodic_summon_template_AuraScript : public AuraScript
 
         void Register() override
         {
-            AfterEffectApply += AuraEffectApplyFn(spell_hadronox_periodic_summon_template_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_hadronox_periodic_summon_template_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            AfterEffectApply.Register(&spell_hadronox_periodic_summon_template_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+            OnEffectPeriodic.Register(&spell_hadronox_periodic_summon_template_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
 
     private:
@@ -1049,8 +1044,6 @@ class spell_hadronox_leeching_poison : public SpellScriptLoader
 
     class spell_hadronox_leeching_poison_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_hadronox_leeching_poison_AuraScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_LEECH_POISON_HEAL });
@@ -1070,7 +1063,7 @@ class spell_hadronox_leeching_poison : public SpellScriptLoader
 
         void Register() override
         {
-            OnEffectRemove += AuraEffectRemoveFn(spell_hadronox_leeching_poison_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_LEECH, AURA_EFFECT_HANDLE_REAL);
+            OnEffectRemove.Register(&spell_hadronox_leeching_poison_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_LEECH, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -1087,8 +1080,6 @@ class spell_hadronox_web_doors : public SpellScriptLoader
 
         class spell_hadronox_web_doors_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hadronox_web_doors_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_CHAMPION_PERIODIC, SPELL_SUMMON_CRYPT_FIEND_PERIODIC, SPELL_SUMMON_NECROMANCER_PERIODIC });
@@ -1106,7 +1097,7 @@ class spell_hadronox_web_doors : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hadronox_web_doors_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_hadronox_web_doors_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 

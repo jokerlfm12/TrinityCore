@@ -208,7 +208,7 @@ public:
             uint8 msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, id, count-curItemCount);
             if (msg == EQUIP_ERR_OK)
             {
-                Item* item = player->StoreNewItem(dest, id, true);
+                Item* item = player->StoreNewItem(dest, id, true, GenerateItemRandomPropertyId(id));
                 player->SendNewItem(item, count-curItemCount, true, false);
             }
         }
@@ -258,7 +258,7 @@ public:
         // If the quest requires money
         int32 ReqOrRewMoney = quest->GetRewOrReqMoney(player);
         if (ReqOrRewMoney < 0)
-            player->ModifyMoney(-ReqOrRewMoney);
+            player->ModifyMoney(-int64(ReqOrRewMoney));
 
         if (sWorld->getBoolConfig(CONFIG_QUEST_ENABLE_QUEST_TRACKER)) // check if Quest Tracker is enabled
         {

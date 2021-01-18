@@ -21,6 +21,8 @@
 #include "UnitAI.h"
 #include "Common.h"
 #include "ObjectDefines.h"
+#include "Optional.h"
+#include "QuestDef.h"
 
 class AreaBoundary;
 class Creature;
@@ -73,9 +75,6 @@ class TC_GAME_API CreatureAI : public UnitAI
         Creature* const me;
 
         bool UpdateVictim();
-        bool UpdateVictimWithGaze();
-
-        void SetGazeOn(Unit* target);
 
         Creature* DoSummon(uint32 entry, Position const& pos, uint32 despawnTime = 30000, TempSummonType summonType = TEMPSUMMON_CORPSE_TIMED_DESPAWN);
         Creature* DoSummon(uint32 entry, WorldObject* obj, float radius = 5.0f, uint32 despawnTime = 30000, TempSummonType summonType = TEMPSUMMON_CORPSE_TIMED_DESPAWN);
@@ -97,6 +96,8 @@ class TC_GAME_API CreatureAI : public UnitAI
 
         ~CreatureAI();
 
+        bool IsEngaged() const { return _isEngaged; }
+
         void Talk(uint8 id, WorldObject const* whisperTarget = nullptr);
 
         /// == Reactions At =================================
@@ -110,7 +111,13 @@ class TC_GAME_API CreatureAI : public UnitAI
         // Called for reaction at stopping attack at no attackers or targets
         virtual void EnterEvadeMode(EvadeReason why = EVADE_REASON_OTHER);
 
-        // Called for reaction at enter to combat if not in combat yet (enemy can be nullptr)
+        // Called for reaction whenever we start being in combat (overridden from base UnitAI)
+        void JustEnteredCombat(Unit* /*who*/) override;
+
+        // Called for reaction whenever a new non-offline unit is added to the threat list
+        virtual void JustStartedThreateningMe(Unit* who) { if (!IsEngaged()) EngagementStart(who); }
+
+        // Called for reaction when initially engaged
         virtual void JustEngagedWith(Unit* /*who*/) { }
 
         // Called when the creature is killed
@@ -156,7 +163,7 @@ class TC_GAME_API CreatureAI : public UnitAI
         // Called at reaching home after evade
         virtual void JustReachedHome() { }
 
-        void DoZoneInCombat(Creature* creature = nullptr, float maxRangeToNearestTarget = 250.0f);
+        void DoZoneInCombat(Creature* creature = nullptr);
 
         // Called at text emote receive from player
         virtual void ReceiveEmote(Player* /*player*/, uint32 /*emoteId*/) { }
@@ -186,6 +193,33 @@ class TC_GAME_API CreatureAI : public UnitAI
         // Called when victim entered water and creature can not enter water
         //virtual bool CanReachByRangeAttack(Unit*) { return false; }
 
+        /// == Gossip system ================================
+
+        // Called when the dialog status between a player and the creature is requested.
+        virtual Optional<QuestGiverStatus> GetDialogStatus(Player* /*player*/) { return boost::none; }
+
+        // Called when a player opens a gossip dialog with the creature.
+        virtual bool GossipHello(Player* /*player*/) { return false; }
+
+        // Called when a player selects a gossip item in the creature's gossip menu.
+        virtual bool GossipSelect(Player* /*player*/, uint32 /*menuId*/, uint32 /*gossipListId*/) { return false; }
+
+        // Called when a player selects a gossip with a code in the creature's gossip menu.
+        virtual bool GossipSelectCode(Player* /*player*/, uint32 /*menuId*/, uint32 /*gossipListId*/, char const* /*code*/) { return false; }
+
+        // Called when a player accepts a quest from the creature.
+        virtual void QuestAccept(Player* /*player*/, Quest const* /*quest*/) { }
+
+        // Called when a player completes a quest and is rewarded, opt is the selected item's index or 0
+        virtual void QuestReward(Player* /*player*/, Quest const* /*quest*/, uint32 /*opt*/) { }
+
+        /// == Waypoints system =============================
+
+        virtual void WaypointPathStarted(uint32 /*pathId*/) { }
+        virtual void WaypointStarted(uint32 /*nodeId*/, uint32 /*pathId*/) { }
+        virtual void WaypointReached(uint32 /*nodeId*/, uint32 /*pathId*/) { }
+        virtual void WaypointPathEnded(uint32 /*nodeId*/, uint32 /*pathId*/) { }
+
         /// == Fields =======================================
 
         virtual void PassengerBoarded(Unit* /*passenger*/, int8 /*seatId*/, bool /*apply*/) { }
@@ -201,6 +235,8 @@ class TC_GAME_API CreatureAI : public UnitAI
 
         // intended for encounter design/debugging. do not use for other purposes. expensive.
         int32 VisualizeBoundary(uint32 duration, Unit* owner = nullptr, bool fill = false) const;
+
+        // boundary system methods
         virtual bool CheckInRoom();
         CreatureBoundary const* GetBoundary() const { return _boundary; }
         void SetBoundary(CreatureBoundary const* boundary, bool negativeBoundaries = false);
@@ -208,6 +244,8 @@ class TC_GAME_API CreatureAI : public UnitAI
         static bool IsInBounds(CreatureBoundary const& boundary, Position const* who);
 
     protected:
+        void EngagementStart(Unit* who);
+        void EngagementOver();
         virtual void MoveInLineOfSight(Unit* /*who*/);
 
         bool _EnterEvadeMode(EvadeReason why = EVADE_REASON_OTHER);
@@ -216,7 +254,8 @@ class TC_GAME_API CreatureAI : public UnitAI
         bool _negateBoundary;
 
     private:
-        bool m_MoveInLineOfSight_locked;
+        bool _isEngaged;
+        bool _moveInLOSLocked;
         void _OnOwnerCombatInteraction(Unit* target);
 };
 

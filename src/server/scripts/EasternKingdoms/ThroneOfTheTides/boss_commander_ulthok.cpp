@@ -71,9 +71,9 @@ struct boss_commander_ulthok : public BossAI
 {
     boss_commander_ulthok(Creature* creature) : BossAI(creature, DATA_COMMANDER_ULTHOK) { }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         Talk(SAY_AGGRO);
         DoCastAOE(SPELL_ULTHOK_VO_AGGRO, true);
@@ -182,7 +182,7 @@ struct boss_commander_ulthok : public BossAI
                     events.Repeat(32s, 33s);
                     break;
                 case EVENT_CURSE_OF_FATIGUE:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                         DoCast(target, SPELL_CURSE_OF_FATIGUE);
                     events.Repeat(18s, 23s);
                     break;
@@ -200,8 +200,6 @@ struct boss_commander_ulthok : public BossAI
 
 class spell_ulthok_dark_fissure : public AuraScript
 {
-    PrepareAuraScript(spell_ulthok_dark_fissure);
-
     void HandlePeriodic(AuraEffect const* aurEff)
     {
         PreventDefaultAction();
@@ -209,18 +207,18 @@ class spell_ulthok_dark_fissure : public AuraScript
         {
             uint32 triggerSpell = GetSpellInfo()->Effects[EFFECT_0].TriggerSpell;
             int32 radius = target->GetObjectScale() * 300;
-            target->CastCustomSpell(triggerSpell, SPELLVALUE_RADIUS_MOD, radius, nullptr, true, nullptr, aurEff, target->GetGUID());
+            target->CastSpell(nullptr, triggerSpell, CastSpellExtraArgs(aurEff).SetOriginalCaster(target->GetGUID()).AddSpellMod(SPELLVALUE_RADIUS_MOD, radius));
         }
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_ulthok_dark_fissure::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_ulthok_dark_fissure::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 void AddSC_boss_commander_ulthok()
 {
     RegisterThroneOfTheTidesCreatureAI(boss_commander_ulthok);
-    RegisterAuraScript(spell_ulthok_dark_fissure);
+    RegisterSpellScript(spell_ulthok_dark_fissure);
 }

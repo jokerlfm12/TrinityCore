@@ -28,6 +28,7 @@
 #include <vector>
 #include <cmath>
 
+class WorldPacket;
 struct ItemTemplate;
 enum class VisibilityDistanceType : uint8;
 
@@ -46,7 +47,7 @@ enum CreatureFlagsExtra : uint32
     CREATURE_FLAG_EXTRA_GHOST_VISIBILITY     = 0x00000400,       // creature will be only visible for dead players
     CREATURE_FLAG_EXTRA_USE_OFFHAND_ATTACK   = 0x00000800,       // creature will use offhand attacks
     CREATURE_FLAG_EXTRA_NO_SELL_VENDOR       = 0x00001000,       // players can't sell items to this vendor
-    CREATURE_FLAG_EXTRA_UNUSED_13            = 0x00002000,
+    CREATURE_FLAG_EXTRA_NO_COMBAT            = 0x00002000,       // creature is not allowed to enter combat
     CREATURE_FLAG_EXTRA_WORLDEVENT           = 0x00004000,       // custom flag for world event creatures (left room for merging)
     CREATURE_FLAG_EXTRA_GUARD                = 0x00008000,       // Creature is guard
     CREATURE_FLAG_EXTRA_UNUSED_16            = 0x00010000,
@@ -67,7 +68,7 @@ enum CreatureFlagsExtra : uint32
     CREATURE_FLAG_EXTRA_UNUSED_31            = 0x80000000,
 
     // Masks
-    CREATURE_FLAG_EXTRA_UNUSED               = (CREATURE_FLAG_EXTRA_UNUSED_13 | CREATURE_FLAG_EXTRA_UNUSED_16 | CREATURE_FLAG_EXTRA_UNUSED_22 |
+    CREATURE_FLAG_EXTRA_UNUSED               = (CREATURE_FLAG_EXTRA_UNUSED_16 | CREATURE_FLAG_EXTRA_UNUSED_22 |
                                                 CREATURE_FLAG_EXTRA_UNUSED_23 | CREATURE_FLAG_EXTRA_UNUSED_24 | CREATURE_FLAG_EXTRA_UNUSED_25 |
                                                 CREATURE_FLAG_EXTRA_UNUSED_26 | CREATURE_FLAG_EXTRA_UNUSED_27 | CREATURE_FLAG_EXTRA_UNUSED_31),
 
@@ -199,6 +200,7 @@ struct TC_GAME_API CreatureTemplate
     uint32  SpellSchoolImmuneMask;
     uint32  flags_extra;
     uint32  ScriptID;
+    WorldPacket QueryData[TOTAL_LOCALES];
     uint32  GetRandomValidModelId() const;
     uint32  GetFirstValidModelId() const;
     uint32  GetFirstInvisibleModel() const;
@@ -230,6 +232,9 @@ struct TC_GAME_API CreatureTemplate
         // if can tame exotic then can tame any tameable
         return canTameExotic || !IsExotic();
     }
+
+    void InitializeQueryData();
+    WorldPacket BuildQueryData(LocaleConstant loc) const;
 };
 
 #pragma pack(push, 1)
@@ -326,7 +331,8 @@ enum InhabitTypeValues
 // `creature_addon` table
 struct CreatureAddon
 {
-    uint32 path_id;
+    uint32 waypointPathId;
+    uint32 cyclicSplinePathId;
     uint32 mount;
     uint32 bytes1;
     uint32 bytes2;
@@ -341,8 +347,7 @@ struct CreatureAddon
 // Vendors
 struct VendorItem
 {
-    VendorItem(uint32 _item, int32 _maxcount, uint32 _incrtime, uint32 _ExtendedCost, uint8 _Type)
-        : item(_item), maxcount(_maxcount), incrtime(_incrtime), ExtendedCost(_ExtendedCost), Type(_Type) { }
+    VendorItem() : item(0), maxcount(0), incrtime(0), ExtendedCost(0), Type(0) { }
 
     uint32 item;
     uint32 maxcount;                                        // 0 for infinity item amount
@@ -367,9 +372,9 @@ struct VendorItemData
     }
     bool Empty() const { return m_items.empty(); }
     uint32 GetItemCount() const { return m_items.size(); }
-    void AddItem(uint32 item, int32 maxcount, uint32 ptime, uint32 ExtendedCost, uint8 type)
+    void AddItem(VendorItem vItem)
     {
-        m_items.emplace_back(item, maxcount, ptime, ExtendedCost, type);
+        m_items.emplace_back(std::move(vItem));
     }
     bool RemoveItem(uint32 item_id, uint8 type);
     VendorItem const* FindItemCostPair(uint32 item_id, uint32 extendedCost, uint8 type) const;

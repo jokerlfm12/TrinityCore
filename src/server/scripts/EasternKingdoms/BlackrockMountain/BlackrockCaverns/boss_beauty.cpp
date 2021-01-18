@@ -89,9 +89,9 @@ struct boss_beauty : public BossAI
         DoSummon(NPC_RUNTY, RuntyPos);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_BERSERKER_CHARGE, 15s);
         events.ScheduleEvent(EVENT_FLAMEBREAK, 21s);
@@ -138,12 +138,12 @@ struct boss_beauty : public BossAI
             switch (eventId)
             {
                 case EVENT_MAGMA_SPIT:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_MAGMA_SPIT))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -SPELL_MAGMA_SPIT))
                         DoCast(target, SPELL_MAGMA_SPIT);
                     events.Repeat(7s, 9s);
                     break;
                 case EVENT_BERSERKER_CHARGE:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 100.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 100.0f, true, true, 0))
                         DoCast(target, SPELL_BERSERKER_CHARGE);
                     events.Repeat(15s, 21s);
                     break;
@@ -223,8 +223,6 @@ private:
 
 class spell_beauty_magma_spit : public AuraScript
 {
-    PrepareAuraScript(spell_beauty_magma_spit);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -247,7 +245,7 @@ class spell_beauty_magma_spit : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_beauty_magma_spit::AfterRemove, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_beauty_magma_spit::AfterRemove, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -255,5 +253,5 @@ void AddSC_boss_beauty()
 {
     RegisterBlackrockCavernsCreatureAI(boss_beauty);
     RegisterBlackrockCavernsCreatureAI(npc_beauty_puppy);
-    RegisterAuraScript(spell_beauty_magma_spit);
+    RegisterSpellScript(spell_beauty_magma_spit);
 }

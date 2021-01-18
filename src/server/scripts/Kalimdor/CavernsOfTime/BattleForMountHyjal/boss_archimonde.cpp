@@ -299,10 +299,10 @@ public:
             me->RemoveAllAuras();                              // Reset Soul Charge auras.
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
-            _JustEngagedWith();
             events.ScheduleEvent(EVENT_FEAR, 42000);
             events.ScheduleEvent(EVENT_AIR_BURST, 30000);
             events.ScheduleEvent(EVENT_GRIP_OF_THE_LEGION, urand(5000, 25000));
@@ -474,7 +474,7 @@ public:
                     break;
                 case NPC_DOOMFIRE:
                     summoned->CastSpell(summoned, SPELL_DOOMFIRE_SPAWN, false);
-                    summoned->CastSpell(summoned, SPELL_DOOMFIRE, true, 0, 0, me->GetGUID());
+                    summoned->CastSpell(summoned, SPELL_DOOMFIRE, me->GetGUID());
 
                     if (Unit* DoomfireSpirit = ObjectAccessor::GetUnit(*me, DoomfireSpiritGUID))
                     {
@@ -544,8 +544,6 @@ class spell_archimonde_drain_world_tree_dummy : public SpellScriptLoader
 
         class spell_archimonde_drain_world_tree_dummy_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_archimonde_drain_world_tree_dummy_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_DRAIN_WORLD_TREE_TRIGGERED });
@@ -559,7 +557,7 @@ class spell_archimonde_drain_world_tree_dummy : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_archimonde_drain_world_tree_dummy_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_archimonde_drain_world_tree_dummy_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

@@ -22,6 +22,7 @@ SDComment:
 SDCategory: Temple of Ahn'Qiraj
 EndScriptData */
 
+#include "temple_of_ahnqiraj.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 
@@ -35,7 +36,7 @@ enum Sartura
     SPELL_ENRAGE        = 28747,            //Not sure if right ID.
     SPELL_ENRAGEHARD    = 28798,
 
-//Guard Spell
+    //Guard Spell
     SPELL_WHIRLWINDADD  = 26038,
     SPELL_KNOCKBACK     = 26027
 };
@@ -50,9 +51,9 @@ public:
         return new boss_sarturaAI(creature);
     }
 
-    struct boss_sarturaAI : public ScriptedAI
+    struct boss_sarturaAI : public BossAI
     {
-        boss_sarturaAI(Creature* creature) : ScriptedAI(creature)
+        boss_sarturaAI(Creature* creature) : BossAI(creature, DATA_SARTURA)
         {
             Initialize();
         }
@@ -87,16 +88,19 @@ public:
         void Reset() override
         {
             Initialize();
+            _Reset();
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
             Talk(SAY_AGGRO);
+            _JustEngagedWith(who);
         }
 
          void JustDied(Unit* /*killer*/) override
          {
              Talk(SAY_DEATH);
+             _JustDied();
          }
 
          void KilledUnit(Unit* /*victim*/) override
@@ -117,8 +121,7 @@ public:
                     //Attack random Gamers
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100.0f, true))
                     {
-                        me->AddThreat(target, 1.0f);
-                        me->TauntApply(target);
+                        AddThreat(target, 1.0f);
                         AttackStart(target);
                     }
                     WhirlWindRandom_Timer = urand(3000, 7000);
@@ -145,8 +148,7 @@ public:
                     //Attack random Gamers
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100.0f, true))
                     {
-                        me->AddThreat(target, 1.0f);
-                        me->TauntApply(target);
+                        AddThreat(target, 1.0f);
                         AttackStart(target);
                     }
                     AggroReset = true;
@@ -260,8 +262,7 @@ public:
                     //Attack random Gamers
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100.0f, true))
                     {
-                        me->AddThreat(target, 1.0f);
-                        me->TauntApply(target);
+                        AddThreat(target, 1.0f);
                         AttackStart(target);
                     }
 
@@ -281,8 +282,7 @@ public:
                     //Attack random Gamers
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100.0f, true))
                     {
-                        me->AddThreat(target, 1.0f);
-                        me->TauntApply(target);
+                        AddThreat(target, 1.0f);
                         AttackStart(target);
                     }
 

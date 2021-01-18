@@ -114,7 +114,9 @@ enum KrickPhase
 
 enum Actions
 {
-    ACTION_OUTRO    = 1
+    ACTION_OUTRO    = 1,
+    ACTION_STORE_OLD_TARGET,
+    ACTION_RESET_THREAT
 };
 
 enum Points
@@ -144,13 +146,15 @@ class boss_ick : public CreatureScript
         {
             boss_ickAI(Creature* creature) : BossAI(creature, DATA_ICK)
             {
-                _tempThreat = 0;
+                _tempThreat = 0.0f;
             }
 
             void Reset() override
             {
                 events.Reset();
                 instance->SetBossState(DATA_ICK, NOT_STARTED);
+                _oldTargetGUID.Clear();
+                _tempThreat = 0.0f;
             }
 
             Creature* GetKrick()
@@ -158,9 +162,9 @@ class boss_ick : public CreatureScript
                 return ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_KRICK));
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 if (Creature* krick = GetKrick())
                     krick->AI()->Talk(SAY_KRICK_AGGRO);
@@ -190,23 +194,37 @@ class boss_ick : public CreatureScript
                 instance->SetBossState(DATA_ICK, DONE);
             }
 
-            void SetTempThreat(float threat)
+            void DoAction(int32 actionId) override
             {
-                _tempThreat = threat;
-            }
+                if (actionId == ACTION_STORE_OLD_TARGET)
+                {
+                    if (Unit* victim = me->GetVictim())
+                    {
+                        _oldTargetGUID = victim->GetGUID();
+                        _tempThreat = GetThreat(victim);
+                    }
+                }
+                else if (actionId == ACTION_RESET_THREAT)
+                {
+                    if (Unit* oldTarget = ObjectAccessor::GetUnit(*me, _oldTargetGUID))
+                    {
+                        if (Unit* current = me->GetVictim())
+                            ModifyThreatByPercent(current, -100);
 
-            void _ResetThreat(Unit* target)
-            {
-                DoModifyThreatPercent(target, -100);
-                me->AddThreat(target, _tempThreat);
+                        AddThreat(oldTarget, _tempThreat);
+                        AttackStart(oldTarget);
+                        _oldTargetGUID.Clear();
+                        _tempThreat = 0.0f;
+                    }
+                }
             }
 
             void UpdateAI(uint32 diff) override
             {
-                if (!me->IsInCombat())
+                if (!me->IsEngaged())
                     return;
 
-                if (!me->GetVictim() && me->getThreatManager().isThreatListEmpty())
+                if (!me->GetVictim() && me->GetThreatManager().IsThreatListEmpty())
                 {
                     EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
                     return;
@@ -262,7 +280,7 @@ class boss_ick : public CreatureScript
                         case EVENT_PURSUIT:
                             if (Creature* krick = GetKrick())
                                 krick->AI()->Talk(SAY_KRICK_CHASE);
-                            DoCast(me, SPELL_PURSUIT);
+                            me->CastSpell(me, SPELL_PURSUIT, { SPELLVALUE_MAX_TARGETS, 1 });
                             break;
                         default:
                             break;
@@ -277,6 +295,7 @@ class boss_ick : public CreatureScript
 
         private:
             float _tempThreat;
+            ObjectGuid _oldTargetGUID;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -518,8 +537,6 @@ class spell_krick_explosive_barrage : public SpellScriptLoader
 
         class spell_krick_explosive_barrage_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_krick_explosive_barrage_AuraScript);
-
             void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -536,7 +553,7 @@ class spell_krick_explosive_barrage : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_krick_explosive_barrage_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_krick_explosive_barrage_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -553,8 +570,6 @@ class spell_ick_explosive_barrage : public SpellScriptLoader
 
         class spell_ick_explosive_barrage_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_ick_explosive_barrage_AuraScript);
-
             void HandleEffectApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (Unit* caster = GetCaster())
@@ -574,8 +589,8 @@ class spell_ick_explosive_barrage : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_ick_explosive_barrage_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_ick_explosive_barrage_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_ick_explosive_barrage_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_ick_explosive_barrage_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -592,8 +607,6 @@ class spell_exploding_orb_hasty_grow : public SpellScriptLoader
 
         class spell_exploding_orb_hasty_grow_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_exploding_orb_hasty_grow_AuraScript);
-
             void OnStackChange(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (GetStackAmount() == 15)
@@ -610,7 +623,7 @@ class spell_exploding_orb_hasty_grow : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_exploding_orb_hasty_grow_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_MOD_SCALE, AURA_EFFECT_HANDLE_REAPPLY);
+                AfterEffectApply.Register(&spell_exploding_orb_hasty_grow_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_MOD_SCALE, AURA_EFFECT_HANDLE_REAPPLY);
             }
         };
 
@@ -627,44 +640,37 @@ class spell_krick_pursuit : public SpellScriptLoader
 
         class spell_krick_pursuit_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_krick_pursuit_SpellScript);
-
             void HandleScriptEffect(SpellEffIndex /*effIndex*/)
             {
-                if (GetCaster())
-                    if (Creature* ick = GetCaster()->ToCreature())
-                    {
-                        if (Unit* target = ick->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true))
-                        {
-                            ick->AI()->Talk(SAY_ICK_CHASE_1, target);
-                            ick->AddAura(GetSpellInfo()->Id, target);
-                            ENSURE_AI(boss_ick::boss_ickAI, ick->AI())->SetTempThreat(ick->getThreatManager().getThreat(target));
-                            ick->AddThreat(target, float(GetEffectValue()));
-                            target->AddThreat(ick, float(GetEffectValue()));
-                        }
-                    }
+                Unit* target = GetHitUnit();
+                if (Creature* ick = GetCaster()->ToCreature())
+                {
+                    ick->AI()->Talk(SAY_ICK_CHASE_1, target);
+                    ick->AddAura(GetSpellInfo()->Id, target);
+                    ick->AI()->DoAction(ACTION_STORE_OLD_TARGET);
+                    ick->GetThreatManager().AddThreat(target, float(GetEffectValue()), GetSpellInfo(), true, true);
+                    ick->AI()->AttackStart(target);
+                }
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_krick_pursuit_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_krick_pursuit_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
         class spell_krick_pursuit_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_krick_pursuit_AuraScript);
-
             void HandleExtraEffect(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (Unit* caster = GetCaster())
                     if (Creature* creCaster = caster->ToCreature())
-                        ENSURE_AI(boss_ick::boss_ickAI, creCaster->AI())->_ResetThreat(GetTarget());
+                        creCaster->AI()->DoAction(ACTION_RESET_THREAT);
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_krick_pursuit_AuraScript::HandleExtraEffect, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_krick_pursuit_AuraScript::HandleExtraEffect, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -686,8 +692,6 @@ class spell_krick_pursuit_confusion : public SpellScriptLoader
 
         class spell_krick_pursuit_confusion_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_krick_pursuit_confusion_AuraScript);
-
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 GetTarget()->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
@@ -702,8 +706,8 @@ class spell_krick_pursuit_confusion : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectApply += AuraEffectApplyFn(spell_krick_pursuit_confusion_AuraScript::OnApply, EFFECT_2, SPELL_AURA_LINKED, AURA_EFFECT_HANDLE_REAL);
-                OnEffectRemove += AuraEffectRemoveFn(spell_krick_pursuit_confusion_AuraScript::OnRemove, EFFECT_2, SPELL_AURA_LINKED, AURA_EFFECT_HANDLE_REAL);
+                OnEffectApply.Register(&spell_krick_pursuit_confusion_AuraScript::OnApply, EFFECT_2, SPELL_AURA_LINKED, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_krick_pursuit_confusion_AuraScript::OnRemove, EFFECT_2, SPELL_AURA_LINKED, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

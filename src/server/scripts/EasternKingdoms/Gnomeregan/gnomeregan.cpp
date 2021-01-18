@@ -212,11 +212,7 @@ public:
                         continue;
 
                     if (player->IsAlive())
-                    {
-                        temp->SetInCombatWith(player);
-                        player->SetInCombatWith(temp);
-                        temp->AddThreat(player, 0.0f);
-                    }
+                        AddThreat(player, 0.0f, temp);
                 }
             }
         }
@@ -557,8 +553,6 @@ class spell_collecting_fallout : public SpellScriptLoader
 
         class spell_collecting_fallout_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_collecting_fallout_SpellScript);
-
             void OnLaunch(SpellEffIndex effIndex)
             {
                 // estimated 25% chance of success
@@ -576,8 +570,8 @@ class spell_collecting_fallout : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectLaunch += SpellEffectFn(spell_collecting_fallout_SpellScript::OnLaunch, EFFECT_0, SPELL_EFFECT_TRIGGER_SPELL);
-                OnEffectLaunch += SpellEffectFn(spell_collecting_fallout_SpellScript::HandleFail, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
+                OnEffectLaunch.Register(&spell_collecting_fallout_SpellScript::OnLaunch, EFFECT_0, SPELL_EFFECT_TRIGGER_SPELL);
+                OnEffectLaunch.Register(&spell_collecting_fallout_SpellScript::HandleFail, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
             }
 
             bool _spellFail = true;

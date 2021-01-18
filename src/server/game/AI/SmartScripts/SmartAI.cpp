@@ -73,7 +73,7 @@ void SmartAI::StartPath(bool run/* = false*/, uint32 pathId/* = 0*/, bool repeat
             return;
     }
 
-    if (_path.nodes.empty())
+    if (_path.Nodes.empty())
         return;
 
     _currentWaypointNode = nodeId;
@@ -101,19 +101,19 @@ bool SmartAI::LoadPath(uint32 entry)
         return false;
 
     WaypointPath const* path = sSmartWaypointMgr->GetPath(entry);
-    if (!path || path->nodes.empty())
+    if (!path || path->Nodes.empty())
     {
         GetScript()->SetPathId(0);
         return false;
     }
 
-    _path.id = path->id;
-    _path.nodes = path->nodes;
-    for (WaypointNode& waypoint : _path.nodes)
+    _path.Id = path->Id;
+    _path.Nodes = path->Nodes;
+    for (WaypointNode& waypoint : _path.Nodes)
     {
-        Trinity::NormalizeMapCoord(waypoint.x);
-        Trinity::NormalizeMapCoord(waypoint.y);
-        waypoint.moveType = _run ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
+        Trinity::NormalizeMapCoord(waypoint.X);
+        Trinity::NormalizeMapCoord(waypoint.Y);
+        waypoint.MoveType = _run ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
     }
 
     GetScript()->SetPathId(entry);
@@ -197,7 +197,7 @@ void SmartAI::StopPath(uint32 DespawnTime, uint32 quest, bool fail)
 void SmartAI::EndPath(bool fail)
 {
     RemoveEscortState(SMART_ESCORT_ESCORTING | SMART_ESCORT_PAUSED | SMART_ESCORT_RETURNING);
-    _path.nodes.clear();
+    _path.Nodes.clear();
     _waypointPauseTimer = 0;
 
     if (_escortNPCFlags)
@@ -343,6 +343,13 @@ void SmartAI::UpdatePath(uint32 diff)
 
 void SmartAI::UpdateAI(uint32 diff)
 {
+    if (!me->IsAlive())
+    {
+        if (IsEngaged())
+            EngagementOver();
+        return;
+    }
+
     CheckConditions(diff);
     GetScript()->OnUpdate(diff);
     UpdatePath(diff);
@@ -417,11 +424,12 @@ bool SmartAI::IsEscortInvokerInRange()
 }
 
 ///@todo move escort related logic
-void SmartAI::WaypointPathStarted(uint32 nodeId, uint32 pathId)
+void SmartAI::WaypointPathStarted(uint32 pathId)
 {
     if (!HasEscortState(SMART_ESCORT_ESCORTING))
     {
-        GetScript()->ProcessEventsFor(SMART_EVENT_WAYPOINT_START, nullptr, nodeId, pathId);
+        // @todo remove the constant 1 at some point, it's never anything different
+        GetScript()->ProcessEventsFor(SMART_EVENT_WAYPOINT_START, nullptr, 1, pathId);
         return;
     }
 }
@@ -451,7 +459,7 @@ void SmartAI::WaypointReached(uint32 nodeId, uint32 pathId)
     }
     else if (HasEscortState(SMART_ESCORT_ESCORTING) && me->GetMotionMaster()->GetCurrentMovementGeneratorType() == WAYPOINT_MOTION_TYPE)
     {
-        if (_currentWaypointNode == _path.nodes.size())
+        if (_currentWaypointNode == _path.Nodes.size())
             _waypointPathEnded = true;
         else
             SetRun(_run);
@@ -544,11 +552,6 @@ void SmartAI::MoveInLineOfSight(Unit* who)
     CreatureAI::MoveInLineOfSight(who);
 }
 
-bool SmartAI::CanAIAttack(Unit const* /*who*/) const
-{
-    return !(me->HasReactState(REACT_PASSIVE));
-}
-
 bool SmartAI::AssistPlayerInCombatAgainst(Unit* who)
 {
     if (me->HasReactState(REACT_PASSIVE) || !IsAIControlled())
@@ -572,18 +575,8 @@ bool SmartAI::AssistPlayerInCombatAgainst(Unit* who)
     // too far away and no free sight?
     if (me->IsWithinDistInMap(who, SMART_MAX_AID_DIST) && me->IsWithinLOSInMap(who))
     {
-        // already fighting someone?
-        if (!me->GetVictim())
-        {
-            AttackStart(who);
-            return true;
-        }
-        else
-        {
-            who->SetInCombatWith(me);
-            me->AddThreat(who, 0.0f);
-            return true;
-        }
+        me->EngageWithTarget(who);
+        return true;
     }
 
     return false;
@@ -610,6 +603,8 @@ void SmartAI::JustReachedHome()
     {
         if (me->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_IDLE) != WAYPOINT_MOTION_TYPE && me->GetWaypointPath())
             me->GetMotionMaster()->MovePath(me->GetWaypointPath(), true);
+        else if (me->GetMotionMaster()->GetMotionSlotType(MOTION_SLOT_IDLE) != CYCLIC_SPLINE_MOTION_TYPE && me->GetCyclicSplinePathId())
+            me->GetMotionMaster()->MoveCyclicPath(me->GetCyclicSplinePathId());
         else
             me->ResumeMovement();
     }
@@ -795,8 +790,8 @@ void SmartAI::SetRun(bool run)
 
     me->SetWalk(!run);
     _run = run;
-    for (auto& node : _path.nodes)
-        node.moveType = run ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
+    for (auto& node : _path.Nodes)
+        node.MoveType = run ? WAYPOINT_MOVE_TYPE_RUN : WAYPOINT_MOVE_TYPE_WALK;
 }
 
 void SmartAI::SetDisableGravity(bool fly)

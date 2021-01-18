@@ -25,6 +25,7 @@
 #include "Duration.h"
 #include "Loot.h"
 #include "MapObject.h"
+
 #include <list>
 
 class CreatureAI;
@@ -51,7 +52,7 @@ typedef std::list<VendorItemCount> VendorItemCounts;
 // max different by z coordinate for creature aggro reaction
 #define CREATURE_Z_ATTACK_RANGE 3
 
-#define MAX_VENDOR_ITEMS 150                                // Limitation in 4.x.x item count in SMSG_LIST_INVENTORY
+#define MAX_VENDOR_ITEMS 150                                // Limitation in 4.x.x item count in SMSG_VENDOR_INVENTORY
 
 //used for handling non-repeatable random texts
 typedef std::vector<uint8> CreatureTextRepeatIds;
@@ -91,9 +92,11 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool IsCivilian() const { return (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_CIVILIAN) != 0; }
         bool IsTrigger() const { return (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER) != 0; }
         bool IsGuard() const { return (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_GUARD) != 0; }
+
         CreatureMovementData const& GetMovementTemplate() const;
         bool CanWalk() const { return GetMovementTemplate().IsGroundAllowed(); }
-        bool CanSwim() const override { return GetMovementTemplate().IsSwimAllowed() || IsPet(); }
+        bool CanSwim() const override;
+        bool CanEnterWater() const override;
         bool CanFly()  const override { return GetMovementTemplate().IsFlightAllowed() || IsFlying(); }
         bool CanHover() const { return GetMovementTemplate().Ground == CreatureGroundMovementType::Hover || IsHovering(); }
         bool SetDisableGravity(bool disable, bool packetOnly = false, bool updateAnimationTier = true) override;
@@ -102,10 +105,22 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool IsDungeonBoss() const { return (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_DUNGEON_BOSS) != 0; }
         bool IsAffectedByDiminishingReturns() const override { return Unit::IsAffectedByDiminishingReturns() || (GetCreatureTemplate()->flags_extra & CREATURE_FLAG_EXTRA_ALL_DIMINISH) != 0; }
 
+        Unit* SelectVictim();
+
         void SetReactState(ReactStates st) { m_reactState = st; }
         ReactStates GetReactState() const { return m_reactState; }
         bool HasReactState(ReactStates state) const { return (m_reactState == state); }
         void InitializeReactState();
+
+        using Unit::IsImmuneToAll;
+        using Unit::SetImmuneToAll;
+        void SetImmuneToAll(bool apply) override { Unit::SetImmuneToAll(apply, HasReactState(REACT_PASSIVE)); }
+        using Unit::IsImmuneToPC;
+        using Unit::SetImmuneToPC;
+        void SetImmuneToPC(bool apply) override { Unit::SetImmuneToPC(apply, HasReactState(REACT_PASSIVE)); }
+        using Unit::IsImmuneToNPC;
+        using Unit::SetImmuneToNPC;
+        void SetImmuneToNPC(bool apply) override { Unit::SetImmuneToNPC(apply, HasReactState(REACT_PASSIVE)); }
 
         /// @todo Rename these properly
         bool isCanInteractWithBattleMaster(Player* player, bool msg) const;
@@ -292,6 +307,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         uint32 GetWaypointPath() const { return _waypointPathId; }
         void LoadPath(uint32 pathid) { _waypointPathId = pathid; }
 
+        uint32 GetCyclicSplinePathId() const { return _cyclicSplinePathId; }
+
         // nodeId, pathId
         std::pair<uint32, uint32> GetCurrentWaypointInfo() const { return _currentWaypointNodeInfo; }
         void UpdateCurrentWaypointInfo(uint32 nodeId, uint32 pathId) { _currentWaypointNodeInfo = { nodeId, pathId }; }
@@ -304,8 +321,6 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool IsFormationLeader() const;
         void SignalFormationMovement();
         bool IsFormationLeaderMoveAllowed() const;
-
-        Unit* SelectVictim();
 
         void SetDisableReputationGain(bool disable) { DisableReputationGain = disable; }
         bool IsReputationGainDisabled() const { return DisableReputationGain; }
@@ -347,6 +362,16 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool IsAllowedToRepostionAgainst(Unit* target) const;
 
         void MakeInterruptable(bool apply);
+
+        bool IsEngaged() const override;
+        void AtEngage(Unit* target) override;
+        void AtDisengage() override;
+
+        bool HasSwimmingFlagOutOfCombat() const
+        {
+            return !_isMissingSwimmingFlagOutOfCombat;
+        }
+        void RefreshSwimmingFlag(bool recheck = false);
 
     protected:
         bool CreateFromProto(ObjectGuid::LowType guidlow, uint32 entry, CreatureData const* data = nullptr, uint32 vehId = 0);
@@ -410,6 +435,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         uint32 _waypointPathId;
         std::pair<uint32/*nodeId*/, uint32/*pathId*/> _currentWaypointNodeInfo;
 
+        // Cyclic spline path
+        uint32 _cyclicSplinePathId;
 
         //Formation var
         CreatureGroup* m_formation;
@@ -426,6 +453,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         } _spellFocusInfo;
 
         CreatureTextRepeatGroup m_textRepeat;
+
+        bool _isMissingSwimmingFlagOutOfCombat;
 };
 
 class TC_GAME_API AssistDelayEvent : public BasicEvent

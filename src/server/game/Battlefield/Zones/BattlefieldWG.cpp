@@ -410,7 +410,7 @@ bool BattlefieldWG::SetupBattlefield()
     m_BattleId = BATTLEFIELD_BATTLEID_WG;
     m_ZoneId = BATTLEFIELD_WG_ZONEID;
     m_MapId = BATTLEFIELD_WG_MAPID;
-    m_Map = sMapMgr->FindMap(m_MapId, 0);
+    m_Map = sMapMgr->CreateBaseMap(m_MapId);
 
     InitStalker(BATTLEFIELD_WG_NPC_STALKER, WintergraspStalkerPos);
 
@@ -762,15 +762,12 @@ void BattlefieldWG::DoCompleteOrIncrementAchievement(uint32 achievement, Player*
     switch (achievement)
     {
         case ACHIEVEMENTS_WIN_WG_100:
-        {
             // player->UpdateAchievementCriteria();
-        }
+            break;
         default:
-        {
             if (player)
                 player->CompletedAchievement(achievementEntry);
             break;
-        }
     }
 
 }

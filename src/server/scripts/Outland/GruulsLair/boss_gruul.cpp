@@ -104,9 +104,9 @@ class boss_gruul : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
             }
 
@@ -133,11 +133,11 @@ class boss_gruul : public CreatureScript
                         switch (urand(0, 1))
                         {
                             case 0:
-                                target->CastSpell(target, SPELL_MAGNETIC_PULL, true, nullptr, nullptr, me->GetGUID());
+                                target->CastSpell(target, SPELL_MAGNETIC_PULL, me->GetGUID());
                                 break;
 
                             case 1:
-                                target->CastSpell(target, SPELL_KNOCK_BACK, true, nullptr, nullptr, me->GetGUID());
+                                target->CastSpell(target, SPELL_KNOCK_BACK, me->GetGUID());
                                 break;
                         }
                     }
@@ -205,7 +205,7 @@ class boss_gruul : public CreatureScript
                     // Hurtful Strike
                     if (m_uiHurtfulStrike_Timer <= diff)
                     {
-                        Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 1);
+                        Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 1);
 
                         if (target && me->IsWithinMeleeRange(me->GetVictim()))
                             DoCast(target, SPELL_HURTFUL_STRIKE);
@@ -272,8 +272,6 @@ class spell_gruul_shatter : public SpellScriptLoader
 
         class spell_gruul_shatter_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_gruul_shatter_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_STONED, SPELL_SHATTER_EFFECT });
@@ -290,7 +288,7 @@ class spell_gruul_shatter : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_gruul_shatter_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_gruul_shatter_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -307,8 +305,6 @@ class spell_gruul_shatter_effect : public SpellScriptLoader
 
         class spell_gruul_shatter_effect_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_gruul_shatter_effect_SpellScript);
-
             void CalculateDamage()
             {
                 if (!GetHitUnit())
@@ -325,7 +321,7 @@ class spell_gruul_shatter_effect : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_gruul_shatter_effect_SpellScript::CalculateDamage);
+                OnHit.Register(&spell_gruul_shatter_effect_SpellScript::CalculateDamage);
             }
         };
 

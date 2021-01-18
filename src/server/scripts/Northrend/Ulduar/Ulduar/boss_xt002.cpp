@@ -178,7 +178,7 @@ class boss_xt002 : public CreatureScript
 
         struct boss_xt002_AI : public BossAI
         {
-            boss_xt002_AI(Creature* creature) : BossAI(creature, BOSS_XT002)
+            boss_xt002_AI(Creature* creature) : BossAI(creature, DATA_XT002)
             {
                 Initialize();
                 _transferHealth = 0;
@@ -213,10 +213,10 @@ class boss_xt002 : public CreatureScript
                 _DespawnAtEvade();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
-                _JustEngagedWith();
 
                 events.ScheduleEvent(EVENT_ENRAGE, TIMER_ENRAGE);
                 events.ScheduleEvent(EVENT_GRAVITY_BOMB, TIMER_GRAVITY_BOMB);
@@ -460,7 +460,7 @@ class npc_xt002_heart : public CreatureScript
 
             void JustDied(Unit* /*killer*/) override
             {
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                 {
                     xt002->AI()->SetData(DATA_TRANSFERED_HEALTH, me->GetHealth());
                     xt002->AI()->DoAction(ACTION_ENTER_HARD_MODE);
@@ -506,7 +506,7 @@ class npc_scrapbot : public CreatureScript
 
                 Initialize();
 
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                     me->GetMotionMaster()->MoveFollow(xt002, 0.0f, 0.0f);
             }
 
@@ -514,7 +514,7 @@ class npc_scrapbot : public CreatureScript
             {
                 if (_rangeCheckTimer <= diff)
                 {
-                    if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                    if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                     {
                         if (me->IsWithinMeleeRange(xt002))
                         {
@@ -569,7 +569,7 @@ class npc_pummeller : public CreatureScript
             {
                 Initialize();
 
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                 {
                     Position pos = xt002->GetPosition();
                     me->GetMotionMaster()->MovePoint(0, pos);
@@ -683,7 +683,7 @@ class npc_boombot : public CreatureScript
                 me->SetFloatValue(UNIT_FIELD_MAXDAMAGE, 18000.0f);
 
                 /// @todo proper waypoints?
-                if (Creature* xt002 = _instance->GetCreature(BOSS_XT002))
+                if (Creature* xt002 = _instance->GetCreature(DATA_XT002))
                     me->GetMotionMaster()->MoveFollow(xt002, 0.0f, 0.0f);
             }
 
@@ -822,8 +822,6 @@ class spell_xt002_searing_light_spawn_life_spark : public SpellScriptLoader
 
         class spell_xt002_searing_light_spawn_life_spark_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_xt002_searing_light_spawn_life_spark_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_LIFE_SPARK });
@@ -839,7 +837,7 @@ class spell_xt002_searing_light_spawn_life_spark : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_xt002_searing_light_spawn_life_spark_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_xt002_searing_light_spawn_life_spark_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -856,8 +854,6 @@ class spell_xt002_gravity_bomb_aura : public SpellScriptLoader
 
         class spell_xt002_gravity_bomb_aura_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_xt002_gravity_bomb_aura_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_VOID_ZONE });
@@ -888,8 +884,8 @@ class spell_xt002_gravity_bomb_aura : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_xt002_gravity_bomb_aura_AuraScript::OnPeriodic, EFFECT_2, SPELL_AURA_PERIODIC_DAMAGE);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_xt002_gravity_bomb_aura_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_xt002_gravity_bomb_aura_AuraScript::OnPeriodic, EFFECT_2, SPELL_AURA_PERIODIC_DAMAGE);
+                AfterEffectRemove.Register(&spell_xt002_gravity_bomb_aura_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -906,8 +902,6 @@ class spell_xt002_gravity_bomb_damage : public SpellScriptLoader
 
         class spell_xt002_gravity_bomb_damage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_xt002_gravity_bomb_damage_SpellScript);
-
             void HandleScript(SpellEffIndex /*eff*/)
             {
                 Unit* caster = GetCaster();
@@ -921,7 +915,7 @@ class spell_xt002_gravity_bomb_damage : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_xt002_gravity_bomb_damage_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_xt002_gravity_bomb_damage_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
             }
         };
 
@@ -938,8 +932,6 @@ class spell_xt002_heart_overload_periodic : public SpellScriptLoader
 
         class spell_xt002_heart_overload_periodic_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_xt002_heart_overload_periodic_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_ENERGY_ORB, SPELL_RECHARGE_BOOMBOT, SPELL_RECHARGE_PUMMELER, SPELL_RECHARGE_SCRAPBOT });
@@ -964,7 +956,7 @@ class spell_xt002_heart_overload_periodic : public SpellScriptLoader
                             {
                                 uint8 a = urand(0, 4);
                                 uint32 spellId = spells[a];
-                                toyPile->CastSpell(toyPile, spellId, true, nullptr, nullptr, instance->GetGuidData(BOSS_XT002));
+                                toyPile->CastSpell(toyPile, spellId, instance->GetGuidData(DATA_XT002));
                             }
                         }
                     }
@@ -976,7 +968,7 @@ class spell_xt002_heart_overload_periodic : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_xt002_heart_overload_periodic_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHit.Register(&spell_xt002_heart_overload_periodic_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -993,8 +985,6 @@ class spell_xt002_tympanic_tantrum : public SpellScriptLoader
 
         class spell_xt002_tympanic_tantrum_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_xt002_tympanic_tantrum_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(PlayerOrPetCheck());
@@ -1007,9 +997,9 @@ class spell_xt002_tympanic_tantrum : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xt002_tympanic_tantrum_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_xt002_tympanic_tantrum_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnHit += SpellHitFn(spell_xt002_tympanic_tantrum_SpellScript::RecalculateDamage);
+                OnObjectAreaTargetSelect.Register(&spell_xt002_tympanic_tantrum_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_xt002_tympanic_tantrum_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnHit.Register(&spell_xt002_tympanic_tantrum_SpellScript::RecalculateDamage);
             }
         };
 
@@ -1026,8 +1016,6 @@ class spell_xt002_submerged : public SpellScriptLoader
 
         class spell_xt002_submerged_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_xt002_submerged_SpellScript);
-
             void HandleScript(SpellEffIndex /*eff*/)
             {
                 Creature* target = GetHitCreature();
@@ -1040,7 +1028,7 @@ class spell_xt002_submerged : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_xt002_submerged_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_xt002_submerged_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1057,8 +1045,6 @@ class spell_xt002_321_boombot_aura : public SpellScriptLoader
 
         class spell_xt002_321_boombot_aura_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_xt002_321_boombot_aura_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_ACHIEVEMENT_CREDIT_NERF_SCRAPBOTS });
@@ -1082,8 +1068,8 @@ class spell_xt002_321_boombot_aura : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_xt002_321_boombot_aura_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_xt002_321_boombot_aura_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_xt002_321_boombot_aura_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_xt002_321_boombot_aura_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 

@@ -20,6 +20,7 @@
 #include "ConfusedMovementGenerator.h"
 #include "Creature.h"
 #include "CreatureAISelector.h"
+#include "CyclicMovementGenerator.h"
 #include "DBCStores.h"
 #include "G3DPosition.hpp"
 #include "FleeingMovementGenerator.h"
@@ -42,6 +43,7 @@
 #include "Unit.h"
 #include "WaypointDefines.h"
 #include "WaypointMovementGenerator.h"
+#include "WaypointManager.h"
 
 inline MovementGenerator* GetIdleMovementGenerator()
 {
@@ -307,17 +309,17 @@ void MotionMaster::MoveFleeing(Unit* enemy, uint32 time)
         Mutate(new FleeingMovementGenerator<Player>(enemy->GetGUID()), MOTION_SLOT_CONTROLLED);
 }
 
-void MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool generatePath)
+void MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool generatePath, float speed)
 {
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MovePoint: '%s', targeted point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Player>(id, x, y, z, generatePath, 0.0f), MOTION_SLOT_ACTIVE);
+        Mutate(new PointMovementGenerator<Player>(id, x, y, z, generatePath, speed), MOTION_SLOT_ACTIVE);
     }
     else
     {
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MovePoint: '%s', targeted point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, generatePath, 0.0f), MOTION_SLOT_ACTIVE);
+        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, generatePath, speed), MOTION_SLOT_ACTIVE);
     }
 }
 
@@ -341,7 +343,7 @@ void MotionMaster::MoveCloserAndStop(uint32 id, Unit* target, float distance)
     }
 }
 
-void MotionMaster::MoveLand(uint32 id, Position const& pos, Optional<float> velocity /*= nullptr*/)
+void MotionMaster::MoveLand(uint32 id, Position const& pos, Optional<float> velocity /*= { }*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveLand: '%s', landing point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
 
@@ -355,7 +357,7 @@ void MotionMaster::MoveLand(uint32 id, Position const& pos, Optional<float> velo
     Mutate(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id), MOTION_SLOT_ACTIVE);
 }
 
-void MotionMaster::MoveTakeoff(uint32 id, Position const& pos)
+void MotionMaster::MoveTakeoff(uint32 id, Position const& pos, Optional<float> velocity /*= { }*/)
 {
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveTakeoff: '%s', landing point Id: %u (X: %f, Y: %f, Z: %f)", _owner->GetGUID().ToString().c_str(), id, pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
 
@@ -364,6 +366,8 @@ void MotionMaster::MoveTakeoff(uint32 id, Position const& pos)
     init.SetSmooth();
     init.SetFly();
     init.SetAnimation(AnimationTier::Hover);
+    if (velocity)
+        init.SetVelocity(velocity.get());
     Mutate(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id), MOTION_SLOT_ACTIVE);
 }
 
@@ -456,7 +460,7 @@ void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, f
     Mutate(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, id), MOTION_SLOT_CONTROLLED);
 }
 
-void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount)
+void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount, float velocity /*= 0.f*/)
 {
     float step = 2 * float(M_PI) / stepCount * (clockwise ? -1.0f : 1.0f);
     Position const& pos = { x, y, z, 0.0f };
@@ -495,7 +499,10 @@ void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool 
     }
 
     init.SetSmooth();
-    Mutate(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, 0), MOTION_SLOT_ACTIVE);
+    if (velocity > 0.f)
+        init.SetVelocity(velocity);
+
+    Mutate(new GenericMovementGenerator(std::move(init), CYCLIC_SPLINE_MOTION_TYPE, 0), MOTION_SLOT_ACTIVE);
 }
 
 void MotionMaster::MoveCyclicPath(Position const* pathPoints, size_t pathSize, bool walk /*= false*/, bool fly /*= false*/, float velocity /*= 0.0f*/)
@@ -521,7 +528,13 @@ void MotionMaster::MoveCyclicPath(Position const* pathPoints, size_t pathSize, b
     init.SetSmooth();
     init.SetWalk(walk);
     init.SetCyclic();
-    Mutate(new GenericMovementGenerator(std::move(init), EFFECT_MOTION_TYPE, 0), MOTION_SLOT_IDLE);
+    Mutate(new GenericMovementGenerator(std::move(init), CYCLIC_SPLINE_MOTION_TYPE, 0), MOTION_SLOT_IDLE);
+}
+
+void MotionMaster::MoveCyclicPath(uint32 pathId)
+{
+    if (WaypointPath const* splinePath = sWaypointMgr->GetPath(pathId))
+        Mutate(new CyclicMovementGenerator<Creature>(splinePath), MOTION_SLOT_IDLE);
 }
 
 void MotionMaster::MoveSmoothPath(uint32 pointId, Position const* pathPoints, size_t pathSize, bool walk /*= false*/, bool fly /*= false*/, float velocity /*= 0.0f*/)
@@ -700,7 +713,7 @@ void MotionMaster::MovePath(uint32 pathId, bool repeatable)
 
 void MotionMaster::MovePath(WaypointPath& path, bool repeatable)
 {
-    TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MovePath: '%s', starts moving over path Id: %u (repeatable: %s)", _owner->GetGUID().ToString().c_str(), path.id, repeatable ? "YES" : "NO");
+    TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MovePath: '%s', starts moving over path Id: %u (repeatable: %s)", _owner->GetGUID().ToString().c_str(), path.Id, repeatable ? "YES" : "NO");
     Mutate(new WaypointMovementGenerator<Creature>(path, repeatable), MOTION_SLOT_IDLE);
 }
 
@@ -713,7 +726,7 @@ void MotionMaster::MoveRotate(uint32 time, RotateDirection direction)
     Mutate(new RotateMovementGenerator(time, direction), MOTION_SLOT_ACTIVE);
 }
 
-void MotionMaster::MoveFormation(Unit* leader, float range, float angle, uint32 point1, uint32 point2)
+void MotionMaster::MoveFormation(Unit* leader, float range, float angle, int32 point1, int32 point2)
 {
     if (_owner->GetTypeId() == TYPEID_UNIT && leader)
     {
@@ -881,7 +894,9 @@ void MotionMaster::DirectDelete(MovementGenerator* curr)
     if (IsStatic(curr))
         return;
 
+
     curr->Finalize(_owner);
+    curr->NotifyAIOnFinalize(_owner);
     delete curr;
 }
 

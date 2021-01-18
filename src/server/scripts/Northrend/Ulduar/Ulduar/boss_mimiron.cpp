@@ -372,7 +372,7 @@ static bool IsEncounterFinished(Unit* who)
         mkii->DespawnOrUnsummon(120000);
         vx001->DespawnOrUnsummon(120000);
         aerial->DespawnOrUnsummon(120000);
-        if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+        if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
             mimiron->AI()->JustDied(who);
         return true;
     }
@@ -386,7 +386,7 @@ class boss_mimiron : public CreatureScript
 
         struct boss_mimironAI : public BossAI
         {
-            boss_mimironAI(Creature* creature) : BossAI(creature, BOSS_MIMIRON)
+            boss_mimironAI(Creature* creature) : BossAI(creature, DATA_MIMIRON)
             {
                 me->SetReactState(REACT_PASSIVE);
                 _fireFighter = false;
@@ -419,12 +419,12 @@ class boss_mimiron : public CreatureScript
                 }
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 if (!me->GetVehicleBase())
                     return;
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                 me->RemoveAurasDueToSpell(SPELL_WELD);
                 DoCast(me->GetVehicleBase(), SPELL_SEAT_6);
@@ -439,7 +439,7 @@ class boss_mimiron : public CreatureScript
 
             void JustDied(Unit* /*killer*/) override
             {
-                instance->SetBossState(BOSS_MIMIRON, DONE);
+                instance->SetBossState(DATA_MIMIRON, DONE);
                 events.Reset();
                 me->CombatStop(true);
                 me->SetDisableGravity(false);
@@ -453,7 +453,7 @@ class boss_mimiron : public CreatureScript
 
             void Reset() override
             {
-                if (instance->GetBossState(BOSS_MIMIRON) == DONE) // Mimiron will attempt to reset because he is not dead and will be set to friendly before despawning.
+                if (instance->GetBossState(DATA_MIMIRON) == DONE) // Mimiron will attempt to reset because he is not dead and will be set to friendly before despawning.
                     return;
 
                 _Reset();
@@ -481,7 +481,7 @@ class boss_mimiron : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                if (!UpdateVictim() && instance->GetBossState(BOSS_MIMIRON) != DONE)
+                if (!UpdateVictim() && instance->GetBossState(DATA_MIMIRON) != DONE)
                     return;
 
                 events.Update(diff);
@@ -495,7 +495,7 @@ class boss_mimiron : public CreatureScript
                     {
                         case EVENT_SUMMON_FLAMES:
                             if (Creature* worldtrigger = instance->GetCreature(DATA_MIMIRON_WORLD_TRIGGER))
-                                worldtrigger->CastCustomSpell(SPELL_SCRIPT_EFFECT_SUMMON_FLAMES_INITIAL, SPELLVALUE_MAX_TARGETS, 3, nullptr, true, nullptr, nullptr, me->GetGUID());
+                                worldtrigger->CastSpell(nullptr, SPELL_SCRIPT_EFFECT_SUMMON_FLAMES_INITIAL, CastSpellExtraArgs(me->GetGUID()).AddSpellMod(SPELLVALUE_MAX_TARGETS, 3));
                             events.RescheduleEvent(EVENT_SUMMON_FLAMES, 28000);
                             break;
                         case EVENT_INTRO_1:
@@ -684,7 +684,7 @@ class boss_leviathan_mk_ii : public CreatureScript
 
         struct boss_leviathan_mk_iiAI : public BossAI
         {
-            boss_leviathan_mk_iiAI(Creature* creature) : BossAI(creature, BOSS_MIMIRON)
+            boss_leviathan_mk_iiAI(Creature* creature) : BossAI(creature, DATA_MIMIRON)
             {
                 _fireFighter = false;
                 _setupMine = true;
@@ -784,7 +784,7 @@ class boss_leviathan_mk_ii : public CreatureScript
             void KilledUnit(Unit* victim) override
             {
                 if (victim->GetTypeId() == TYPEID_PLAYER)
-                    if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                    if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                         mimiron->AI()->Talk(events.IsInPhase(PHASE_LEVIATHAN_MK_II) ? SAY_MKII_SLAY : SAY_V07TRON_SLAY);
             }
 
@@ -799,7 +799,7 @@ class boss_leviathan_mk_ii : public CreatureScript
                         me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                         DoCast(me, SPELL_HALF_HEAL);
 
-                        if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                        if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                             mimiron->AI()->DoAction(DO_ACTIVATE_VX001);
                         break;
                     case WP_MKII_P4_POS_1:
@@ -809,7 +809,7 @@ class boss_leviathan_mk_ii : public CreatureScript
                         events.ScheduleEvent(EVENT_MOVE_POINT_3, 1);
                         break;
                     case WP_MKII_P4_POS_3:
-                        if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                        if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                             mimiron->AI()->DoAction(DO_ACTIVATE_V0L7R0N_2);
                         break;
                     case WP_MKII_P4_POS_4:
@@ -929,7 +929,7 @@ class boss_vx_001 : public CreatureScript
 
         struct boss_vx_001AI : public BossAI
         {
-            boss_vx_001AI(Creature* creature) : BossAI(creature, BOSS_MIMIRON)
+            boss_vx_001AI(Creature* creature) : BossAI(creature, DATA_MIMIRON)
             {
                 me->SetDisableGravity(true); // This is the unfold visual state of VX-001, it has to be set on create as it requires an objectupdate if set later.
                 me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_SPECIAL_UNARMED); // This is a hack to force the yet to be unfolded visual state.
@@ -952,7 +952,7 @@ class boss_vx_001 : public CreatureScript
                         me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE); // | UNIT_FLAG_NOT_SELECTABLE);
                         DoCast(me, SPELL_HALF_HEAL); // has no effect, wat
                         DoCast(me, SPELL_TORSO_DISABLED);
-                        if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                        if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                             mimiron->AI()->DoAction(DO_ACTIVATE_AERIAL);
                     }
                     else if (events.IsInPhase(PHASE_VOL7RON))
@@ -981,7 +981,8 @@ class boss_vx_001 : public CreatureScript
                         events.ScheduleEvent(EVENT_FLAME_SUPPRESSANT_VX, 6000);
                         [[fallthrough]];
                     case DO_START_VX001:
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToPC(false);
                         me->RemoveAurasDueToSpell(SPELL_FREEZE_ANIM);
                         me->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_ONESHOT_NONE); // Remove emotestate.
                         //me->SetHover(true); // Blizzard handles hover animation like this it seems.
@@ -1023,7 +1024,7 @@ class boss_vx_001 : public CreatureScript
             void KilledUnit(Unit* victim) override
             {
                 if (victim->GetTypeId() == TYPEID_PLAYER)
-                    if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                    if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                         mimiron->AI()->Talk(events.IsInPhase(PHASE_VX_001) ? SAY_VX001_SLAY : SAY_V07TRON_SLAY);
             }
 
@@ -1111,7 +1112,7 @@ class boss_aerial_command_unit : public CreatureScript
 
         struct boss_aerial_command_unitAI : public BossAI
         {
-            boss_aerial_command_unitAI(Creature* creature) : BossAI(creature, BOSS_MIMIRON)
+            boss_aerial_command_unitAI(Creature* creature) : BossAI(creature, DATA_MIMIRON)
             {
                 me->SetReactState(REACT_PASSIVE);
                 fireFigther = false;
@@ -1157,7 +1158,8 @@ class boss_aerial_command_unit : public CreatureScript
                         events.ScheduleEvent(EVENT_SUMMON_FIRE_BOTS, 1000, 0, PHASE_AERIAL_COMMAND_UNIT);
                         [[fallthrough]];
                     case DO_START_AERIAL:
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToPC(false);
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->SetHover(true);
                         me->SetDisableGravity(false);
@@ -1203,7 +1205,7 @@ class boss_aerial_command_unit : public CreatureScript
             void KilledUnit(Unit* victim) override
             {
                 if (victim->GetTypeId() == TYPEID_PLAYER)
-                    if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                    if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                         mimiron->AI()->Talk(events.IsInPhase(PHASE_AERIAL_COMMAND_UNIT) ? SAY_AERIAL_SLAY : SAY_V07TRON_SLAY);
             }
 
@@ -1213,7 +1215,7 @@ class boss_aerial_command_unit : public CreatureScript
                 {
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 
-                    if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                    if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                         mimiron->AI()->DoAction(DO_ACTIVATE_V0L7R0N_1);
                 }
             }
@@ -1233,15 +1235,15 @@ class boss_aerial_command_unit : public CreatureScript
                     switch (eventId)
                     {
                         case EVENT_SUMMON_FIRE_BOTS:
-                            me->CastCustomSpell(SPELL_SUMMON_FIRE_BOT_TRIGGER, SPELLVALUE_MAX_TARGETS, 3, nullptr, true);
+                            DoCastAOE(SPELL_SUMMON_FIRE_BOT_TRIGGER, CastSpellExtraArgs(TRIGGERED_FULL_MASK).AddSpellMod(SPELLVALUE_MAX_TARGETS, 3));
                             events.RescheduleEvent(EVENT_SUMMON_FIRE_BOTS, 45000, 0, PHASE_AERIAL_COMMAND_UNIT);
                             break;
                         case EVENT_SUMMON_JUNK_BOT:
-                            me->CastCustomSpell(SPELL_SUMMON_JUNK_BOT_TRIGGER, SPELLVALUE_MAX_TARGETS, 1, nullptr, true);
+                            DoCastAOE(SPELL_SUMMON_JUNK_BOT_TRIGGER, CastSpellExtraArgs(TRIGGERED_FULL_MASK).AddSpellMod(SPELLVALUE_MAX_TARGETS, 1));
                             events.RescheduleEvent(EVENT_SUMMON_JUNK_BOT, urand(11000, 12000), 0, PHASE_AERIAL_COMMAND_UNIT);
                             break;
                         case EVENT_SUMMON_ASSAULT_BOT:
-                            me->CastCustomSpell(SPELL_SUMMON_ASSAULT_BOT_TRIGGER, SPELLVALUE_MAX_TARGETS, 1, nullptr, true);
+                            DoCastAOE(SPELL_SUMMON_ASSAULT_BOT_TRIGGER, CastSpellExtraArgs(TRIGGERED_FULL_MASK).AddSpellMod(SPELLVALUE_MAX_TARGETS, 1));
                             events.RescheduleEvent(EVENT_SUMMON_ASSAULT_BOT, 30000, 0, PHASE_AERIAL_COMMAND_UNIT);
                             break;
                         case EVENT_SUMMON_BOMB_BOT:
@@ -1293,9 +1295,9 @@ class npc_mimiron_assault_bot : public CreatureScript
 
                 if (me->HasUnitState(UNIT_STATE_ROOT))
                 {
-                    if (Unit* newTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 30.0f, true))
+                    if (Unit* newTarget = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 30.0f, true))
                     {
-                        me->DeleteThreatList();
+                        me->GetThreatManager().ResetAllThreat();
                         AttackStart(newTarget);
                     }
                 }
@@ -1436,7 +1438,7 @@ class npc_mimiron_computer : public CreatureScript
                     {
                         case EVENT_SELF_DESTRUCT_10:
                             Talk(SAY_SELF_DESTRUCT_10);
-                            if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                            if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                                 mimiron->AI()->DoAction(DO_ACTIVATE_HARD_MODE);
                             events.ScheduleEvent(EVENT_SELF_DESTRUCT_9, 60000);
                             break;
@@ -1478,7 +1480,7 @@ class npc_mimiron_computer : public CreatureScript
                             break;
                         case EVENT_SELF_DESTRUCT_FINALIZED:
                             Talk(SAY_SELF_DESTRUCT_FINALIZED);
-                            if (Creature* mimiron = instance->GetCreature(BOSS_MIMIRON))
+                            if (Creature* mimiron = instance->GetCreature(DATA_MIMIRON))
                                 mimiron->AI()->DoAction(DO_ACTIVATE_SELF_DESTRUCT);
                             DoCast(me, SPELL_SELF_DESTRUCTION_AURA);
                             DoCast(me, SPELL_SELF_DESTRUCTION_VISUAL);
@@ -1519,7 +1521,7 @@ class npc_mimiron_flames : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                if (instance->GetBossState(BOSS_MIMIRON) != IN_PROGRESS)
+                if (instance->GetBossState(DATA_MIMIRON) != IN_PROGRESS)
                     me->DespawnOrUnsummon();
 
                 events.Update(diff);
@@ -1684,8 +1686,6 @@ class spell_mimiron_bomb_bot : public SpellScriptLoader
 
         class spell_mimiron_bomb_bot_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_bomb_bot_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitPlayer())
@@ -1705,8 +1705,8 @@ class spell_mimiron_bomb_bot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_bomb_bot_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_bomb_bot_SpellScript::HandleDespawn, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_mimiron_bomb_bot_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_mimiron_bomb_bot_SpellScript::HandleDespawn, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -1724,8 +1724,6 @@ class spell_mimiron_clear_fires : public SpellScriptLoader
 
         class spell_mimiron_clear_fires_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_clear_fires_SpellScript);
-
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitCreature())
@@ -1734,7 +1732,7 @@ class spell_mimiron_clear_fires : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_clear_fires_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_mimiron_clear_fires_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -1752,8 +1750,6 @@ class spell_mimiron_despawn_assault_bots : public SpellScriptLoader
 
         class spell_mimiron_despawn_assault_bots_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_despawn_assault_bots_SpellScript);
-
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitCreature())
@@ -1762,7 +1758,7 @@ class spell_mimiron_despawn_assault_bots : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_despawn_assault_bots_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_mimiron_despawn_assault_bots_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1779,10 +1775,8 @@ class spell_mimiron_fire_search : public SpellScriptLoader
         spell_mimiron_fire_search() : SpellScriptLoader("spell_mimiron_fire_search") { }
 
         class spell_mimiron_fire_search_SpellScript : public SpellScript
-        {
-            PrepareSpellScript(spell_mimiron_fire_search_SpellScript);
-
-        public:
+    {
+                 public:
             spell_mimiron_fire_search_SpellScript()
             {
                 _noTarget = false;
@@ -1833,9 +1827,9 @@ class spell_mimiron_fire_search : public SpellScriptLoader
 
             void Register() override
             {
-                AfterCast += SpellCastFn(spell_mimiron_fire_search_SpellScript::HandleAftercast);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_fire_search_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_fire_search_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                AfterCast.Register(&spell_mimiron_fire_search_SpellScript::HandleAftercast);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_fire_search_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_mimiron_fire_search_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
 
         private:
@@ -1856,8 +1850,6 @@ class spell_mimiron_magnetic_core : public SpellScriptLoader
 
         class spell_mimiron_magnetic_core_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_magnetic_core_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if([](WorldObject* obj) { return obj->ToUnit() && (obj->ToUnit()->GetVehicleBase() || obj->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE)); });
@@ -1865,7 +1857,7 @@ class spell_mimiron_magnetic_core : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_magnetic_core_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_magnetic_core_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENTRY);
             }
         };
 
@@ -1876,8 +1868,6 @@ class spell_mimiron_magnetic_core : public SpellScriptLoader
 
         class spell_mimiron_magnetic_core_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_magnetic_core_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_MAGNETIC_CORE_VISUAL });
@@ -1909,9 +1899,9 @@ class spell_mimiron_magnetic_core : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_mimiron_magnetic_core_AuraScript::OnApply, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_mimiron_magnetic_core_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_mimiron_magnetic_core_AuraScript::OnRemoveSelf, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_mimiron_magnetic_core_AuraScript::OnApply, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_mimiron_magnetic_core_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_mimiron_magnetic_core_AuraScript::OnRemoveSelf, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1929,8 +1919,6 @@ class spell_mimiron_napalm_shell : public SpellScriptLoader
 
         class spell_mimiron_napalm_shell_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_napalm_shell_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_NAPALM_SHELL });
@@ -1959,8 +1947,8 @@ class spell_mimiron_napalm_shell : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_napalm_shell_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_napalm_shell_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_napalm_shell_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_mimiron_napalm_shell_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1978,8 +1966,6 @@ class spell_mimiron_p3wx2_laser_barrage : public SpellScriptLoader
 
         class spell_mimiron_p3wx2_laser_barrage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_p3wx2_laser_barrage_SpellScript);
-
             void OnHit(SpellEffIndex /*effIndex*/)
             {
                 GetCaster()->SetChannelObjectGuid(GetHitUnit()->GetGUID());
@@ -1987,7 +1973,7 @@ class spell_mimiron_p3wx2_laser_barrage : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_p3wx2_laser_barrage_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_mimiron_p3wx2_laser_barrage_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -2005,8 +1991,6 @@ class spell_mimiron_plasma_blast : public SpellScriptLoader
 
         class spell_mimiron_plasma_blast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_plasma_blast_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_PLASMA_BLAST });
@@ -2025,7 +2009,7 @@ class spell_mimiron_plasma_blast : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_plasma_blast_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_mimiron_plasma_blast_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2043,8 +2027,6 @@ class spell_mimiron_proximity_explosion : public SpellScriptLoader
 
         class spell_mimiron_proximity_explosion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_proximity_explosion_SpellScript);
-
             void OnHit(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitPlayer())
@@ -2060,8 +2042,8 @@ class spell_mimiron_proximity_explosion : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_proximity_explosion_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_proximity_explosion_SpellScript::HandleAura, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_mimiron_proximity_explosion_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_mimiron_proximity_explosion_SpellScript::HandleAura, EFFECT_1, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -2079,8 +2061,6 @@ class spell_mimiron_proximity_mines : public SpellScriptLoader
 
         class spell_mimiron_proximity_mines_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_proximity_mines_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_PROXIMITY_MINE });
@@ -2094,7 +2074,7 @@ class spell_mimiron_proximity_mines : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_proximity_mines_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_mimiron_proximity_mines_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2112,8 +2092,6 @@ class spell_mimiron_proximity_trigger : public SpellScriptLoader
 
         class spell_mimiron_proximity_trigger_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_proximity_trigger_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_PROXIMITY_MINE_EXPLOSION });
@@ -2134,8 +2112,8 @@ class spell_mimiron_proximity_trigger : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_proximity_trigger_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHit += SpellEffectFn(spell_mimiron_proximity_trigger_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_proximity_trigger_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHit.Register(&spell_mimiron_proximity_trigger_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2153,8 +2131,6 @@ class spell_mimiron_rapid_burst : public SpellScriptLoader
 
         class spell_mimiron_rapid_burst_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_rapid_burst_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_RAPID_BURST_LEFT, SPELL_RAPID_BURST_RIGHT });
@@ -2169,13 +2145,13 @@ class spell_mimiron_rapid_burst : public SpellScriptLoader
             void HandleDummyTick(AuraEffect const* aurEff)
             {
                 if (GetCaster())
-                    GetCaster()->CastSpell(GetTarget(), aurEff->GetTickNumber() % 2 == 0 ? SPELL_RAPID_BURST_RIGHT : SPELL_RAPID_BURST_LEFT, true, nullptr, aurEff);
+                    GetCaster()->CastSpell(GetTarget(), aurEff->GetTickNumber() % 2 == 0 ? SPELL_RAPID_BURST_RIGHT : SPELL_RAPID_BURST_LEFT, aurEff);
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectApplyFn(spell_mimiron_rapid_burst_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mimiron_rapid_burst_AuraScript::HandleDummyTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+                AfterEffectRemove.Register(&spell_mimiron_rapid_burst_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_mimiron_rapid_burst_AuraScript::HandleDummyTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -2193,8 +2169,6 @@ class spell_mimiron_rocket_strike : public SpellScriptLoader
 
         class spell_mimiron_rocket_strike_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_rocket_strike_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SCRIPT_EFFECT_ROCKET_STRIKE });
@@ -2215,13 +2189,13 @@ class spell_mimiron_rocket_strike : public SpellScriptLoader
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
-                GetHitUnit()->CastSpell((Unit*)nullptr, SPELL_SCRIPT_EFFECT_ROCKET_STRIKE, true, nullptr, nullptr, GetCaster()->GetGUID());
+                GetHitUnit()->CastSpell(nullptr, SPELL_SCRIPT_EFFECT_ROCKET_STRIKE, GetCaster()->GetGUID());
             }
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_rocket_strike_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_rocket_strike_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_rocket_strike_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_mimiron_rocket_strike_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2239,8 +2213,6 @@ class spell_mimiron_rocket_strike_damage : public SpellScriptLoader
 
         class spell_mimiron_rocket_strike_damage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_rocket_strike_damage_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_NOT_SO_FRIENDLY_FIRE });
@@ -2267,9 +2239,9 @@ class spell_mimiron_rocket_strike_damage : public SpellScriptLoader
 
             void Register() override
             {
-                AfterCast += SpellCastFn(spell_mimiron_rocket_strike_damage_SpellScript::HandleAfterCast);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_rocket_strike_damage_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_rocket_strike_damage_SpellScript::HandleFriendlyFire, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
+                AfterCast.Register(&spell_mimiron_rocket_strike_damage_SpellScript::HandleAfterCast);
+                OnEffectHitTarget.Register(&spell_mimiron_rocket_strike_damage_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnEffectHitTarget.Register(&spell_mimiron_rocket_strike_damage_SpellScript::HandleFriendlyFire, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
             }
         };
 
@@ -2287,8 +2259,6 @@ class spell_mimiron_rocket_strike_target_select : public SpellScriptLoader
 
         class spell_mimiron_rocket_strike_target_select_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_rocket_strike_target_select_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_ROCKET_STRIKE });
@@ -2313,14 +2283,14 @@ class spell_mimiron_rocket_strike_target_select : public SpellScriptLoader
             void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (InstanceScript* instance = GetCaster()->GetInstanceScript())
-                    GetCaster()->CastSpell(GetHitUnit(), SPELL_SUMMON_ROCKET_STRIKE, true, nullptr, nullptr, instance->GetGuidData(DATA_VX_001));
+                    GetCaster()->CastSpell(GetHitUnit(), SPELL_SUMMON_ROCKET_STRIKE, instance->GetGuidData(DATA_VX_001));
                 GetCaster()->SetDisplayId(11686);
             }
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_rocket_strike_target_select_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_rocket_strike_target_select_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_rocket_strike_target_select_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_mimiron_rocket_strike_target_select_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2338,8 +2308,6 @@ class spell_mimiron_self_repair : public SpellScriptLoader
 
         class spell_mimiron_self_repair_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_self_repair_SpellScript);
-
             void HandleScript()
             {
                 if (GetCaster()->GetAI())
@@ -2348,7 +2316,7 @@ class spell_mimiron_self_repair : public SpellScriptLoader
 
             void Register() override
             {
-                AfterHit += SpellHitFn(spell_mimiron_self_repair_SpellScript::HandleScript);
+                AfterHit.Register(&spell_mimiron_self_repair_SpellScript::HandleScript);
             }
         };
 
@@ -2367,8 +2335,6 @@ class spell_mimiron_spinning_up : public SpellScriptLoader
 
         class spell_mimiron_spinning_up_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_spinning_up_SpellScript);
-
             void OnHit(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitUnit() != GetCaster())
@@ -2377,7 +2343,7 @@ class spell_mimiron_spinning_up : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_spinning_up_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_mimiron_spinning_up_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -2395,8 +2361,6 @@ class spell_mimiron_summon_assault_bot : public SpellScriptLoader
 
         class spell_mimiron_summon_assault_bot_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_summon_assault_bot_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_ASSAULT_BOT });
@@ -2406,13 +2370,13 @@ class spell_mimiron_summon_assault_bot : public SpellScriptLoader
             {
                 if (Unit* caster = GetCaster())
                     if (InstanceScript* instance = caster->GetInstanceScript())
-                        if (instance->GetBossState(BOSS_MIMIRON) == IN_PROGRESS)
-                            caster->CastSpell(caster, SPELL_SUMMON_ASSAULT_BOT, false, nullptr, aurEff, instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT));
+                        if (instance->GetBossState(DATA_MIMIRON) == IN_PROGRESS)
+                            caster->CastSpell(caster, SPELL_SUMMON_ASSAULT_BOT, CastSpellExtraArgs(aurEff).SetOriginalCaster(instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT)));
             }
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_mimiron_summon_assault_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_mimiron_summon_assault_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -2430,8 +2394,6 @@ class spell_mimiron_summon_assault_bot_target : public SpellScriptLoader
 
         class spell_mimiron_summon_assault_bot_target_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_summon_assault_bot_target_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_ASSAULT_BOT_DUMMY });
@@ -2444,7 +2406,7 @@ class spell_mimiron_summon_assault_bot_target : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_summon_assault_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_mimiron_summon_assault_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2462,8 +2424,6 @@ class spell_mimiron_summon_fire_bot : public SpellScriptLoader
 
         class spell_mimiron_summon_fire_bot_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_summon_fire_bot_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_FIRE_BOT });
@@ -2473,13 +2433,13 @@ class spell_mimiron_summon_fire_bot : public SpellScriptLoader
             {
                 if (Unit* caster = GetCaster())
                     if (InstanceScript* instance = caster->GetInstanceScript())
-                        if (instance->GetBossState(BOSS_MIMIRON) == IN_PROGRESS)
-                            caster->CastSpell(caster, SPELL_SUMMON_FIRE_BOT, false, nullptr, aurEff, instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT));
+                        if (instance->GetBossState(DATA_MIMIRON) == IN_PROGRESS)
+                            caster->CastSpell(caster, SPELL_SUMMON_FIRE_BOT, { aurEff, instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT) });
             }
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_mimiron_summon_fire_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_mimiron_summon_fire_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -2497,8 +2457,6 @@ class spell_mimiron_summon_fire_bot_target : public SpellScriptLoader
 
         class spell_mimiron_summon_fire_bot_target_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_summon_fire_bot_target_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_FIRE_BOT_DUMMY });
@@ -2511,7 +2469,7 @@ class spell_mimiron_summon_fire_bot_target : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_summon_fire_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_mimiron_summon_fire_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2529,8 +2487,6 @@ class spell_mimiron_summon_flames_spread : public SpellScriptLoader
 
         class spell_mimiron_summon_flames_spread_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_summon_flames_spread_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -2549,13 +2505,13 @@ class spell_mimiron_summon_flames_spread : public SpellScriptLoader
 
             void OnHit(SpellEffIndex /*effIndex*/)
             {
-                GetCaster()->SetInFront(GetHitUnit());
+                GetCaster()->SetOrientationTowards(GetHitUnit());
             }
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_summon_flames_spread_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_summon_flames_spread_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_summon_flames_spread_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_mimiron_summon_flames_spread_SpellScript::OnHit, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -2566,8 +2522,6 @@ class spell_mimiron_summon_flames_spread : public SpellScriptLoader
 
         class spell_mimiron_summon_flames_spread_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_summon_flames_spread_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_FLAMES_SPREAD });
@@ -2583,7 +2537,7 @@ class spell_mimiron_summon_flames_spread : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mimiron_summon_flames_spread_AuraScript::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_mimiron_summon_flames_spread_AuraScript::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -2601,8 +2555,6 @@ class spell_mimiron_summon_frost_bomb_target : public SpellScriptLoader
 
         class spell_mimiron_summon_frost_bomb_target_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_summon_frost_bomb_target_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_FROST_BOMB });
@@ -2631,8 +2583,8 @@ class spell_mimiron_summon_frost_bomb_target : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mimiron_summon_frost_bomb_target_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_summon_frost_bomb_target_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_mimiron_summon_frost_bomb_target_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_mimiron_summon_frost_bomb_target_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2650,8 +2602,6 @@ class spell_mimiron_summon_junk_bot : public SpellScriptLoader
 
         class spell_mimiron_summon_junk_bot_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_summon_junk_bot_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_JUNK_BOT });
@@ -2661,13 +2611,13 @@ class spell_mimiron_summon_junk_bot : public SpellScriptLoader
             {
                 if (Unit* caster = GetCaster())
                     if (InstanceScript* instance = caster->GetInstanceScript())
-                        if (instance->GetBossState(BOSS_MIMIRON) == IN_PROGRESS)
-                            caster->CastSpell(caster, SPELL_SUMMON_JUNK_BOT, false, nullptr, aurEff, instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT));
+                        if (instance->GetBossState(DATA_MIMIRON) == IN_PROGRESS)
+                            caster->CastSpell(caster, SPELL_SUMMON_JUNK_BOT, { aurEff, instance->GetGuidData(DATA_AERIAL_COMMAND_UNIT) });
             }
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_mimiron_summon_junk_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_mimiron_summon_junk_bot_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -2685,8 +2635,6 @@ class spell_mimiron_summon_junk_bot_target : public SpellScriptLoader
 
         class spell_mimiron_summon_junk_bot_target_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mimiron_summon_junk_bot_target_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_JUNK_BOT_DUMMY });
@@ -2699,7 +2647,7 @@ class spell_mimiron_summon_junk_bot_target : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_mimiron_summon_junk_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_mimiron_summon_junk_bot_target_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2717,8 +2665,6 @@ class spell_mimiron_weld : public SpellScriptLoader
 
         class spell_mimiron_weld_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mimiron_weld_AuraScript);
-
             void HandleTick(AuraEffect const* aurEff)
             {
                 Unit* caster = GetTarget();
@@ -2732,7 +2678,7 @@ class spell_mimiron_weld : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mimiron_weld_AuraScript::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_mimiron_weld_AuraScript::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 

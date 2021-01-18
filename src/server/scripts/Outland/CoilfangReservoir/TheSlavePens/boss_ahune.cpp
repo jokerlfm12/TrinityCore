@@ -181,9 +181,9 @@ public:
             me->SetControlled(true, UNIT_STATE_ROOT);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             events.ScheduleEvent(EVENT_INITIAL_EMERGE, Milliseconds(4));
             events.ScheduleEvent(EVENT_SYNCH_HEALTH, Seconds(3));
         }
@@ -277,7 +277,6 @@ public:
             if (Creature* frozenCore = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_FROZEN_CORE)))
                 frozenCore->AI()->DoAction(ACTION_AHUNE_RETREAT);
             me->RemoveAurasDueToSpell(SPELL_AHUNES_SHIELD);
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_31);
             DoCast(me, SPELL_SUBMERGED, true);
             DoCast(me, SPELL_AHUNE_SELF_STUN, true);
             DoCast(me, SPELL_STAY_SUBMERGED, true);
@@ -326,7 +325,8 @@ public:
         {
             if (action == ACTION_AHUNE_RETREAT)
             {
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToPC(false);
                 me->RemoveAurasDueToSpell(SPELL_ICE_SPEAR_AURA);
                 _events.ScheduleEvent(EVENT_SYNCH_HEALTH, Seconds(3), 0, PHASE_TWO);
             }
@@ -334,7 +334,8 @@ public:
             {
                 _events.Reset();
                 DoCast(me, SPELL_ICE_SPEAR_AURA);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToPC(true);
             }
         }
 
@@ -692,8 +693,6 @@ public:
 
     class spell_ahune_synch_health_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_ahune_synch_health_SpellScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_SYNCH_HEALTH });
@@ -708,7 +707,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_ahune_synch_health_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_ahune_synch_health_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -726,8 +725,6 @@ public:
 
     class spell_summoning_rhyme_aura_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_summoning_rhyme_aura_AuraScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_FORCE_WHISP_FLIGHT, SPELL_SUMMONING_RHYME_BONFIRE });
@@ -764,7 +761,7 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_summoning_rhyme_aura_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            OnEffectPeriodic.Register(&spell_summoning_rhyme_aura_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
@@ -782,8 +779,6 @@ public:
 
     class spell_summon_ice_spear_delayer_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_summon_ice_spear_delayer_AuraScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_SUMMON_ICE_SPEAR_GO, SPELL_ICE_SPEAR_KNOCKBACK });
@@ -815,7 +810,7 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_summon_ice_spear_delayer_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            OnEffectPeriodic.Register(&spell_summon_ice_spear_delayer_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
@@ -833,8 +828,6 @@ public:
 
     class spell_ice_spear_control_aura_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_ice_spear_control_aura_AuraScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_ICE_SPEAR_TARGET_PICKER });
@@ -848,7 +841,7 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_ice_spear_control_aura_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            OnEffectPeriodic.Register(&spell_ice_spear_control_aura_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
@@ -866,9 +859,7 @@ public:
 
     class spell_ice_spear_target_picker_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_ice_spear_target_picker_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+             bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_SUMMON_ICE_SPEAR_BUNNY });
         }
@@ -890,8 +881,8 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_ice_spear_target_picker_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-            OnEffectHitTarget += SpellEffectFn(spell_ice_spear_target_picker_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+            OnObjectAreaTargetSelect.Register(&spell_ice_spear_target_picker_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+            OnEffectHitTarget.Register(&spell_ice_spear_target_picker_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
         }
     };
 
@@ -909,8 +900,6 @@ public:
 
     class spell_slippery_floor_periodic_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_slippery_floor_periodic_SpellScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_SLIPPERY_FLOOR_SLIP });
@@ -928,7 +917,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_slippery_floor_periodic_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_slippery_floor_periodic_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 
@@ -946,8 +935,6 @@ public:
 
     class spell_ahune_spanky_hands_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_ahune_spanky_hands_AuraScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_COLD_SLAP });
@@ -961,7 +948,7 @@ public:
 
         void Register() override
         {
-            OnEffectProc += AuraEffectProcFn(spell_ahune_spanky_hands_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+            OnEffectProc.Register(&spell_ahune_spanky_hands_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
         }
     };
 
@@ -978,8 +965,6 @@ public:
 
     class spell_ahune_minion_despawner_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_ahune_minion_despawner_SpellScript);
-
         void HandleScript(SpellEffIndex /*effIndex*/)
         {
             if (GetHitCreature())
@@ -988,7 +973,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_ahune_minion_despawner_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+            OnEffectHitTarget.Register(&spell_ahune_minion_despawner_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
         }
     };
 
@@ -1006,8 +991,6 @@ public:
 
     class spell_ice_bombardment_dest_picker_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_ice_bombardment_dest_picker_SpellScript);
-
         bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_ICE_BOMBARDMENT });
@@ -1015,12 +998,12 @@ public:
 
         void HandleScriptEffect(SpellEffIndex /*effIndex*/)
         {
-            GetCaster()->CastSpell(GetHitDest()->GetPositionX(), GetHitDest()->GetPositionY(), GetHitDest()->GetPositionZ(), SPELL_ICE_BOMBARDMENT, true);
+            GetCaster()->CastSpell({ GetHitDest()->GetPositionX(), GetHitDest()->GetPositionY(), GetHitDest()->GetPositionZ() }, SPELL_ICE_BOMBARDMENT, true);
         }
 
         void Register() override
         {
-            OnEffectHit += SpellEffectFn(spell_ice_bombardment_dest_picker_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+            OnEffectHit.Register(&spell_ice_bombardment_dest_picker_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
         }
     };
 

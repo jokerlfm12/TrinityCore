@@ -29,6 +29,8 @@
 
 #define MAX_GAMEOBJECT_QUEST_ITEMS 6
 
+class WorldPacket;
+
 // from `gameobject_template`
 struct GameObjectTemplate
 {
@@ -327,6 +329,7 @@ struct GameObjectTemplate
         {
             uint32 gameType;                                //0
         } miniGame;
+        //28 GAMEOBJECT_TYPE_DO_NOT_USE_2 - empty
         //29 GAMEOBJECT_TYPE_CAPTURE_POINT
         struct
         {
@@ -426,6 +429,7 @@ struct GameObjectTemplate
 
     std::string AIName;
     uint32 ScriptId;
+    WorldPacket QueryData[TOTAL_LOCALES];
 
     // helpers
     bool IsDespawnAtAction() const
@@ -442,10 +446,26 @@ struct GameObjectTemplate
     {
         switch (type)
         {
+            case GAMEOBJECT_TYPE_MAILBOX: return true;
+            case GAMEOBJECT_TYPE_BARBER_CHAIR: return false;
             case GAMEOBJECT_TYPE_QUESTGIVER: return questgiver.allowMounted != 0;
             case GAMEOBJECT_TYPE_TEXT: return text.allowMounted != 0;
             case GAMEOBJECT_TYPE_GOOBER: return goober.allowMounted != 0;
             case GAMEOBJECT_TYPE_SPELLCASTER: return spellcaster.allowMounted != 0;
+            default: return false;
+        }
+    }
+
+    bool IsIgnoringLOSChecks() const
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_BUTTON: return button.losOK == 0;
+            case GAMEOBJECT_TYPE_QUESTGIVER: return questgiver.losOK == 0;
+            case GAMEOBJECT_TYPE_CHEST: return chest.losOK == 0;
+            case GAMEOBJECT_TYPE_GOOBER: return goober.losOK == 0;
+            case GAMEOBJECT_TYPE_FLAGSTAND: return flagstand.losOK == 0;
+            case GAMEOBJECT_TYPE_TRAP: return true;
             default: return false;
         }
     }
@@ -480,6 +500,21 @@ struct GameObjectTemplate
             case GAMEOBJECT_TYPE_FLAGSTAND:  return flagstand.noDamageImmune != 0;
             case GAMEOBJECT_TYPE_FLAGDROP:   return flagdrop.noDamageImmune != 0;
             default: return true;
+        }
+    }
+
+    bool CannotBeUsedUnderImmunity() const // Cannot be used/activated/looted by players under immunity effects (example: Divine Shield)
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_DOOR:       return door.noDamageImmune != 0;
+            case GAMEOBJECT_TYPE_BUTTON:     return button.noDamageImmune != 0;
+            case GAMEOBJECT_TYPE_QUESTGIVER: return questgiver.noDamageImmune != 0;
+            case GAMEOBJECT_TYPE_CHEST:      return true;                           // All chests cannot be opened while immune on 3.3.5a
+            case GAMEOBJECT_TYPE_GOOBER:     return goober.noDamageImmune != 0;
+            case GAMEOBJECT_TYPE_FLAGSTAND:  return flagstand.noDamageImmune != 0;
+            case GAMEOBJECT_TYPE_FLAGDROP:   return flagdrop.noDamageImmune != 0;
+            default: return false;
         }
     }
 
@@ -594,12 +629,14 @@ struct GameObjectTemplate
             default: return false;
         }
     }
+
+    void InitializeQueryData();
+    WorldPacket BuildQueryData(LocaleConstant loc) const;
 };
 
 // From `gameobject_template_addon`
 struct GameObjectTemplateAddon
 {
-    uint32  entry;
     uint32  faction;
     uint32  flags;
     uint32  mingold;

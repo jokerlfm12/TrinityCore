@@ -49,8 +49,8 @@ class npc_pet_pri_lightwell : public CreatureScript
                 if (!me->IsAlive())
                     return;
 
-                me->DeleteThreatList();
                 me->CombatStop(true);
+                EngagementOver();
                 me->ResetPlayerDamageReq();
             }
         };

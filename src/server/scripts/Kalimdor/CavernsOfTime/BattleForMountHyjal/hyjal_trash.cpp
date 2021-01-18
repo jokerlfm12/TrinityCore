@@ -450,7 +450,7 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
         }
@@ -486,7 +486,7 @@ public:
                     {
                         Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                         if (target && target->IsAlive())
-                            me->AddThreat(target, 0.0f);
+                            AddThreat(target, 0.0f);
                     } else if (instance->GetData(DATA_ALLIANCE_RETREAT) && instance->GetData(DATA_HORDE_RETREAT)){
                         //do overrun
                     }
@@ -558,13 +558,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
             if (waypointId == LastOverronPos && IsOverrun)
@@ -656,13 +656,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
             if (waypointId == LastOverronPos && IsOverrun)
@@ -766,13 +766,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
         }
@@ -878,13 +878,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
         }
@@ -973,13 +973,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
         }
@@ -1058,13 +1058,13 @@ public:
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
                 else
                 {
                     Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                     if (target && target->IsAlive())
-                        me->AddThreat(target, 0.0f);
+                        AddThreat(target, 0.0f);
                 }
             }
         }
@@ -1150,7 +1150,7 @@ public:
                 Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                 if (target && target->IsAlive())
                 {
-                    me->AddThreat(target, 0.0f);
+                    AddThreat(target, 0.0f);
                     DoCast(target, SPELL_FROST_BREATH, true);
                 }
             }
@@ -1271,7 +1271,7 @@ public:
                 Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_THRALL));
                 if (target && target->IsAlive())
                 {
-                    me->AddThreat(target, 0.0f);
+                    AddThreat(target, 0.0f);
                     DoCast(target, SPELL_GARGOYLE_STRIKE, true);
                 }
             }
@@ -1323,7 +1323,7 @@ public:
                 {
                     if (StrikeTimer <= diff)
                     {
-                        me->CastSpell(DummyTarget[0], DummyTarget[1], DummyTarget[2], SPELL_GARGOYLE_STRIKE, false);
+                        me->CastSpell({ DummyTarget[0], DummyTarget[1], DummyTarget[2] }, SPELL_GARGOYLE_STRIKE);
                         StrikeTimer = 2000 + rand32() % 1000;
                     } else StrikeTimer -= diff;
                     }
@@ -1430,8 +1430,9 @@ public:
                     EnterEvadeMode();
                     return;
                 }
-                int dmg = 500 + rand32() % 700;
-                me->CastCustomSpell(me->GetVictim(), SPELL_EXPLODING_SHOT, &dmg, 0, 0, false);
+                int32 dmg = 500 + rand32() % 700;
+
+                me->CastSpell(me->GetVictim(), SPELL_EXPLODING_SHOT, { SPELLVALUE_BASE_POINT0, dmg });
                 ExplodeTimer = 5000 + rand32() % 5000;
             } else ExplodeTimer -= diff;
             DoMeleeAttackIfReady();

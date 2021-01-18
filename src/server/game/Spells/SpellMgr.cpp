@@ -1585,8 +1585,8 @@ void SpellMgr::LoadSpellProcs()
 
     //                                                     0           1                2                 3                 4                 5
     QueryResult result = WorldDatabase.Query("SELECT SpellId, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, "
-    //           6              7               8        9              10              11      12        13      14
-        "ProcFlags, SpellTypeMask, SpellPhaseMask, HitMask, AttributesMask, ProcsPerMinute, Chance, Cooldown, Charges FROM spell_proc");
+    //           6              7               8        9               10                  11              12      13        14       15
+        "ProcFlags, SpellTypeMask, SpellPhaseMask, HitMask, AttributesMask, DisableEffectsMask, ProcsPerMinute, Chance, Cooldown, Charges FROM spell_proc");
 
     uint32 count = 0;
     if (result)
@@ -1635,10 +1635,11 @@ void SpellMgr::LoadSpellProcs()
             baseProcEntry.SpellPhaseMask = fields[8].GetUInt32();
             baseProcEntry.HitMask = fields[9].GetUInt32();
             baseProcEntry.AttributesMask = fields[10].GetUInt32();
-            baseProcEntry.ProcsPerMinute = fields[11].GetFloat();
-            baseProcEntry.Chance = fields[12].GetFloat();
-            baseProcEntry.Cooldown = Milliseconds(fields[13].GetUInt32());
-            baseProcEntry.Charges = fields[14].GetUInt8();
+            baseProcEntry.DisableEffectsMask = fields[11].GetUInt32();
+            baseProcEntry.ProcsPerMinute = fields[12].GetFloat();
+            baseProcEntry.Chance = fields[13].GetFloat();
+            baseProcEntry.Cooldown = Milliseconds(fields[14].GetUInt32());
+            baseProcEntry.Charges = fields[15].GetUInt8();
 
             while (spellInfo)
             {
@@ -1690,8 +1691,8 @@ void SpellMgr::LoadSpellProcs()
                 if (procEntry.HitMask && !(procEntry.ProcFlags & TAKEN_HIT_PROC_FLAG_MASK || (procEntry.ProcFlags & DONE_HIT_PROC_FLAG_MASK && (!procEntry.SpellPhaseMask || procEntry.SpellPhaseMask & (PROC_SPELL_PHASE_HIT | PROC_SPELL_PHASE_FINISH)))))
                     TC_LOG_ERROR("sql.sql", "The `spell_proc` table entry for spellId %u has `HitMask` value defined, but it will not be used for defined `ProcFlags` and `SpellPhaseMask` values.", spellInfo->Id);
                 for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                    if ((procEntry.AttributesMask & (PROC_ATTR_DISABLE_EFF_0 << i)) && !spellInfo->Effects[i].IsAura())
-                        TC_LOG_ERROR("sql.sql", "The `spell_proc` table entry for spellId %u has Attribute PROC_ATTR_DISABLE_EFF_%u, but effect %u is not an aura effect", spellInfo->Id, static_cast<uint32>(i), static_cast<uint32>(i));
+                    if ((procEntry.DisableEffectsMask & (1u << i)) && !spellInfo->Effects[i].IsAura())
+                        TC_LOG_ERROR("sql.sql", "The `spell_proc` table entry for spellId %u has DisableEffectsMask with effect %u, but effect %u is not an aura effect", spellInfo->Id, static_cast<uint32>(i), static_cast<uint32>(i));
                 if (procEntry.AttributesMask & PROC_ATTR_REQ_SPELLMOD)
                 {
                     bool found = false;
@@ -1925,12 +1926,11 @@ void SpellMgr::LoadSpellProcs()
         }
 
         procEntry.AttributesMask  = 0;
+        procEntry.DisableEffectsMask = nonProcMask;
         if (spellInfo->ProcFlags & PROC_FLAG_KILL)
             procEntry.AttributesMask |= PROC_ATTR_REQ_EXP_OR_HONOR;
         if (addTriggerFlag)
             procEntry.AttributesMask |= PROC_ATTR_TRIGGERED_CAN_PROC;
-        if (nonProcMask)
-            procEntry.AttributesMask |= nonProcMask * PROC_ATTR_DISABLE_EFF_0;
 
         procEntry.ProcsPerMinute  = 0;
         procEntry.Chance          = spellInfo->ProcChance;
@@ -3018,7 +3018,8 @@ void SpellMgr::LoadSpellInfoCorrections()
         52438, // Summon Skittering Swarmer (Force Cast)
         52449, // Summon Skittering Infector (Force Cast)
         53609, // Summon Anub'ar Assassin (Force Cast)
-        53457  // Summon Impale Trigger (AoE
+        53457,  // Summon Impale Trigger (AoE)
+        45907  // Torch Target Picker
     }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 1;
@@ -4848,6 +4849,18 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
     // ENDOF ISLE OF CONQUEST SPELLS
 
+    // Deadly Poison - Black Temple
+    ApplySpellFix({ 66551 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+    });
+
+    // Envenom - Black Temple
+    ApplySpellFix({ 41487 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+    });
+
     //
     // FIRELANDS SPELLS
     //
@@ -5417,17 +5430,10 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].RadiusEntry = sSpellRadiusStore.LookupEntry(EFFECT_RADIUS_5_YARDS);
     });
 
-    // Sonar Pulse (10n, 10h)
+    // Sonar Pulse
     ApplySpellFix({
         77672,
-        92412
-    }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->MaxAffectedTargets = 3;
-    });
-
-    // Sonar Pulse (25n, 25h)
-    ApplySpellFix({
+        92412,
         92411,
         92413
     }, [](SpellInfo* spellInfo)
@@ -5444,15 +5450,22 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].AuraPeriod = 2000;
     });
 
-    // Sonar Pulse
+    // Sonar Pulse (10 player)
     ApplySpellFix({
         92526,
-        92531,
         92532,
+    }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 5;
+    });
+
+    // Sonar Pulse (25 player)
+    ApplySpellFix({
+        92531,
         92533
     }, [](SpellInfo* spellInfo)
     {
-        spellInfo->MaxAffectedTargets = 4;
+        spellInfo->MaxAffectedTargets = 12;
     });
 
     // Roaring Flame Breath
@@ -5640,6 +5653,24 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].RadiusEntry = sSpellRadiusStore.LookupEntry(EFFECT_RADIUS_4_YARDS);
     });
 
+    // Mangle (Hotfix: 2011-03-16: Magmaw overall damage and health was a little too high on all difficulties and has been reduced slightly)
+    // For some reason this didn't seem to have found its way into the dbc as sniffs confirm 100% melee damage instead of 150%.
+    ApplySpellFix({
+        89773,
+        91912,
+        94616,
+        94617
+    }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_2].BasePoints = 100;
+    });
+
+    // Shadow Conductor
+    ApplySpellFix({ 92053 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->DurationEntry = sSpellDurationStore.LookupEntry(29); // 12 seconds
+    });
+
     // ENDOF BLACKWING DESCENT SPELLS
 
     // Living Bomb
@@ -5727,6 +5758,22 @@ void SpellMgr::LoadSpellInfoCorrections()
     }, [](SpellInfo* spellInfo)
     {
        spellInfo->RangeEntry = sSpellRangeStore.LookupEntry(2); // 5 yards (combat range)
+    });
+
+    // Gift of the Earthmother (Rank 2)
+    ApplySpellFix({ 51180 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].Effect = SPELL_EFFECT_APPLY_AURA;
+        spellInfo->Effects[EFFECT_0].ApplyAuraName = SPELL_AURA_DUMMY;
+
+        spellInfo->Effects[EFFECT_1].Effect = SPELL_EFFECT_APPLY_AURA;
+        spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_DUMMY;
+    });
+
+    // Divine Purpose
+    ApplySpellFix({ 90174 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->Effects[EFFECT_0].SpellClassMask[1] = 0;
     });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)

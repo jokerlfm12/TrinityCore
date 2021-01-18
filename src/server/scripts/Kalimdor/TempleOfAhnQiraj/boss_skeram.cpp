@@ -125,14 +125,17 @@ class boss_skeram : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 if (!me->IsSummon())
+                {
+                    _JustDied();
                     Talk(SAY_DEATH);
+                }
                 else
                     me->RemoveCorpse();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.Reset();
 
                 events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, urand(6000, 12000));
@@ -165,7 +168,7 @@ class boss_skeram : public CreatureScript
                             break;
                         case EVENT_BLINK:
                             DoCast(me, BlinkSpells[urand(0, 2)]);
-                            DoResetThreat();
+                            ResetThreatList();
                             me->SetVisible(true);
                             events.ScheduleEvent(EVENT_BLINK, urand(10000, 30000));
                             break;
@@ -226,8 +229,6 @@ class spell_skeram_arcane_explosion : public SpellScriptLoader
 
         class spell_skeram_arcane_explosion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_skeram_arcane_explosion_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(PlayerOrPetCheck());
@@ -235,7 +236,7 @@ class spell_skeram_arcane_explosion : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_skeram_arcane_explosion_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_skeram_arcane_explosion_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -253,8 +254,6 @@ public:
 
     class spell_skeram_true_fulfillment_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_skeram_true_fulfillment_SpellScript);
-
         bool Validate(SpellInfo const* /*spell*/) override
         {
             return ValidateSpellInfo({ SPELL_TRUE_FULFILLMENT_2, SPELL_GENERIC_DISMOUNT });
@@ -268,7 +267,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_skeram_true_fulfillment_SpellScript::HandleEffect, EFFECT_0, SPELL_AURA_MOD_CHARM);
+            OnEffectHitTarget.Register(&spell_skeram_true_fulfillment_SpellScript::HandleEffect, EFFECT_0, SPELL_AURA_MOD_CHARM);
         }
     };
 

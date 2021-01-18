@@ -123,7 +123,7 @@ EnumName<UnitFlags> const unitFlags[MAX_UNIT_FLAGS] =
     CREATE_NAMED_ENUM(UNIT_FLAG_SERVER_CONTROLLED),
     CREATE_NAMED_ENUM(UNIT_FLAG_NON_ATTACKABLE),
     CREATE_NAMED_ENUM(UNIT_FLAG_REMOVE_CLIENT_CONTROL),
-    CREATE_NAMED_ENUM(UNIT_FLAG_PVP_ATTACKABLE),
+    CREATE_NAMED_ENUM(UNIT_FLAG_PLAYER_CONTROLLED),
     CREATE_NAMED_ENUM(UNIT_FLAG_RENAME),
     CREATE_NAMED_ENUM(UNIT_FLAG_PREPARATION),
     CREATE_NAMED_ENUM(UNIT_FLAG_UNK_6),
@@ -135,7 +135,7 @@ EnumName<UnitFlags> const unitFlags[MAX_UNIT_FLAGS] =
     CREATE_NAMED_ENUM(UNIT_FLAG_PVP),
     CREATE_NAMED_ENUM(UNIT_FLAG_SILENCED),
     CREATE_NAMED_ENUM(UNIT_FLAG_CANNOT_SWIM),
-    CREATE_NAMED_ENUM(UNIT_FLAG_UNK_15),
+    CREATE_NAMED_ENUM(UNIT_FLAG_SWIMMING),
     CREATE_NAMED_ENUM(UNIT_FLAG_NOT_ATTACKABLE_2),
     CREATE_NAMED_ENUM(UNIT_FLAG_PACIFIED),
     CREATE_NAMED_ENUM(UNIT_FLAG_STUNNED),
@@ -144,14 +144,14 @@ EnumName<UnitFlags> const unitFlags[MAX_UNIT_FLAGS] =
     CREATE_NAMED_ENUM(UNIT_FLAG_DISARMED),
     CREATE_NAMED_ENUM(UNIT_FLAG_CONFUSED),
     CREATE_NAMED_ENUM(UNIT_FLAG_FLEEING),
-    CREATE_NAMED_ENUM(UNIT_FLAG_PLAYER_CONTROLLED),
+    CREATE_NAMED_ENUM(UNIT_FLAG_POSSESSED),
     CREATE_NAMED_ENUM(UNIT_FLAG_NOT_SELECTABLE),
     CREATE_NAMED_ENUM(UNIT_FLAG_SKINNABLE),
     CREATE_NAMED_ENUM(UNIT_FLAG_MOUNT),
     CREATE_NAMED_ENUM(UNIT_FLAG_UNK_28),
     CREATE_NAMED_ENUM(UNIT_FLAG_UNK_29),
     CREATE_NAMED_ENUM(UNIT_FLAG_SHEATHE),
-    CREATE_NAMED_ENUM(UNIT_FLAG_UNK_31)
+    CREATE_NAMED_ENUM(UNIT_FLAG_IMMUNE)
 };
 
 EnumName<CreatureFlagsExtra> const flagsExtra[] =
@@ -167,6 +167,7 @@ EnumName<CreatureFlagsExtra> const flagsExtra[] =
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_NO_TAUNT),
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_NO_MOVE_FLAGS_UPDATE),
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_NO_SELL_VENDOR),
+    CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_NO_COMBAT),
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_WORLDEVENT),
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_GUARD),
     CREATE_NAMED_ENUM(CREATURE_FLAG_EXTRA_NO_CRIT),
@@ -436,13 +437,20 @@ public:
 
         uint32 vendor_entry = vendor->GetEntry();
 
-        if (!sObjectMgr->IsVendorItemValid(vendor_entry, itemId, maxcount, incrtime, extendedcost, type, handler->GetSession()->GetPlayer()))
+        VendorItem vItem;
+        vItem.item = itemId;
+        vItem.maxcount = maxcount;
+        vItem.incrtime = incrtime;
+        vItem.ExtendedCost = extendedcost;
+        vItem.Type = type;
+
+        if (!sObjectMgr->IsVendorItemValid(vendor_entry, vItem, handler->GetSession()->GetPlayer()))
         {
             handler->SetSentErrorMessage(true);
             return false;
         }
 
-        sObjectMgr->AddVendorItem(vendor_entry, itemId, maxcount, incrtime, extendedcost, type);
+        sObjectMgr->AddVendorItem(vendor_entry, vItem);
 
         ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(itemId);
 
@@ -1689,13 +1697,12 @@ public:
             return false;
 
         Player* chr = handler->GetSession()->GetPlayer();
-        FormationInfo* group_member;
+        FormationInfo group_member;
 
-        group_member                 = new FormationInfo;
-        group_member->follow_angle   = (creature->GetAngle(chr) - chr->GetOrientation()) * 180 / float(M_PI);
-        group_member->follow_dist    = std::sqrt(std::pow(chr->GetPositionX() - creature->GetPositionX(), 2.f) + std::pow(chr->GetPositionY() - creature->GetPositionY(), 2.f));
-        group_member->leaderGUID     = leaderGUID;
-        group_member->groupAI        = 0;
+        group_member.FollowAngle   = (creature->GetAngle(chr) - chr->GetOrientation()) * 180 / float(M_PI);
+        group_member.FollowDistance    = std::sqrt(std::pow(chr->GetPositionX() - creature->GetPositionX(), 2.f) + std::pow(chr->GetPositionY() - creature->GetPositionY(), 2.f));
+        group_member.LeaderGUID     = leaderGUID;
+        group_member.GroupAI        = 0;
 
         sFormationMgr->CreatureGroupMap[lowguid] = group_member;
         creature->SearchFormation();
@@ -1704,9 +1711,9 @@ public:
 
         stmt->setUInt32(0, leaderGUID);
         stmt->setUInt32(1, lowguid);
-        stmt->setFloat(2, group_member->follow_dist);
-        stmt->setFloat(3, group_member->follow_angle);
-        stmt->setUInt32(4, uint32(group_member->groupAI));
+        stmt->setFloat(2, group_member.FollowAngle);
+        stmt->setFloat(3, group_member.FollowDistance);
+        stmt->setUInt32(4, uint32(group_member.GroupAI));
 
         WorldDatabase.Execute(stmt);
 

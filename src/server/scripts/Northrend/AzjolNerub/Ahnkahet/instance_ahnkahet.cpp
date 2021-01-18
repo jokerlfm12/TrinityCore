@@ -289,8 +289,6 @@ class instance_ahnkahet : public InstanceMapScript
 // 56584 - Combined Toxins
 class spell_combined_toxins : public AuraScript
 {
-    PrepareAuraScript(spell_combined_toxins);
-
     bool CheckProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
         // only procs on poisons (damage class check to exclude stuff like Envenom)
@@ -300,12 +298,12 @@ class spell_combined_toxins : public AuraScript
 
     void Register() override
     {
-        DoCheckEffectProc += AuraCheckEffectProcFn(spell_combined_toxins::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_DAMAGE);
+        DoCheckEffectProc.Register(&spell_combined_toxins::CheckProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_DAMAGE);
     }
 };
 
 void AddSC_instance_ahnkahet()
 {
     new instance_ahnkahet();
-    RegisterAuraScript(spell_combined_toxins);
+    RegisterSpellScript(spell_combined_toxins);
 }

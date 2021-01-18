@@ -84,9 +84,9 @@ public:
             Initialize();
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
 
             events.ScheduleEvent(EVENT_CRYSTAL_SPIKES, 12000);
             events.ScheduleEvent(EVENT_TRAMPLE, 10000);
@@ -269,8 +269,6 @@ class spell_crystal_spike : public SpellScriptLoader
 
         class spell_crystal_spike_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_crystal_spike_AuraScript);
-
             void HandlePeriodic(AuraEffect const* /*aurEff*/)
             {
                 Unit* target = GetTarget();
@@ -285,7 +283,7 @@ class spell_crystal_spike : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_crystal_spike_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_crystal_spike_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 

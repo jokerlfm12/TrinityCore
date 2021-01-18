@@ -124,9 +124,9 @@ class boss_setesh : public CreatureScript
         {
             boss_seteshAI(Creature* creature) : BossAI(creature, DATA_SETESH) { }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
                 
@@ -178,7 +178,7 @@ class boss_setesh : public CreatureScript
                 switch (pointId)
                 {
                     case POINT_CHANNEL_CHAOS_PORTAL:
-                        if (Unit* npcChaosPortal = SelectTarget(SELECT_TARGET_NEAREST, 0, 0.0f, false, SPELL_DUMMY_AURA))
+                        if (Unit* npcChaosPortal = SelectTarget(SELECT_TARGET_MINDISTANCE, 0, 0.0f, false, true, SPELL_DUMMY_AURA))
                             DoCast(npcChaosPortal, SPELL_CHANNEL_CHAOS_PORTAL);
                         events.ScheduleEvent(EVENT_CONTINUE_FIGHT, Seconds(5));
                         break;
@@ -248,7 +248,7 @@ class boss_setesh : public CreatureScript
         private:
             void StartChaosPortalPhase()
             {
-                Unit* npcChaosPortal = SelectTarget(SELECT_TARGET_FARTHEST, 0, NPCEntryPred(NPC_SETESH_CHAOS_PORTAL));
+                Unit* npcChaosPortal = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, NPCEntryPred(NPC_SETESH_CHAOS_PORTAL));
                 if (!npcChaosPortal)
                     return;
 
@@ -499,8 +499,6 @@ public:
 
     class spell_setesh_chaos_blast_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_setesh_chaos_blast_SpellScript);
-
         void FilterTargets(std::list<WorldObject*>& unitList)
         {
             if (unitList.empty())
@@ -513,7 +511,7 @@ public:
 
         void Register() override
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_setesh_chaos_blast_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+            OnObjectAreaTargetSelect.Register(&spell_setesh_chaos_blast_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
         }
     };
 

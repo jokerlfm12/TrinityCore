@@ -128,9 +128,9 @@ class boss_urom : public CreatureScript
                 me->GetMotionMaster()->MoveIdle();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 StartAttack();
             }
@@ -290,7 +290,7 @@ class boss_urom : public CreatureScript
             {
                 me->RemoveAllAuras();
                 me->CombatStop(false);
-                me->DeleteThreatList();
+                EngagementOver();
             }
 
             void SpellHit(Unit* /*caster*/, SpellInfo const* spellInfo) override

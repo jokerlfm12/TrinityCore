@@ -219,10 +219,12 @@ public:
         void DoFriend()
         {
             me->RemoveAllAuras();
-            me->DeleteThreatList();
             me->CombatStop(true);
 
             me->StopMoving();
+
+            EngagementOver();
+
             me->GetMotionMaster()->MoveIdle();
 
             me->SetFaction(FACTION_FRIENDLY_F);

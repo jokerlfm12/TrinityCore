@@ -109,11 +109,10 @@ void AggroAllPlayers(Creature* temp)
 
             if (player->IsAlive())
             {
-                temp->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                temp->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                temp->SetImmuneToPC(true);
                 temp->SetReactState(REACT_AGGRESSIVE);
-                temp->SetInCombatWith(player);
-                player->SetInCombatWith(temp);
-                temp->AddThreat(player, 0.0f);
+                temp->EngageWithTarget(player);                
             }
         }
     }
@@ -261,8 +260,8 @@ public:
                         Player* player = itr->GetSource();
                         if (player && !player->IsGameMaster() && me->IsInRange(player, 8.0f, 25.0f, false))
                         {
-                            DoResetThreat();
-                            me->AddThreat(player, 1.0f);
+                            ResetThreatList();
+                            AddThreat(player, 1.0f);
                             DoCast(player, SPELL_CHARGE);
                             break;
                         }
@@ -328,7 +327,8 @@ public:
 
             me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(true);
         }
 
         void Initialize()
@@ -407,8 +407,8 @@ public:
                         Player* player = itr->GetSource();
                         if (player && !player->IsGameMaster() && me->IsInRange(player, 8.0f, 25.0f, false))
                         {
-                            DoResetThreat();
-                            me->AddThreat(player, 5.0f);
+                            ResetThreatList();
+                            AddThreat(player, 5.0f);
                             DoCast(player, SPELL_INTERCEPT);
                             break;
                         }
@@ -465,7 +465,8 @@ public:
 
             me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(true);
         }
 
         void Initialize()
@@ -608,7 +609,8 @@ public:
 
             me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(true);
         }
 
         void Initialize()
@@ -759,7 +761,8 @@ public:
 
             me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(true);
         }
 
         void Initialize()
@@ -845,7 +848,7 @@ public:
 
             if (uiShootTimer <= uiDiff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 30.0f))
+                if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 30.0f))
                 {
                     uiTargetGUID = target->GetGUID();
                     DoCast(target, SPELL_SHOOT);
@@ -919,7 +922,8 @@ public:
 
             me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(true);
         }
 
         void Initialize()

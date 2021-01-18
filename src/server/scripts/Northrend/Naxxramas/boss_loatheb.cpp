@@ -72,9 +72,9 @@ class boss_loatheb : public CreatureScript
                 _sporeLoser = true;
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.ScheduleEvent(EVENT_NECROTIC_AURA, Seconds(17));
                 events.ScheduleEvent(EVENT_DEATHBLOOM, Seconds(5));
                 events.ScheduleEvent(EVENT_SPORE, Seconds(18));
@@ -169,8 +169,6 @@ class spell_loatheb_deathbloom : public SpellScriptLoader
 
         class spell_loatheb_deathbloom_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_loatheb_deathbloom_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_DEATHBLOOM_FINAL_DAMAGE });
@@ -181,12 +179,12 @@ class spell_loatheb_deathbloom : public SpellScriptLoader
                 if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
                     return;
 
-                GetTarget()->CastSpell(nullptr, SPELL_DEATHBLOOM_FINAL_DAMAGE, true, nullptr, eff, GetCasterGUID());
+                GetTarget()->CastSpell(nullptr, SPELL_DEATHBLOOM_FINAL_DAMAGE, { eff, GetCasterGUID() });
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_loatheb_deathbloom_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_loatheb_deathbloom_AuraScript::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

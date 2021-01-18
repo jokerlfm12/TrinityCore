@@ -67,15 +67,14 @@ class boss_toravon : public CreatureScript
             {
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
+                BossAI::JustEngagedWith(who);
                 DoCast(me, SPELL_FROZEN_MALLET);
 
                 events.ScheduleEvent(EVENT_FROZEN_ORB, 11000);
                 events.ScheduleEvent(EVENT_WHITEOUT, 13000);
                 events.ScheduleEvent(EVENT_FREEZING_GROUND, 15000);
-
-                _JustEngagedWith();
             }
 
             void UpdateAI(uint32 diff) override
@@ -93,7 +92,7 @@ class boss_toravon : public CreatureScript
                     switch (eventId)
                     {
                         case EVENT_FROZEN_ORB:
-                            me->CastCustomSpell(SPELL_FROZEN_ORB, SPELLVALUE_MAX_TARGETS, 1, me);
+                            DoCastSelf(SPELL_FROZEN_ORB, { SPELLVALUE_MAX_TARGETS, 1 });
                             events.ScheduleEvent(EVENT_FROZEN_ORB, 38000);
                             break;
                         case EVENT_WHITEOUT:

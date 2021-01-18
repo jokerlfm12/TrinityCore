@@ -92,33 +92,33 @@ enum ScriptTexts
 enum Spells
 {
     // Deathbringer Saurfang
-    SPELL_ZERO_POWER                    = 72242,
-    SPELL_GRIP_OF_AGONY                 = 70572, // Intro
-    SPELL_BLOOD_LINK                    = 72178,
-    SPELL_MARK_OF_THE_FALLEN_CHAMPION_S = 72256,
-    SPELL_RUNE_OF_BLOOD_S               = 72408,
+    SPELL_ZERO_POWER                          = 72242,
+    SPELL_GRIP_OF_AGONY                       = 70572, // Intro
+    SPELL_BLOOD_LINK                          = 72178,
+    SPELL_MARK_OF_THE_FALLEN_CHAMPION_S       = 72256,
+    SPELL_RUNE_OF_BLOOD_S                     = 72408,
 
-    SPELL_SUMMON_BLOOD_BEAST            = 72172,
-    SPELL_SUMMON_BLOOD_BEAST_25_MAN     = 72356, // Additional cast, does not replace
-    SPELL_FRENZY                        = 72737,
-    SPELL_BLOOD_NOVA_TRIGGER            = 72378,
-    SPELL_BLOOD_NOVA                    = 72380,
-    SPELL_BLOOD_POWER                   = 72371,
-    SPELL_BLOOD_LINK_POWER              = 72195,
-    SPELL_BLOOD_LINK_DUMMY              = 72202,
-    SPELL_MARK_OF_THE_FALLEN_CHAMPION   = 72293,
-    SPELL_BOILING_BLOOD                 = 72385,
-    SPELL_RUNE_OF_BLOOD                 = 72410,
+    SPELL_SUMMON_BLOOD_BEAST                  = 72172,
+    SPELL_SUMMON_BLOOD_BEAST_25_MAN           = 72356, // Additional cast, does not replace
+    SPELL_FRENZY                              = 72737,
+    SPELL_BLOOD_NOVA_TRIGGER                  = 72378,
+    SPELL_BLOOD_NOVA                          = 72380,
+    SPELL_BLOOD_POWER                         = 72371,
+    SPELL_BLOOD_LINK_POWER                    = 72195,
+    SPELL_BLOOD_LINK_DUMMY                    = 72202,
+    SPELL_MARK_OF_THE_FALLEN_CHAMPION         = 72293,
+    SPELL_BOILING_BLOOD                       = 72385,
+    SPELL_RUNE_OF_BLOOD                       = 72410,
 
     // Blood Beast
-    SPELL_BLOOD_LINK_BEAST              = 72176,
-    SPELL_RESISTANT_SKIN                = 72723,
-    SPELL_SCENT_OF_BLOOD                = 72769, // Heroic only
+    SPELL_BLOOD_LINK_BEAST                    = 72176,
+    SPELL_RESISTANT_SKIN                      = 72723,
+    SPELL_SCENT_OF_BLOOD                      = 72769, // Heroic only
 
-    SPELL_RIDE_VEHICLE                  = 70640, // Outro
-    SPELL_ACHIEVEMENT                   = 72928,
+    SPELL_RIDE_VEHICLE                        = 70640, // Outro
+    SPELL_ACHIEVEMENT                         = 72928,
     SPELL_REMOVE_MARKS_OF_THE_FALLEN_CHAMPION = 72257,
-    SPELL_PERMANENT_FEIGN_DEATH         = 70628,
+    SPELL_PERMANENT_FEIGN_DEATH               = 70628
 };
 
 // Helper to get id of the aura on different modes (HasAura(baseId) wont work)
@@ -269,11 +269,11 @@ class boss_deathbringer_saurfang : public CreatureScript
                 _frenzied = false;
                 _dead = false;
                 me->SetPower(POWER_ENERGY, 0);
-                DoCast(me, SPELL_ZERO_POWER, true);
-                DoCast(me, SPELL_BLOOD_LINK, true);
-                DoCast(me, SPELL_BLOOD_POWER, true);
-                DoCast(me, SPELL_MARK_OF_THE_FALLEN_CHAMPION_S, true);
-                DoCast(me, SPELL_RUNE_OF_BLOOD_S, true);
+                DoCastSelf(SPELL_ZERO_POWER, true);
+                DoCastSelf(SPELL_BLOOD_LINK, true);
+                DoCastSelf(SPELL_BLOOD_POWER, true);
+                DoCastSelf(SPELL_MARK_OF_THE_FALLEN_CHAMPION_S, true);
+                DoCastSelf(SPELL_RUNE_OF_BLOOD_S, true);
                 me->RemoveAurasDueToSpell(SPELL_BERSERK);
                 me->RemoveAurasDueToSpell(SPELL_FRENZY);
             }
@@ -296,10 +296,10 @@ class boss_deathbringer_saurfang : public CreatureScript
 
                 events.Reset();
                 events.SetPhase(PHASE_COMBAT);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                me->SetImmuneToPC(false);
                 if (!_introDone)
                 {
-                    DoCast(me, SPELL_GRIP_OF_AGONY);
+                    DoCastSelf(SPELL_GRIP_OF_AGONY);
                     if (Creature* creature = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_SAURFANG_EVENT_NPC)))
                         creature->AI()->DoAction(ACTION_INTERRUPT_INTRO);
                 }
@@ -324,7 +324,7 @@ class boss_deathbringer_saurfang : public CreatureScript
 
             void AttackStart(Unit* victim) override
             {
-                if (me->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC))
+                if (me->IsImmuneToPC())
                     return;
 
                 ScriptedAI::AttackStart(victim);
@@ -334,7 +334,7 @@ class boss_deathbringer_saurfang : public CreatureScript
             {
                 ScriptedAI::EnterEvadeMode(why);
                 if (_introDone)
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
             }
 
             void JustReachedHome() override
@@ -361,7 +361,7 @@ class boss_deathbringer_saurfang : public CreatureScript
                 if (!_frenzied && HealthBelowPct(31)) // AT 30%, not below
                 {
                     _frenzied = true;
-                    DoCast(me, SPELL_FRENZY);
+                    DoCastSelf(SPELL_FRENZY, true);
                     Talk(SAY_FRENZY);
                 }
 
@@ -370,14 +370,15 @@ class boss_deathbringer_saurfang : public CreatureScript
                     _dead = true;
                     _JustDied();
                     _EnterEvadeMode();
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
-
+                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    me->SetImmuneToPC(true);
+                    me->RemoveAurasOnEvade();
                     DoCastAOE(SPELL_REMOVE_MARKS_OF_THE_FALLEN_CHAMPION);
-                    DoCast(me, SPELL_ACHIEVEMENT, true);
+                    DoCastSelf(SPELL_ACHIEVEMENT, true);
                     Talk(SAY_DEATH);
+                    DoCastSelf(SPELL_REPUTATION_BOSS_KILL, true);
+                    DoCastSelf(SPELL_PERMANENT_FEIGN_DEATH);
 
-                    //instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_MARK_OF_THE_FALLEN_CHAMPION);
-                    DoCast(me, SPELL_PERMANENT_FEIGN_DEATH);
                     if (Creature* creature = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_SAURFANG_EVENT_NPC)))
                         creature->AI()->DoAction(ACTION_START_OUTRO);
                 }
@@ -434,7 +435,7 @@ class boss_deathbringer_saurfang : public CreatureScript
                     case 72445:
                     case 72446:
                         if (me->GetPower(POWER_ENERGY) != me->GetMaxPower(POWER_ENERGY))
-                            target->CastCustomSpell(SPELL_BLOOD_LINK_DUMMY, SPELLVALUE_BASE_POINT0, 1, (Unit*)nullptr, true);
+                            target->CastSpell(nullptr, SPELL_BLOOD_LINK_DUMMY, CastSpellExtraArgs(true).AddSpellBP0(1));
                         break;
                     default:
                         break;
@@ -473,7 +474,7 @@ class boss_deathbringer_saurfang : public CreatureScript
                         case EVENT_INTRO_ALLIANCE_6:
                             Talk(SAY_INTRO_ALLIANCE_6);
                             Talk(SAY_INTRO_ALLIANCE_7);
-                            DoCast(me, SPELL_GRIP_OF_AGONY);
+                            DoCastSelf(SPELL_GRIP_OF_AGONY);
                             break;
                         case EVENT_INTRO_HORDE_2:
                             me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -484,20 +485,20 @@ class boss_deathbringer_saurfang : public CreatureScript
                             Talk(SAY_INTRO_HORDE_4);
                             break;
                         case EVENT_INTRO_HORDE_9:
-                            DoCast(me, SPELL_GRIP_OF_AGONY);
+                            DoCastSelf(SPELL_GRIP_OF_AGONY);
                             Talk(SAY_INTRO_HORDE_9);
                             break;
                         case EVENT_INTRO_FINISH:
                             events.SetPhase(PHASE_COMBAT);
                             _introDone = true;
-                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                            me->SetImmuneToPC(false);
                             break;
                         case EVENT_SUMMON_BLOOD_BEAST:
                             for (uint32 i10 = 0; i10 < 2; ++i10)
-                                DoCast(me, SPELL_SUMMON_BLOOD_BEAST+i10);
+                                DoCastSelf(SPELL_SUMMON_BLOOD_BEAST + i10);
                             if (Is25ManRaid())
                                 for (uint32 i25 = 0; i25 < 3; ++i25)
-                                    DoCast(me, SPELL_SUMMON_BLOOD_BEAST_25_MAN+i25);
+                                    DoCastSelf(SPELL_SUMMON_BLOOD_BEAST_25_MAN + i25);
                             Talk(SAY_BLOOD_BEASTS);
                             events.ScheduleEvent(EVENT_SUMMON_BLOOD_BEAST, 40000, 0, PHASE_COMBAT);
                             if (IsHeroic())
@@ -512,11 +513,11 @@ class boss_deathbringer_saurfang : public CreatureScript
                             events.ScheduleEvent(EVENT_RUNE_OF_BLOOD, urand(20000, 25000), 0, PHASE_COMBAT);
                             break;
                         case EVENT_BOILING_BLOOD:
-                            DoCast(me, SPELL_BOILING_BLOOD);
+                            DoCastSelf(SPELL_BOILING_BLOOD);
                             events.ScheduleEvent(EVENT_BOILING_BLOOD, urand(15000, 20000), 0, PHASE_COMBAT);
                             break;
                         case EVENT_BERSERK:
-                            DoCast(me, SPELL_BERSERK);
+                            DoCastSelf(SPELL_BERSERK);
                             Talk(SAY_BERSERK);
                             break;
                         case EVENT_SCENT_OF_BLOOD:
@@ -581,7 +582,7 @@ class boss_deathbringer_saurfang : public CreatureScript
                     }
                     case ACTION_MARK_OF_THE_FALLEN_CHAMPION:
                     {
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_MARK_OF_THE_FALLEN_CHAMPION))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, -SPELL_MARK_OF_THE_FALLEN_CHAMPION))
                         {
                             ++_fallenChampionCastCount;
                             DoCast(target, SPELL_MARK_OF_THE_FALLEN_CHAMPION);
@@ -1036,8 +1037,6 @@ class spell_deathbringer_blood_link : public SpellScriptLoader
 
         class spell_deathbringer_blood_link_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_blood_link_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_BLOOD_LINK_POWER, SPELL_BLOOD_POWER });
@@ -1045,13 +1044,13 @@ class spell_deathbringer_blood_link : public SpellScriptLoader
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
-                GetHitUnit()->CastCustomSpell(SPELL_BLOOD_LINK_POWER, SPELLVALUE_BASE_POINT0, GetEffectValue(), GetHitUnit(), true);
+                GetHitUnit()->CastSpell(GetHitUnit(), SPELL_BLOOD_LINK_POWER, CastSpellExtraArgs(true).AddSpellBP0(GetEffectValue()));
                 PreventHitDefaultEffect(EFFECT_0);
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_deathbringer_blood_link_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_deathbringer_blood_link_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -1068,8 +1067,6 @@ class spell_deathbringer_blood_link_aura : public SpellScriptLoader
 
         class spell_deathbringer_blood_link_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_deathbringer_blood_link_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_MARK_OF_THE_FALLEN_CHAMPION });
@@ -1085,7 +1082,7 @@ class spell_deathbringer_blood_link_aura : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_deathbringer_blood_link_AuraScript::HandlePeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_deathbringer_blood_link_AuraScript::HandlePeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -1102,8 +1099,6 @@ class spell_deathbringer_blood_power : public SpellScriptLoader
 
         class spell_deathbringer_blood_power_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_blood_power_SpellScript);
-
             void ModAuraValue()
             {
                 if (Aura* aura = GetHitAura())
@@ -1112,14 +1107,12 @@ class spell_deathbringer_blood_power : public SpellScriptLoader
 
             void Register() override
             {
-                AfterHit += SpellHitFn(spell_deathbringer_blood_power_SpellScript::ModAuraValue);
+                AfterHit.Register(&spell_deathbringer_blood_power_SpellScript::ModAuraValue);
             }
         };
 
         class spell_deathbringer_blood_power_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_deathbringer_blood_power_AuraScript);
-
             void RecalculateHook(AuraEffect const* /*aurEffect*/, int32& amount, bool& canBeRecalculated)
             {
                 amount = int32(GetUnitOwner()->GetPower(POWER_ENERGY));
@@ -1128,8 +1121,8 @@ class spell_deathbringer_blood_power : public SpellScriptLoader
 
             void Register() override
             {
-                DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_deathbringer_blood_power_AuraScript::RecalculateHook, EFFECT_0, SPELL_AURA_MOD_SCALE);
-                DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_deathbringer_blood_power_AuraScript::RecalculateHook, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+                DoEffectCalcAmount.Register(&spell_deathbringer_blood_power_AuraScript::RecalculateHook, EFFECT_0, SPELL_AURA_MOD_SCALE);
+                DoEffectCalcAmount.Register(&spell_deathbringer_blood_power_AuraScript::RecalculateHook, EFFECT_1, SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
             }
         };
 
@@ -1151,8 +1144,6 @@ class spell_deathbringer_rune_of_blood : public SpellScriptLoader
 
         class spell_deathbringer_rune_of_blood_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_rune_of_blood_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_BLOOD_LINK_DUMMY });
@@ -1161,12 +1152,12 @@ class spell_deathbringer_rune_of_blood : public SpellScriptLoader
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);  // make this the default handler
-                GetHitUnit()->CastCustomSpell(SPELL_BLOOD_LINK_DUMMY, SPELLVALUE_BASE_POINT0, 1, (Unit*)nullptr, true);
+                GetHitUnit()->CastSpell(nullptr, SPELL_BLOOD_LINK_DUMMY, CastSpellExtraArgs(true).AddSpellBP0(1));
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_deathbringer_rune_of_blood_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_deathbringer_rune_of_blood_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1184,8 +1175,6 @@ class spell_deathbringer_blood_beast_blood_link : public SpellScriptLoader
 
         class spell_deathbringer_blood_beast_blood_link_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_deathbringer_blood_beast_blood_link_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_BLOOD_LINK_DUMMY });
@@ -1194,12 +1183,12 @@ class spell_deathbringer_blood_beast_blood_link : public SpellScriptLoader
             void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
             {
                 PreventDefaultAction();
-                eventInfo.GetProcTarget()->CastCustomSpell(SPELL_BLOOD_LINK_DUMMY, SPELLVALUE_BASE_POINT0, 3, (Unit*)nullptr, true, nullptr, aurEff);
+                eventInfo.GetProcTarget()->CastSpell(nullptr, SPELL_BLOOD_LINK_DUMMY, CastSpellExtraArgs(aurEff).AddSpellBP0(3));
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_deathbringer_blood_beast_blood_link_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+                OnEffectProc.Register(&spell_deathbringer_blood_beast_blood_link_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
             }
         };
 
@@ -1216,8 +1205,6 @@ class spell_deathbringer_blood_nova : public SpellScriptLoader
 
         class spell_deathbringer_blood_nova_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_blood_nova_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_BLOOD_LINK_DUMMY });
@@ -1226,12 +1213,12 @@ class spell_deathbringer_blood_nova : public SpellScriptLoader
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);  // make this the default handler
-                GetHitUnit()->CastCustomSpell(SPELL_BLOOD_LINK_DUMMY, SPELLVALUE_BASE_POINT0, 2, (Unit*)nullptr, true);
+                GetHitUnit()->CastSpell(nullptr, SPELL_BLOOD_LINK_DUMMY, CastSpellExtraArgs(true).AddSpellBP0(2));
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_deathbringer_blood_nova_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_deathbringer_blood_nova_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1248,8 +1235,6 @@ class spell_deathbringer_blood_nova_targeting : public SpellScriptLoader
 
         class spell_deathbringer_blood_nova_targeting_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_blood_nova_targeting_SpellScript);
-
             void FilterTargetsInitial(std::list<WorldObject*>& targets)
             {
                 if (targets.empty())
@@ -1293,9 +1278,9 @@ class spell_deathbringer_blood_nova_targeting : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsInitial, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsSubsequent, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_deathbringer_blood_nova_targeting_SpellScript::HandleForceCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+                OnObjectAreaTargetSelect.Register(&spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsInitial, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsSubsequent, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_deathbringer_blood_nova_targeting_SpellScript::HandleForceCast, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
             }
 
             WorldObject* target = nullptr;
@@ -1314,8 +1299,6 @@ class spell_deathbringer_boiling_blood : public SpellScriptLoader
 
         class spell_deathbringer_boiling_blood_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_boiling_blood_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -1334,7 +1317,7 @@ class spell_deathbringer_boiling_blood : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_deathbringer_boiling_blood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_deathbringer_boiling_blood_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -1351,8 +1334,6 @@ class spell_deathbringer_remove_marks : public SpellScriptLoader
 
         class spell_deathbringer_remove_marks_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_deathbringer_remove_marks_SpellScript);
-
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1361,7 +1342,7 @@ class spell_deathbringer_remove_marks : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_deathbringer_remove_marks_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_deathbringer_remove_marks_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

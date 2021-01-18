@@ -467,9 +467,9 @@ struct boss_madness_of_deathwing : public BossAI
         DoZoneInCombat();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         DoSummon(NPC_TAIL_TENTACLE, TailTentacleSummonPosition, 0, TEMPSUMMON_MANUAL_DESPAWN);
 
         Talk(SAY_AGGRO);
@@ -708,7 +708,7 @@ struct boss_madness_of_deathwing : public BossAI
                             break;
                     }
 
-                    me->CastCustomSpell(SPELL_FACE_TRIGGER, SPELLVALUE_BASE_POINT0, facingSpellID);
+                    me->CastSpell(me, SPELL_FACE_TRIGGER, { SPELLVALUE_BASE_POINT0, facingSpellID });
 
                     // Nozdormu creates a time zone at the same moment when Deathwing faces a platform
                     if (!_limbData[DRAGON_ASPECT_NOZDORMU].TentacleKilled)
@@ -1654,8 +1654,6 @@ private:
 
 class spell_madness_of_deathwing_presence_of_the_aspects : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_presence_of_the_aspects);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -1676,14 +1674,12 @@ class spell_madness_of_deathwing_presence_of_the_aspects : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_presence_of_the_aspects::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_presence_of_the_aspects::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ALLY);
     }
 };
 
 class spell_madness_of_deathwing_carrying_winds_jump : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_carrying_winds_jump);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         GetHitUnit()->CastSpell(GetHitUnit(), GetEffectValue());
@@ -1691,14 +1687,12 @@ class spell_madness_of_deathwing_carrying_winds_jump : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_carrying_winds_jump::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_carrying_winds_jump::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_carrying_winds_triggered : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_carrying_winds_triggered);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         GetHitUnit()->RemoveAurasDueToSpell(GetEffectValue());
@@ -1706,14 +1700,12 @@ class spell_madness_of_deathwing_carrying_winds_triggered : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_carrying_winds_triggered::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_carrying_winds_triggered::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_limb_emerge_visual : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_limb_emerge_visual);
-
     void HandleDummyEffect(SpellEffIndex /*effIndex*/)
     {
         uint32 visualKitId = RAND(SPELL_VISUAL_KIT_LIMB_EMERGE_1, SPELL_VISUAL_KIT_LIMB_EMERGE_2, SPELL_VISUAL_KIT_LIMB_EMERGE_3);
@@ -1722,14 +1714,12 @@ class spell_madness_of_deathwing_limb_emerge_visual : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_limb_emerge_visual::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_limb_emerge_visual::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_madness_of_deathwing_agonizing_pain : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_agonizing_pain);
-
     void HandleDamage(SpellEffIndex /*effIndex*/)
     {
         Unit* target = GetHitUnit();
@@ -1742,14 +1732,12 @@ class spell_madness_of_deathwing_agonizing_pain : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_agonizing_pain::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_agonizing_pain::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 
 class spell_madness_of_deathwing_assault_aspects : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_assault_aspects);
-
     void CountPlayers(std::list<WorldObject*>& targets)
     {
         std::array<uint8, MAX_DRAGON_ASPECTS> playersOnPlatform = { };
@@ -1792,15 +1780,13 @@ class spell_madness_of_deathwing_assault_aspects : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_assault_aspects::CountPlayers, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        AfterCast += SpellCastFn(spell_madness_of_deathwing_assault_aspects::NotifyDeathwing);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_assault_aspects::CountPlayers, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        AfterCast.Register(&spell_madness_of_deathwing_assault_aspects::NotifyDeathwing);
     }
 };
 
 class spell_madness_of_deathwing_face_trigger : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_face_trigger);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         GetHitUnit()->CastSpell(GetHitUnit(), GetEffectValue());
@@ -1808,14 +1794,12 @@ class spell_madness_of_deathwing_face_trigger : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_face_trigger::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_face_trigger::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_summon_tail : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_summon_tail);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -1844,14 +1828,12 @@ class spell_madness_of_deathwing_summon_tail : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_summon_tail::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_summon_tail::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
     }
 };
 
 class spell_madness_of_deathwing_crush : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_crush);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -1879,14 +1861,12 @@ class spell_madness_of_deathwing_crush : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_crush::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_crush::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
 class spell_madness_of_deathwing_hemorrhage : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_hemorrhage);
-
     void SetDest(SpellDestination& dest)
     {
         if (Creature* caster = GetCaster()->ToCreature())
@@ -1897,14 +1877,12 @@ class spell_madness_of_deathwing_hemorrhage : public SpellScript
 
     void Register() override
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_madness_of_deathwing_hemorrhage::SetDest, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
+        OnDestinationTargetSelect.Register(&spell_madness_of_deathwing_hemorrhage::SetDest, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
     }
 };
 
 class spell_madness_of_deathwing_hemorrhage_script : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_hemorrhage_script);
-
     void SetTarget(WorldObject*& target)
     {
         InstanceScript* instance = GetCaster()->GetInstanceScript();
@@ -1924,15 +1902,13 @@ class spell_madness_of_deathwing_hemorrhage_script : public SpellScript
 
     void Register() override
     {
-        OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_madness_of_deathwing_hemorrhage_script::SetTarget, EFFECT_0, TARGET_UNIT_NEARBY_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_hemorrhage_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectTargetSelect.Register(&spell_madness_of_deathwing_hemorrhage_script::SetTarget, EFFECT_0, TARGET_UNIT_NEARBY_ENTRY);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_hemorrhage_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_regenerative_blood_periodic : public AuraScript
 {
-    PrepareAuraScript(spell_madness_of_deathwing_regenerative_blood_periodic);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1954,7 +1930,7 @@ class spell_madness_of_deathwing_regenerative_blood_periodic : public AuraScript
         }
 
         int32 bp = _basePoints * 10;
-        target->CastCustomSpell(SPELL_REGENERATIVE_BLOOD_SCRIPT, SPELLVALUE_BASE_POINT0, bp, target);
+        target->CastSpell(target, SPELL_REGENERATIVE_BLOOD_SCRIPT, { SPELLVALUE_BASE_POINT0, bp });
 
         if (aurEff->GetTickNumber() >= 20)
             Remove();
@@ -1962,7 +1938,7 @@ class spell_madness_of_deathwing_regenerative_blood_periodic : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_madness_of_deathwing_regenerative_blood_periodic::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_madness_of_deathwing_regenerative_blood_periodic::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 private:
     int32 _basePoints = 0;
@@ -1970,8 +1946,6 @@ private:
 
 class spell_madness_of_deathwing_regenerative_blood_script : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_regenerative_blood_script);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         GetHitUnit()->SetPower(POWER_ENERGY, GetEffectValue());
@@ -1979,14 +1953,12 @@ class spell_madness_of_deathwing_regenerative_blood_script : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_regenerative_blood_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_regenerative_blood_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_elementium_meteor_script: public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_elementium_meteor_script);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         if (Creature* target = GetHitCreature())
@@ -1999,14 +1971,12 @@ class spell_madness_of_deathwing_elementium_meteor_script: public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_elementium_meteor_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_elementium_meteor_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_elementium_meteor_visual : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_elementium_meteor_visual);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -2032,14 +2002,12 @@ class spell_madness_of_deathwing_elementium_meteor_visual : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_elementium_meteor_visual::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_elementium_meteor_visual::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
     }
 };
 
 class spell_madness_of_deathwing_burning_blood : public AuraScript
 {
-    PrepareAuraScript(spell_madness_of_deathwing_burning_blood);
-
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
     {
         PreventDefaultAction();
@@ -2048,23 +2016,21 @@ class spell_madness_of_deathwing_burning_blood : public AuraScript
 
         uint8 stackDiff = std::max<int8>(0, uint8(lostHealthPct) - GetStackAmount());
         if (stackDiff)
-            target->CastCustomSpell(GetSpellInfo()->Id, SPELLVALUE_AURA_STACK, stackDiff, target);
+            target->CastSpell(target, GetSpellInfo()->Id, { SPELLVALUE_AURA_STACK, stackDiff });
 
         uint32 spellId = sSpellMgr->GetSpellIdForDifficulty(GetSpellInfo()->Effects[EFFECT_0].TriggerSpell, target);
         int32 bp = sSpellMgr->AssertSpellInfo(spellId)->Effects[EFFECT_0].CalcValue() * GetStackAmount();
-        target->CastCustomSpell(spellId, SPELLVALUE_BASE_POINT0, bp, target, true);
+        target->CastSpell(target, spellId, CastSpellExtraArgs(true).AddSpellBP0(bp));
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_madness_of_deathwing_burning_blood::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_madness_of_deathwing_burning_blood::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_madness_of_deathwing_spawn_blistering_tentacles : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_spawn_blistering_tentacles);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         Unit* target = GetHitUnit();
@@ -2076,14 +2042,12 @@ class spell_madness_of_deathwing_spawn_blistering_tentacles : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_spawn_blistering_tentacles::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_spawn_blistering_tentacles::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_time_zone : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_time_zone);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -2109,14 +2073,12 @@ class spell_madness_of_deathwing_time_zone : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_time_zone::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_time_zone::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
     }
 };
 
 class spell_madness_of_deathwing_trigger_concentration : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_trigger_concentration);
-
     bool Load() override
     {
         if (InstanceScript* instance = GetCaster()->GetInstanceScript())
@@ -2162,7 +2124,7 @@ class spell_madness_of_deathwing_trigger_concentration : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_trigger_concentration::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_trigger_concentration::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 private:
     ObjectGuid _aspectGUID;
@@ -2170,8 +2132,6 @@ private:
 
 class spell_madness_of_deathwing_concentration : public AuraScript
 {
-    PrepareAuraScript(spell_madness_of_deathwing_concentration);
-
     void AfterApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Unit* caster = GetCaster())
@@ -2186,20 +2146,18 @@ class spell_madness_of_deathwing_concentration : public AuraScript
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->SetDisableGravity(false);
+        GetTarget()->SetAnimationTier(AnimationTier::Ground);
     }
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_madness_of_deathwing_concentration::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_madness_of_deathwing_concentration::AfterRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_madness_of_deathwing_concentration::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_madness_of_deathwing_concentration::AfterRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_madness_of_deathwing_trigger_aspect_buffs : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_trigger_aspect_buffs);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -2245,14 +2203,12 @@ class spell_madness_of_deathwing_trigger_aspect_buffs : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_trigger_aspect_buffs::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_trigger_aspect_buffs::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_share_health : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_share_health);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_SHARE_HEALTH_2 });
@@ -2265,14 +2221,12 @@ class spell_madness_of_deathwing_share_health : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_share_health::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_share_health::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_summon_elementium_terror : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_summon_elementium_terror);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         for (uint8 i = 0; i < 2; ++i)
@@ -2281,14 +2235,12 @@ class spell_madness_of_deathwing_summon_elementium_terror : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_summon_elementium_terror::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_summon_elementium_terror::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_summon_impaling_tentacle : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_summon_impaling_tentacle);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         Unit* target = GetHitUnit();
@@ -2299,14 +2251,12 @@ class spell_madness_of_deathwing_summon_impaling_tentacle : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_summon_impaling_tentacle::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_summon_impaling_tentacle::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_shrapnel : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_shrapnel);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_SHRAPNEL });
@@ -2348,9 +2298,9 @@ class spell_madness_of_deathwing_shrapnel : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_shrapnel::FilterFragments, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_shrapnel::FilterPlayers, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
-        AfterCast += SpellCastFn(spell_madness_of_deathwing_shrapnel::HandleShrapnels);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_shrapnel::FilterFragments, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_shrapnel::FilterPlayers, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        AfterCast.Register(&spell_madness_of_deathwing_shrapnel::HandleShrapnels);
     }
 private:
     GuidVector _targetGUIDs;
@@ -2359,8 +2309,6 @@ private:
 
 class spell_madness_of_deathwing_fire_dragon_soul: public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_fire_dragon_soul);
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
         if (Creature* deathwing = GetHitCreature())
@@ -2370,14 +2318,12 @@ class spell_madness_of_deathwing_fire_dragon_soul: public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_fire_dragon_soul::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_fire_dragon_soul::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_fire_dragon_soul_aspects : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_fire_dragon_soul_aspects);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -2431,14 +2377,12 @@ class spell_madness_of_deathwing_fire_dragon_soul_aspects : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_fire_dragon_soul_aspects::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_fire_dragon_soul_aspects::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_trigger_aspect_yell : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_trigger_aspect_yell);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -2459,15 +2403,13 @@ class spell_madness_of_deathwing_trigger_aspect_yell : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_trigger_aspect_yell::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_trigger_aspect_yell::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_trigger_aspect_yell::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_trigger_aspect_yell::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_madness_of_deathwing_corrupted_blood_stacker : public AuraScript
 {
-    PrepareAuraScript(spell_madness_of_deathwing_corrupted_blood_stacker);
-
     void HandlePeriodic(AuraEffect const* aurEff)
     {
         Unit* target = GetTarget();
@@ -2494,7 +2436,7 @@ class spell_madness_of_deathwing_corrupted_blood_stacker : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_madness_of_deathwing_corrupted_blood_stacker::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_madness_of_deathwing_corrupted_blood_stacker::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 private:
     uint8 _hemorrHageSteps = 0;
@@ -2502,8 +2444,6 @@ private:
 
 class spell_madness_of_deathwing_corrupted_blood: public AuraScript
 {
-    PrepareAuraScript(spell_madness_of_deathwing_corrupted_blood);
-
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
     {
         if (AuraEffect* bonusEffect = GetEffect(EFFECT_1))
@@ -2516,14 +2456,12 @@ class spell_madness_of_deathwing_corrupted_blood: public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_madness_of_deathwing_corrupted_blood::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_madness_of_deathwing_corrupted_blood::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_madness_of_deathwing_spellweave : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_spellweave);
-
     void FilterFragments(std::list<WorldObject*>& targets)
     {
         targets.remove_if([this](WorldObject const* target)->bool
@@ -2534,14 +2472,12 @@ class spell_madness_of_deathwing_spellweave : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_madness_of_deathwing_spellweave::FilterFragments, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_madness_of_deathwing_spellweave::FilterFragments, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
     }
 };
 
 class spell_madness_of_deathwing_elementium_blast : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_elementium_blast);
-
     void HandleDamage(SpellEffIndex /*effIndex*/)
     {
         Unit* caster = GetCaster();
@@ -2555,20 +2491,18 @@ class spell_madness_of_deathwing_elementium_blast : public SpellScript
         float distance = caster->GetExactDist2d(GetHitUnit());
 
         // Guessed formular based on sniff data
-        damage = (damage / distance) * 3.5f;
+        damage -= std::max<int32>(0, CalculatePct(damage, distance * 3.5f));
         SetHitDamage(damage);
     }
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_madness_of_deathwing_elementium_blast::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        OnEffectHitTarget.Register(&spell_madness_of_deathwing_elementium_blast::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 
 class spell_madness_of_deathwing_cataclysm : public SpellScript
 {
-    PrepareSpellScript(spell_madness_of_deathwing_cataclysm);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_CATACLYSM_VISUAL });
@@ -2581,7 +2515,7 @@ class spell_madness_of_deathwing_cataclysm : public SpellScript
 
     void Register() override
     {
-        AfterCast += SpellCastFn(spell_madness_of_deathwing_cataclysm::HandleVisual);
+        AfterCast.Register(&spell_madness_of_deathwing_cataclysm::HandleVisual);
     }
 };
 
@@ -2666,7 +2600,7 @@ public:
 
         if (SpellInfo const* spell = sSpellMgr->GetSpellInfo(spellId))
             if (uint32 triggerSpellId = spell->Effects[EFFECT_0].TriggerSpell)
-                player->CastCustomSpell(triggerSpellId, SPELLVALUE_BASE_POINT1, spellId, player, true);
+                player->CastSpell(player, triggerSpellId, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_BASE_POINT1, spellId));
 
         return true;
     }
@@ -2696,14 +2630,14 @@ void AddSC_boss_madness_of_deathwing()
     RegisterSpellScript(spell_madness_of_deathwing_hemorrhage);
     RegisterSpellScript(spell_madness_of_deathwing_hemorrhage_script);
     RegisterSpellScript(spell_madness_of_deathwing_regenerative_blood_script);
-    RegisterAuraScript(spell_madness_of_deathwing_regenerative_blood_periodic);
+    RegisterSpellScript(spell_madness_of_deathwing_regenerative_blood_periodic);
     RegisterSpellScript(spell_madness_of_deathwing_elementium_meteor_script);
     RegisterSpellScript(spell_madness_of_deathwing_elementium_meteor_visual);
-    RegisterAuraScript(spell_madness_of_deathwing_burning_blood);
+    RegisterSpellScript(spell_madness_of_deathwing_burning_blood);
     RegisterSpellScript(spell_madness_of_deathwing_spawn_blistering_tentacles);
     RegisterSpellScript(spell_madness_of_deathwing_time_zone);
     RegisterSpellScript(spell_madness_of_deathwing_trigger_concentration);
-    RegisterAuraScript(spell_madness_of_deathwing_concentration);
+    RegisterSpellScript(spell_madness_of_deathwing_concentration);
     RegisterSpellScript(spell_madness_of_deathwing_trigger_aspect_buffs);
     RegisterSpellScript(spell_madness_of_deathwing_share_health);
     RegisterSpellScript(spell_madness_of_deathwing_summon_elementium_terror);
@@ -2712,8 +2646,8 @@ void AddSC_boss_madness_of_deathwing()
     RegisterSpellScript(spell_madness_of_deathwing_fire_dragon_soul);
     RegisterSpellScript(spell_madness_of_deathwing_fire_dragon_soul_aspects);
     RegisterSpellScript(spell_madness_of_deathwing_trigger_aspect_yell);
-    RegisterAuraScript(spell_madness_of_deathwing_corrupted_blood_stacker);
-    RegisterAuraScript(spell_madness_of_deathwing_corrupted_blood);
+    RegisterSpellScript(spell_madness_of_deathwing_corrupted_blood_stacker);
+    RegisterSpellScript(spell_madness_of_deathwing_corrupted_blood);
     RegisterSpellScript(spell_madness_of_deathwing_spellweave);
     RegisterSpellScript(spell_madness_of_deathwing_elementium_blast);
     RegisterSpellScript(spell_madness_of_deathwing_cataclysm);

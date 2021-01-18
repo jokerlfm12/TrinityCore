@@ -133,7 +133,8 @@ TC_GAME_API extern DBCStorage <MountTypeEntry>               sMountTypeStore;
 //TC_GAME_API extern DBCStorage <NameGenEntry>                 sNameGenStore; -- use GetRandomCharacterName instead
 TC_GAME_API extern DBCStorage <NumTalentsAtLevelEntry>       sNumTalentsAtLevelStore;
 TC_GAME_API extern DBCStorage <PhaseEntry>                   sPhaseStore;
-TC_GAME_API extern DBCStorage <PhaseGroupEntry> sPhaseGroupStore;
+TC_GAME_API extern DBCStorage <PhaseGroupEntry>              sPhaseGroupStore;
+TC_GAME_API extern DBCStorage <LightEntry>                   sLightStore;
 //TC_GAME_API extern DBCStorage <MapDifficultyEntry>           sMapDifficultyStore; -- use GetMapDifficultyData insteed
 TC_GAME_API extern MapDifficultyMap                          sMapDifficultyMap;
 TC_GAME_API extern DBCStorage <MovieEntry>                   sMovieStore;
@@ -170,6 +171,7 @@ TC_GAME_API extern DBCStorage <SpellShapeshiftEntry>         sSpellShapeshiftSto
 TC_GAME_API extern DBCStorage <SpellShapeshiftFormEntry>     sSpellShapeshiftFormStore;
 TC_GAME_API extern DBCStorage <SpellEntry>                   sSpellStore;
 TC_GAME_API extern DBCStorage <SpellVisualEntry>             sSpellVisualStore;
+TC_GAME_API extern DBCStorage <SpellVisualKitEntry>          sSpellVisualKitStore;
 TC_GAME_API extern DBCStorage <SpellAuraOptionsEntry>        sSpellAuraOptionsStore;
 TC_GAME_API extern DBCStorage <SpellAuraRestrictionsEntry>   sSpellAuraRestrictionsStore;
 TC_GAME_API extern DBCStorage <SpellCastingRequirementsEntry> sSpellCastingRequirementsStore;

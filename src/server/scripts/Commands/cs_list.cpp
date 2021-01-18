@@ -585,7 +585,7 @@ public:
                     std::string subject     = queryFields[5].GetString();
                     uint64 deliverTime      = queryFields[6].GetUInt32();
                     uint64 expireTime       = queryFields[7].GetUInt32();
-                    uint32 money            = queryFields[8].GetUInt32();
+                    uint64 money            = queryFields[8].GetUInt64();
                     uint8 hasItem           = queryFields[9].GetUInt8();
                     uint32 gold = money / GOLD;
                     uint32 silv = (money % GOLD) / SILVER;
@@ -712,7 +712,7 @@ public:
                 handler->PSendSysMessage(LANG_LIST_RESPAWNS_ZONE, type == SPAWN_TYPE_CREATURE ? stringCreature : stringGameobject, zoneName, zoneId);
 
             handler->PSendSysMessage(LANG_LIST_RESPAWNS_LISTHEADER);
-            std::vector<RespawnInfo*> respawns;
+            std::vector<RespawnInfo const*> respawns;
             map->GetRespawnInfo(respawns, SpawnObjectTypeMask(1 << type));
             for (RespawnInfo const* ri : respawns)
             {

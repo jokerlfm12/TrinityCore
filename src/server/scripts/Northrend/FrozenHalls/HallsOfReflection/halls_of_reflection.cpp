@@ -961,14 +961,9 @@ class npc_jaina_or_sylvanas_escape_hor : public CreatureScript
 
             void DeleteAllFromThreatList(Unit* target, ObjectGuid except)
             {
-                ThreatContainer::StorageType threatlist = target->getThreatManager().getThreatList();
-                for (auto i : threatlist)
-                {
-                    if (i->getUnitGuid() == except)
-                        continue;
-
-                    i->removeReference();
-                }
+                for (ThreatReference* ref : target->GetThreatManager().GetModifiableThreatList())
+                  if (ref->GetVictim()->GetGUID() != except)
+                    ref->ClearThreat();
             }
 
             void UpdateAI(uint32 diff) override
@@ -1038,7 +1033,7 @@ class npc_jaina_or_sylvanas_escape_hor : public CreatureScript
 
                             if (Creature* lichking = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_THE_LICH_KING_ESCAPE)))
                             {
-                                lichking->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                                lichking->SetImmuneToPC(true);
                                 lichking->RemoveAllAttackers();
 
                                 DeleteAllFromThreatList(lichking, me->GetGUID());
@@ -1052,7 +1047,8 @@ class npc_jaina_or_sylvanas_escape_hor : public CreatureScript
                         case EVENT_ESCAPE_6:
                             if (Creature* lichking = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_THE_LICH_KING_ESCAPE)))
                             {
-                                lichking->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_PACIFIED);
+                                lichking->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
+                                lichking->SetImmuneToPC(false);
 
                                 if (_instance->GetData(DATA_TEAM_IN_INSTANCE) == ALLIANCE)
                                 {
@@ -1347,7 +1343,7 @@ class npc_the_lich_king_escape_hor : public CreatureScript
                             AttackStart(victim);
                     return me->GetVictim() != nullptr;
                 }
-                else if (me->getThreatManager().getThreatList().size() < 2 && me->HasAura(SPELL_REMORSELESS_WINTER))
+                else if (me->GetCombatManager().GetPvECombatRefs().size() < 2 && me->HasAura(SPELL_REMORSELESS_WINTER))
                 {
                     EnterEvadeMode(EVADE_REASON_OTHER);
                     return false;
@@ -1637,7 +1633,7 @@ class npc_phantom_hallucination : public CreatureScript
 
             void Reset() override
             {
-                DoZoneInCombat(me, 150.0f);
+                DoZoneInCombat(me);
             }
 
             void EnterEvadeMode(EvadeReason why) override
@@ -1930,12 +1926,12 @@ class npc_frostsworn_general : public CreatureScript
             void SummonClones()
             {
                 std::list<Unit*> playerList;
-                SelectTargetList(playerList, 5, SELECT_TARGET_TOPAGGRO, 0.0f, true);
+                SelectTargetList(playerList, 5, SELECT_TARGET_MAXTHREAT, 0, 0.0f, true);
                 for (Unit* target : playerList)
                 {
                     if (Creature* reflection = me->SummonCreature(NPC_REFLECTION, *target, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 3000))
                     {
-                        reflection->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        reflection->SetImmuneToPC(false);
                         target->CastSpell(reflection, SPELL_CLONE, true);
                         target->CastSpell(reflection, SPELL_GHOST_VISUAL, true);
                         reflection->AI()->AttackStart(target);
@@ -2167,13 +2163,13 @@ struct npc_escape_event_trash : public ScriptedAI
 
     void IsSummonedBy(Unit* /*summoner*/) override
     {
-        DoZoneInCombat(me, 0.0f);
+        DoZoneInCombat(me);
         if (Creature* leader = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_ESCAPE_LEADER)))
         {
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetImmuneToPC(false);
             me->SetInCombatWith(leader);
             leader->SetInCombatWith(me);
-            me->AddThreat(leader, 0.0f);
+            AddThreat(leader, 0.0f);
         }
     }
 
@@ -2293,7 +2289,7 @@ class npc_risen_witch_doctor : public CreatureScript
                         _events.ScheduleEvent(EVENT_RISEN_WITCH_DOCTOR_CURSE, urand(10000, 15000));
                         break;
                     case EVENT_RISEN_WITCH_DOCTOR_SHADOW_BOLT:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0, 20.0f, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0, 20.0f, true))
                             DoCast(target, SPELL_SHADOW_BOLT);
                         _events.ScheduleEvent(EVENT_RISEN_WITCH_DOCTOR_SHADOW_BOLT, urand(2000, 3000));
                         break;
@@ -2601,7 +2597,7 @@ class npc_quel_delar_sword : public CreatureScript
                 if (_intro)
                     _events.ScheduleEvent(EVENT_QUEL_DELAR_INIT, 0);
                 else
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                    me->SetImmuneToAll(false);
             }
 
             void JustEngagedWith(Unit* /*victim*/) override
@@ -2669,7 +2665,7 @@ class npc_quel_delar_sword : public CreatureScript
                             case EVENT_QUEL_DELAR_FIGHT:
                                 Talk(SAY_QUEL_DELAR_SWORD);
                                 me->GetMotionMaster()->MovePoint(0, QuelDelarMovement[2]);
-                                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                                me->SetImmuneToAll(false);
                                 break;
                             default:
                                 break;
@@ -2744,8 +2740,6 @@ class spell_hor_start_halls_of_reflection_quest_ae : public SpellScriptLoader
 
         class spell_hor_start_halls_of_reflection_quest_ae_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hor_start_halls_of_reflection_quest_ae_SpellScript);
-
             void StartQuests(SpellEffIndex /*effIndex*/)
             {
                 if (Player* target = GetHitPlayer())
@@ -2760,7 +2754,7 @@ class spell_hor_start_halls_of_reflection_quest_ae : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hor_start_halls_of_reflection_quest_ae_SpellScript::StartQuests, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_hor_start_halls_of_reflection_quest_ae_SpellScript::StartQuests, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2778,8 +2772,6 @@ class spell_hor_evasion : public SpellScriptLoader
 
         class spell_hor_evasion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hor_evasion_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -2804,7 +2796,7 @@ class spell_hor_evasion : public SpellScriptLoader
 
             void Register() override
             {
-                OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_hor_evasion_SpellScript::SetDest, EFFECT_0, TARGET_DEST_TARGET_RADIUS);
+                OnDestinationTargetSelect.Register(&spell_hor_evasion_SpellScript::SetDest, EFFECT_0, TARGET_DEST_TARGET_RADIUS);
             }
         };
 
@@ -2822,8 +2814,6 @@ class spell_hor_gunship_cannon_fire : public SpellScriptLoader
 
         class spell_hor_gunship_cannon_fire_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hor_gunship_cannon_fire_AuraScript);
-
             void HandlePeriodic(AuraEffect const* /*aurEff*/)
             {
                 if (!urand(0, 2))
@@ -2837,7 +2827,7 @@ class spell_hor_gunship_cannon_fire : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_hor_gunship_cannon_fire_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_hor_gunship_cannon_fire_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -2850,8 +2840,6 @@ class spell_hor_gunship_cannon_fire : public SpellScriptLoader
 // 70698 - Quel'Delar's Will
 class spell_hor_quel_delars_will : public SpellScript
 {
-    PrepareSpellScript(spell_hor_quel_delars_will);
-
     bool Validate(SpellInfo const* spellInfo) override
     {
         return ValidateSpellInfo({ spellInfo->Effects[EFFECT_0].TriggerSpell });
@@ -2867,7 +2855,7 @@ class spell_hor_quel_delars_will : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_hor_quel_delars_will::HandleReagent, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+        OnEffectHitTarget.Register(&spell_hor_quel_delars_will::HandleReagent, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
     }
 };
 

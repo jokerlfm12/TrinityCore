@@ -86,9 +86,9 @@ public:
             events.ScheduleEvent(EVENT_ENRAGE, Minutes(10));
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
         }
 
@@ -126,7 +126,7 @@ public:
                     events.Repeat(Seconds(42));
                     break;
                 case EVENT_SHADOWBOLT:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXTHREAT, 0))
                         DoCast(target, SPELL_SHADOW_BOLT);
                     events.Repeat(Seconds(4), Seconds(10));
                     break;

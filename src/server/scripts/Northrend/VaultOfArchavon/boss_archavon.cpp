@@ -76,14 +76,14 @@ class boss_archavon : public CreatureScript
             {
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 events.ScheduleEvent(EVENT_ROCK_SHARDS, 15000);
                 events.ScheduleEvent(EVENT_CHOKING_CLOUD, 30000);
                 events.ScheduleEvent(EVENT_STOMP, 45000);
                 events.ScheduleEvent(EVENT_BERSERK, 300000);
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
             }
 
             // Below UpdateAI may need review/debug.
@@ -226,8 +226,6 @@ class spell_archavon_rock_shards : public SpellScriptLoader
 
         class spell_archavon_rock_shards_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_archavon_rock_shards_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -255,7 +253,7 @@ class spell_archavon_rock_shards : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_archavon_rock_shards_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHit.Register(&spell_archavon_rock_shards_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

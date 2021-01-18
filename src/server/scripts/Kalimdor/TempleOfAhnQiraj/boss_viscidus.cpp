@@ -180,9 +180,9 @@ class boss_viscidus : public CreatureScript
                 }
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.Reset();
                 InitSpells();
             }
@@ -204,6 +204,7 @@ class boss_viscidus : public CreatureScript
             {
                 DoCast(me, SPELL_VISCIDUS_SUICIDE);
                 summons.DespawnAll();
+                _JustDied();
             }
 
             void UpdateAI(uint32 diff) override
@@ -213,7 +214,7 @@ class boss_viscidus : public CreatureScript
 
                 if (_phase == PHASE_GLOB && summons.empty())
                 {
-                    DoResetThreat();
+                    ResetThreatList();
                     me->NearTeleportTo(ViscidusCoord.GetPositionX(),
                         ViscidusCoord.GetPositionY(),
                         ViscidusCoord.GetPositionZ(),

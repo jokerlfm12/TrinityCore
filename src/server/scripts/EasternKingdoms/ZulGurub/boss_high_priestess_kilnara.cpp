@@ -112,9 +112,9 @@ struct boss_high_priestess_kilnara : public BossAI
         me->SummonCreatureGroup(SUMMON_GROUP_PRIDE_OF_BETHEK);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         DoCastAOE(SPELL_CLEAR_ACHIEVEMENT_CREDITS);
 
@@ -284,7 +284,7 @@ struct boss_high_priestess_kilnara : public BossAI
                     events.ScheduleEvent(EVENT_PREPARE_RAVAGE, 2s);
                     break;
                 case EVENT_PREPARE_RAVAGE:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                         AttackStart(target);
                     events.ScheduleEvent(EVENT_RAVAGE_CAMOUFLAGE, 4s);
                     break;
@@ -348,8 +348,6 @@ private:
 
 class spell_kilnara_tears_of_blood : public AuraScript
 {
-    PrepareAuraScript(spell_kilnara_tears_of_blood);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_WAIL_OF_SORROW });
@@ -366,7 +364,7 @@ class spell_kilnara_tears_of_blood : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_kilnara_tears_of_blood::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_kilnara_tears_of_blood::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -385,8 +383,6 @@ class AttackerVictimCheck
 
 class spell_kilnara_wave_of_agony : public SpellScript
 {
-    PrepareSpellScript(spell_kilnara_wave_of_agony);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -408,15 +404,13 @@ class spell_kilnara_wave_of_agony : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_kilnara_wave_of_agony::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_kilnara_wave_of_agony::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_kilnara_wave_of_agony::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnObjectAreaTargetSelect.Register(&spell_kilnara_wave_of_agony::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
 class spell_kilnara_wave_of_agony_dummy : public AuraScript
 {
-    PrepareAuraScript(spell_kilnara_wave_of_agony_dummy);
-
     void HandlePeriodic(AuraEffect const* /*aurEff*/)
     {
         if (Unit* caster = GetCaster())
@@ -431,14 +425,12 @@ class spell_kilnara_wave_of_agony_dummy : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_kilnara_wave_of_agony_dummy::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+        OnEffectPeriodic.Register(&spell_kilnara_wave_of_agony_dummy::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
     }
 };
 
 class spell_kilnara_primal_awakening : public AuraScript
 {
-    PrepareAuraScript(spell_kilnara_primal_awakening);
-
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* creature = GetTarget()->ToCreature())
@@ -448,14 +440,12 @@ class spell_kilnara_primal_awakening : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_kilnara_primal_awakening::AfterRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_kilnara_primal_awakening::AfterRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_kilnara_gaping_wound : public SpellScript
 {
-    PrepareSpellScript(spell_kilnara_gaping_wound);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -471,7 +461,7 @@ class spell_kilnara_gaping_wound : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_kilnara_gaping_wound::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_kilnara_gaping_wound::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
@@ -480,9 +470,9 @@ void AddSC_boss_high_priestess_kilnara()
     RegisterZulGurubCreatureAI(boss_high_priestess_kilnara);
     RegisterZulGurubCreatureAI(npc_kilnara_pride_of_bethekk);
 
-    RegisterAuraScript(spell_kilnara_tears_of_blood);
+    RegisterSpellScript(spell_kilnara_tears_of_blood);
     RegisterSpellScript(spell_kilnara_wave_of_agony);
-    RegisterAuraScript(spell_kilnara_wave_of_agony_dummy);
-    RegisterAuraScript(spell_kilnara_primal_awakening);
+    RegisterSpellScript(spell_kilnara_wave_of_agony_dummy);
+    RegisterSpellScript(spell_kilnara_primal_awakening);
     RegisterSpellScript(spell_kilnara_gaping_wound);
 }

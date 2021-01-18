@@ -194,10 +194,10 @@ class boss_vanessa_van_cleef : public CreatureScript
                 _Reset();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
-                _JustEngagedWith();
                 DoCastAOE(SPELL_VANESSA_ACHIEVEMENT_SPELL, true);
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
                 events.ScheduleEvent(EVENT_DEFLECTION, Seconds(11));
@@ -327,7 +327,7 @@ class boss_vanessa_van_cleef : public CreatureScript
                                 float y = defiasReinforcementPositions[_currentReinforcement].m_positionY;
                                 float z = defiasReinforcementPositions[_currentReinforcement].m_positionZ;
 
-                                me->CastSpell(x, y, z, defiasReinforcementSpells[_currentReinforcement], true);
+                                me->CastSpell({ x, y, z }, defiasReinforcementSpells[_currentReinforcement], true);
                                 _currentReinforcement++;
 
                                 if (_currentReinforcement == REINFORCEMENT_BLOOD_WIZARD)
@@ -704,8 +704,6 @@ class spell_vanessa_backslash_targeting : public SpellScriptLoader
 
         class spell_vanessa_backslash_targeting_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_vanessa_backslash_targeting_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_BACKSLASH });
@@ -727,8 +725,8 @@ class spell_vanessa_backslash_targeting : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_vanessa_backslash_targeting_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_vanessa_backslash_targeting_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_vanessa_backslash_targeting_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_vanessa_backslash_targeting_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 

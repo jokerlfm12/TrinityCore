@@ -361,7 +361,7 @@ public:
         {
             if (me->IsWithinLOS(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ()) && me->IsWithinDistInMap(player, 30.0f))
             {
-                me->SetInFront(player);
+                me->SetOrientationTowards(player);
                 Active = false;
 
                 switch (emote)
@@ -931,7 +931,7 @@ void npc_doctor::npc_doctorAI::UpdateAI(uint32 diff)
             if (Creature* Patient = me->SummonCreature(patientEntry, **point, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5000))
             {
                 //303, this flag appear to be required for client side item->spell to work (TARGET_SINGLE_FRIEND)
-                Patient->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+                Patient->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
 
                 Patients.push_back(Patient->GetGUID());
                 ENSURE_AI(npc_injured_patient::npc_injured_patientAI, Patient->AI())->DoctorGUID = me->GetGUID();
@@ -1722,120 +1722,67 @@ enum TrainingDummy
     SPELL_PRIMAL_STRIKE                        = 73899,
     SPELL_IMMOLATE                             = 348,
     SPELL_ARCANE_MISSILES                      = 5143,
-    EVENT_TD_CHECK_COMBAT                      = 1,
-    EVENT_TD_DESPAWN                           = 2
 };
 
-class npc_training_dummy : public CreatureScript
+struct npc_training_dummy : NullCreatureAI
 {
-public:
-    npc_training_dummy() : CreatureScript("npc_training_dummy") { }
-
-    struct npc_training_dummyAI : ScriptedAI
+    npc_training_dummy(Creature* creature) : NullCreatureAI(creature)
     {
-        npc_training_dummyAI(Creature* creature) : ScriptedAI(creature)
+        uint32 const entry = me->GetEntry();
+        if (entry == NPC_TARGET_DUMMY || entry == NPC_ADVANCED_TARGET_DUMMY)
+            me->DespawnOrUnsummon(16s);
+    }
+
+    void DamageTaken(Unit* attacker, uint32& damage) override
+    {
+        damage = 0;
+
+        if (!attacker)
+            return;
+
+        _combatTimer[attacker->GetGUID()] = int32(5 * IN_MILLISECONDS);
+    }
+
+    // Todo: the involved training dummys have a proc aura for that. Drop this part here, once converted.
+    void SpellHit(Unit* caster, SpellInfo const* spell) override
+    {
+        switch (spell->Id)
         {
-            SetCombatMovement(false);
-        }
-
-        EventMap _events;
-        std::unordered_map<ObjectGuid, time_t> _damageTimes;
-
-        void Reset() override
-        {
-            me->SetControlled(true, UNIT_STATE_STUNNED);//disable rotate
-
-            _events.Reset();
-            _damageTimes.clear();
-            if (me->GetEntry() != NPC_ADVANCED_TARGET_DUMMY && me->GetEntry() != NPC_TARGET_DUMMY)
-                _events.ScheduleEvent(EVENT_TD_CHECK_COMBAT, 1000);
-            else
-                _events.ScheduleEvent(EVENT_TD_DESPAWN, 15000);
-        }
-
-        void EnterEvadeMode(EvadeReason why) override
-        {
-            if (!_EnterEvadeMode(why))
-                return;
-
-            Reset();
-        }
-
-        void DamageTaken(Unit* doneBy, uint32& damage) override
-        {
-            me->AddThreat(doneBy, float(damage));    // just to create threat reference
-            _damageTimes[doneBy->GetGUID()] = GameTime::GetGameTime();
-            damage = 0;
-        }
-
-        void SpellHit(Unit* caster, SpellInfo const* spell) override
-        {
-            switch (spell->Id)
-            {
-            case SPELL_CHARGE:   // Charge - Warrior
-            case SPELL_JUDGEMENT: // Judgement - Paladin
-            case SPELL_STEADY_SHOT: // Steady Shot - Hunter
-            case SPELL_EVISCERATE:  // Eviscerate - Rouge
-            case SPELL_PRIMAL_STRIKE: // Primal Strike - Shaman
-            case SPELL_IMMOLATE:   // Immolate - Warlock
-            case SPELL_ARCANE_MISSILES:  // Arcane Missiles - Mage
+            case SPELL_CHARGE:          // Charge - Warrior
+            case SPELL_JUDGEMENT:       // Judgement - Paladin
+            case SPELL_STEADY_SHOT:     // Steady Shot - Hunter
+            case SPELL_EVISCERATE:      // Eviscerate - Rouge
+            case SPELL_PRIMAL_STRIKE:   // Primal Strike - Shaman
+            case SPELL_IMMOLATE:        // Immolate - Warlock
+            case SPELL_ARCANE_MISSILES: // Arcane Missiles - Mage
                 if (caster->GetTypeId() == TYPEID_PLAYER)
                     caster->ToPlayer()->KilledMonsterCredit(NPC_SPELL_PRACTICE_CREDIT);
                 break;
             default:
                 break;
-            }
         }
-
-        void UpdateAI(uint32 diff) override
-        {
-            if (!me->IsInCombat())
-                return;
-
-            if (!me->HasUnitState(UNIT_STATE_STUNNED))
-                me->SetControlled(true, UNIT_STATE_STUNNED);//disable rotate
-
-            _events.Update(diff);
-
-            if (uint32 eventId = _events.ExecuteEvent())
-            {
-                switch (eventId)
-                {
-                    case EVENT_TD_CHECK_COMBAT:
-                    {
-                        time_t now = GameTime::GetGameTime();
-                        for (std::unordered_map<ObjectGuid, time_t>::iterator itr = _damageTimes.begin(); itr != _damageTimes.end();)
-                        {
-                            // If unit has not dealt damage to training dummy for 5 seconds, remove him from combat
-                            if (itr->second < now - 5)
-                            {
-                                if (Unit* unit = ObjectAccessor::GetUnit(*me, itr->first))
-                                    unit->getHostileRefManager().deleteReference(me);
-
-                                itr = _damageTimes.erase(itr);
-                            }
-                            else
-                                ++itr;
-                        }
-                        _events.ScheduleEvent(EVENT_TD_CHECK_COMBAT, 1000);
-                        break;
-                    }
-                    case EVENT_TD_DESPAWN:
-                        me->DespawnOrUnsummon(1);
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
-        void MoveInLineOfSight(Unit* /*who*/) override { }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_training_dummyAI(creature);
     }
+
+    void UpdateAI(uint32 diff) override
+    {
+        for (auto itr = _combatTimer.begin(); itr != _combatTimer.end();)
+        {
+            itr->second -= diff;
+            if (itr->second <= 0)
+            {
+                auto const& pveRefs = me->GetCombatManager().GetPvECombatRefs();
+                auto it = pveRefs.find(itr->first);
+                if (it != pveRefs.end())
+                    it->second->EndCombat();
+
+                itr = _combatTimer.erase(itr);
+            }
+            else
+                ++itr;
+        }
+    }
+private:
+    std::unordered_map<ObjectGuid /*attackerGUID*/, int32 /*combatTime*/> _combatTimer;
 };
 
 /*######
@@ -2323,7 +2270,7 @@ public:
             }
             else
                 //me->CastSpell(me, GetFireworkSpell(me->GetEntry()), true);
-                me->CastSpell(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), GetFireworkSpell(me->GetEntry()), true);
+                me->CastSpell({ me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() }, GetFireworkSpell(me->GetEntry()), true);
         }
     };
 
@@ -3026,7 +2973,7 @@ class npc_mage_orb : public CreatureScript
                                         {
                                             Position explPos = me->GetPosition();
                                             float z = explPos.GetPositionZ() - me->GetFloatValue(UNIT_FIELD_HOVERHEIGHT);
-                                            summoner->CastSpell(explPos.GetPositionX(), explPos.GetPositionY(), z, SPELL_FIRE_POWER_EXPLOSION, true);
+                                            summoner->CastSpell({ explPos.GetPositionX(), explPos.GetPositionY(), z }, SPELL_FIRE_POWER_EXPLOSION, true);
                                             me->DespawnOrUnsummon();
                                         }
                             break;
@@ -3037,7 +2984,7 @@ class npc_mage_orb : public CreatureScript
                                     {
                                         Position explPos = me->GetPosition();
                                         float z = explPos.GetPositionZ() - me->GetFloatValue(UNIT_FIELD_HOVERHEIGHT);
-                                        summoner->CastSpell(explPos.GetPositionX(), explPos.GetPositionY(), z, SPELL_FIRE_POWER_EXPLOSION, true);
+                                        summoner->CastSpell({ explPos.GetPositionX(), explPos.GetPositionY(), z }, SPELL_FIRE_POWER_EXPLOSION, true);
                                         me->DespawnOrUnsummon();
                                     }
                             break;
@@ -3224,7 +3171,7 @@ void AddSC_npcs_special()
     new npc_tonk_mine();
     new npc_tournament_mount();
     new npc_brewfest_reveler();
-    new npc_training_dummy();
+    RegisterCreatureAI(npc_training_dummy);
     new npc_wormhole();
     new npc_pet_trainer();
     new npc_experience();

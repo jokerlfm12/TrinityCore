@@ -155,9 +155,9 @@ struct boss_lady_nazjar : public BossAI
 {
     boss_lady_nazjar(Creature* creature) : BossAI(creature, DATA_LADY_NAZJAR), _waterspoutPhaseCount(0), _killedAdds(0), _isInTransition(false) { }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         HandleDoor(false);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
@@ -306,12 +306,12 @@ struct boss_lady_nazjar : public BossAI
             switch (eventId)
             {
                 case EVENT_SUMMON_GEYSER:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                         DoCast(target, SPELL_SUMMON_GEYSER);
                     events.Repeat(11s, 16s);
                     break;
                 case EVENT_FUNGAL_SPORES:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                         DoCast(target, SPELL_FUNGAL_SPORES);
                     events.Repeat(13s, 19s);
                     break;
@@ -440,7 +440,7 @@ struct npc_nazjar_nazjar_tempest_witch : public ScriptedAI
             switch (eventId)
             {
                 case EVENT_CHAIN_LIGHTNING:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                     {
                         me->MakeInterruptable(true);
                         DoCast(target, SPELL_CHAIN_LIGHTNING);
@@ -463,8 +463,6 @@ private:
 
 class spell_nazjar_waterspout : public SpellScript
 {
-    PrepareSpellScript(spell_nazjar_waterspout);
-
     void HandleScriptEffect(SpellEffIndex effIndex)
     {
         if (Unit* caster = GetCaster())
@@ -473,14 +471,12 @@ class spell_nazjar_waterspout : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_nazjar_waterspout::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_nazjar_waterspout::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_nazjar_waterspout_targeting : public SpellScript
 {
-    PrepareSpellScript(spell_nazjar_waterspout_targeting);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -510,8 +506,8 @@ class spell_nazjar_waterspout_targeting : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_nazjar_waterspout_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_nazjar_waterspout_targeting::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnObjectAreaTargetSelect.Register(&spell_nazjar_waterspout_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_nazjar_waterspout_targeting::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 

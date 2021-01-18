@@ -116,7 +116,7 @@ struct npc_grim_batol_twilight_beguiler : public ScriptedAI
                     }
                     break;
                 case EVENT_DECEITFUL_BLAST:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 25.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 25.0f, true))
                         DoCast(target, SPELL_DECEITFUL_BLAST);
 
                     if (_events.GetTimeUntilEvent(EVENT_CHAINED_MIND) > 4 * IN_MILLISECONDS)
@@ -125,7 +125,7 @@ struct npc_grim_batol_twilight_beguiler : public ScriptedAI
                         _events.Repeat(11s, 12s);
                     break;
                 case EVENT_CHAINED_MIND:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 25.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 25.0f, true))
                         DoCast(target, SPELL_CHAINED_MIND);
                     _events.Repeat(18s, 27s);
                     break;
@@ -280,8 +280,6 @@ private:
 
 class spell_grim_batol_engulfing_flames : public SpellScript
 {
-    PrepareSpellScript(spell_grim_batol_engulfing_flames);
-
     void HandleEffect(SpellEffIndex /*effIndex*/)
     {
         if (Creature* creature = GetHitCreature())
@@ -290,7 +288,7 @@ class spell_grim_batol_engulfing_flames : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_grim_batol_engulfing_flames::HandleEffect, EFFECT_1, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_grim_batol_engulfing_flames::HandleEffect, EFFECT_1, SPELL_EFFECT_DUMMY);
     }
 };
 

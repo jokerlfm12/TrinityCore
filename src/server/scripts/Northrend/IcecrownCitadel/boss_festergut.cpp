@@ -201,7 +201,7 @@ class boss_festergut : public CreatureScript
                                 // just cast and dont bother with target, conditions will handle it
                                 ++_inhaleCounter;
                                 if (_inhaleCounter < 3)
-                                    me->CastSpell(me, gaseousBlight[_inhaleCounter], true, nullptr, nullptr, me->GetGUID());
+                                    me->CastSpell(me, gaseousBlight[_inhaleCounter], me->GetGUID());
                             }
 
                             events.ScheduleEvent(EVENT_INHALE_BLIGHT, urand(33500, 35000));
@@ -211,8 +211,8 @@ class boss_festergut : public CreatureScript
                         {
                             std::list<Unit*> ranged, melee;
                             uint32 minTargets = RAID_MODE<uint32>(3, 8, 3, 8);
-                            SelectTargetList(ranged, 25, SELECT_TARGET_RANDOM, -5.0f, true);
-                            SelectTargetList(melee, 25, SELECT_TARGET_RANDOM, 5.0f, true);
+                            SelectTargetList(ranged, 25, SELECT_TARGET_RANDOM, 0, -5.0f, true);
+                            SelectTargetList(melee, 25, SELECT_TARGET_RANDOM, 0, 5.0f, true);
                             while (ranged.size() < minTargets)
                             {
                                 if (melee.empty())
@@ -236,7 +236,7 @@ class boss_festergut : public CreatureScript
                         case EVENT_GAS_SPORE:
                             Talk(EMOTE_WARN_GAS_SPORE);
                             Talk(EMOTE_GAS_SPORE);
-                            me->CastCustomSpell(SPELL_GAS_SPORE, SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(2, 3, 2, 3), me);
+                            me->CastSpell(me, SPELL_GAS_SPORE, { SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(2, 3, 2, 3) });
                             events.ScheduleEvent(EVENT_GAS_SPORE, urand(40000, 45000));
                             events.RescheduleEvent(EVENT_VILE_GAS, urand(28000, 35000));
                             break;
@@ -374,8 +374,6 @@ class spell_festergut_pungent_blight : public SpellScriptLoader
 
         class spell_festergut_pungent_blight_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_festergut_pungent_blight_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -393,7 +391,7 @@ class spell_festergut_pungent_blight : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_festergut_pungent_blight_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_festergut_pungent_blight_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -410,8 +408,6 @@ class spell_festergut_gastric_bloat : public SpellScriptLoader
 
         class spell_festergut_gastric_bloat_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_festergut_gastric_bloat_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_GASTRIC_EXPLOSION });
@@ -429,7 +425,7 @@ class spell_festergut_gastric_bloat : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_festergut_gastric_bloat_SpellScript::HandleScript, EFFECT_2, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_festergut_gastric_bloat_SpellScript::HandleScript, EFFECT_2, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -446,8 +442,6 @@ class spell_festergut_blighted_spores : public SpellScriptLoader
 
         class spell_festergut_blighted_spores_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_festergut_blighted_spores_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_INOCULATED });
@@ -463,7 +457,7 @@ class spell_festergut_blighted_spores : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_festergut_blighted_spores_AuraScript::ExtraEffect, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_festergut_blighted_spores_AuraScript::ExtraEffect, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

@@ -97,9 +97,9 @@ class boss_faerlina : public CreatureScript
                 SummonAdds();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 summons.DoZoneInCombat();
                 events.ScheduleEvent(EVENT_POISON, randtime(Seconds(10), Seconds(15)));
@@ -219,7 +219,7 @@ class npc_faerlina_add : public CreatureScript
             void JustEngagedWith(Unit* /*who*/) override
             {
                 if (Creature* faerlina = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_FAERLINA)))
-                    faerlina->AI()->DoZoneInCombat(nullptr, 250.0f);
+                    faerlina->AI()->DoZoneInCombat();
             }
 
             void JustDied(Unit* /*killer*/) override

@@ -58,10 +58,10 @@ struct boss_bloodmage_thalnos : public BossAI
         _Reset();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
-        _JustEngagedWith();
         events.ScheduleEvent(EVENT_FLAME_SPIKE, 8s, 10s);
         events.ScheduleEvent(EVENT_SHADOW_BOLT, 1ms);
     }
@@ -100,7 +100,7 @@ struct boss_bloodmage_thalnos : public BossAI
                     ScheduleNextEvent();
                     break;
                 case EVENT_FLAME_SHOCK:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 20.f, true, -SPELL_FLAME_SHOCK))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 20.f, true, true, -SPELL_FLAME_SHOCK))
                         DoCast(target, SPELL_FLAME_SHOCK);
                     else
                         DoCastVictim(SPELL_FLAME_SHOCK);
@@ -180,5 +180,5 @@ private:
 
 void AddSC_boss_bloodmage_thalnos()
 {
-    RegisterScarletMonastryCreatureAI(boss_bloodmage_thalnos);
+    RegisterScarletMonasteryCreatureAI(boss_bloodmage_thalnos);
 }

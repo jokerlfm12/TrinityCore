@@ -123,19 +123,19 @@ enum UnitFlags : uint32
     UNIT_FLAG_SERVER_CONTROLLED     = 0x00000001,           // set only when unit movement is controlled by server - by SPLINE/MONSTER_MOVE packets, together with UNIT_FLAG_STUNNED; only set to units controlled by client; client function CGUnit_C::IsClientControlled returns false when set for owner
     UNIT_FLAG_NON_ATTACKABLE        = 0x00000002,           // not attackable
     UNIT_FLAG_REMOVE_CLIENT_CONTROL = 0x00000004,           // This is a legacy flag used to disable movement player's movement while controlling other units, SMSG_CLIENT_CONTROL replaces this functionality clientside now. CONFUSED and FLEEING flags have the same effect on client movement asDISABLE_MOVE_CONTROL in addition to preventing spell casts/autoattack (they all allow climbing steeper hills and emotes while moving)
-    UNIT_FLAG_PVP_ATTACKABLE        = 0x00000008,           // allow apply pvp rules to attackable state in addition to faction dependent state
+    UNIT_FLAG_PLAYER_CONTROLLED     = 0x00000008,           // controlled by player, use _IMMUNE_TO_PC instead of _IMMUNE_TO_NPC
     UNIT_FLAG_RENAME                = 0x00000010,
     UNIT_FLAG_PREPARATION           = 0x00000020,           // don't take reagents for spells with SPELL_ATTR5_NO_REAGENT_WHILE_PREP
     UNIT_FLAG_UNK_6                 = 0x00000040,
-    UNIT_FLAG_NOT_ATTACKABLE_1      = 0x00000080,           // ?? (UNIT_FLAG_PVP_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1) is NON_PVP_ATTACKABLE
+    UNIT_FLAG_NOT_ATTACKABLE_1      = 0x00000080,           // ?? (UNIT_FLAG_PLAYER_CONTROLLED | UNIT_FLAG_NOT_ATTACKABLE_1) is NON_PVP_ATTACKABLE
     UNIT_FLAG_IMMUNE_TO_PC          = 0x00000100,           // disables combat/assistance with PlayerCharacters (PC) - see Unit::_IsValidAttackTarget, Unit::_IsValidAssistTarget
     UNIT_FLAG_IMMUNE_TO_NPC         = 0x00000200,           // disables combat/assistance with NonPlayerCharacters (NPC) - see Unit::_IsValidAttackTarget, Unit::_IsValidAssistTarget
     UNIT_FLAG_LOOTING               = 0x00000400,           // loot animation
-    UNIT_FLAG_PET_IN_COMBAT         = 0x00000800,           // in combat?, 2.0.8
+    UNIT_FLAG_PET_IN_COMBAT         = 0x00000800,           // on player pets: whether the pet is chasing a target to attack || on other units: whether any of the unit's minions is in combat
     UNIT_FLAG_PVP                   = 0x00001000,           // changed in 3.0.3
     UNIT_FLAG_SILENCED              = 0x00002000,           // silenced, 2.1.1
     UNIT_FLAG_CANNOT_SWIM           = 0x00004000,           // 2.0.8
-    UNIT_FLAG_UNK_15                = 0x00008000,
+    UNIT_FLAG_SWIMMING              = 0x00008000,           // shows swim animation in water
     UNIT_FLAG_NOT_ATTACKABLE_2      = 0x00010000,
     UNIT_FLAG_PACIFIED              = 0x00020000,           // 3.0.3 ok
     UNIT_FLAG_STUNNED               = 0x00040000,           // 3.0.3 ok
@@ -144,14 +144,14 @@ enum UnitFlags : uint32
     UNIT_FLAG_DISARMED              = 0x00200000,           // 3.0.3, disable melee spells casting..., "Required melee weapon" added to melee spells tooltip.
     UNIT_FLAG_CONFUSED              = 0x00400000,
     UNIT_FLAG_FLEEING               = 0x00800000,
-    UNIT_FLAG_PLAYER_CONTROLLED     = 0x01000000,           // used in spell Eyes of the Beast for pet... let attack by controlled creature
+    UNIT_FLAG_POSSESSED             = 0x01000000,           // under direct client control by a player (possess or vehicle)
     UNIT_FLAG_NOT_SELECTABLE        = 0x02000000,
     UNIT_FLAG_SKINNABLE             = 0x04000000,
     UNIT_FLAG_MOUNT                 = 0x08000000,
     UNIT_FLAG_UNK_28                = 0x10000000,
     UNIT_FLAG_UNK_29                = 0x20000000,           // used in Feing Death spell
     UNIT_FLAG_SHEATHE               = 0x40000000,
-    UNIT_FLAG_UNK_31                = 0x80000000,
+    UNIT_FLAG_IMMUNE                = 0x80000000,           // Immune to damage
     MAX_UNIT_FLAGS = 33
 };
 
@@ -278,23 +278,23 @@ enum MovementFlags : uint32
 
 enum MovementFlags2 : uint32
 {
-    MOVEMENTFLAG2_NONE                     = 0x00000000,
-    MOVEMENTFLAG2_NO_STRAFE                = 0x00000001,
-    MOVEMENTFLAG2_NO_JUMPING               = 0x00000002,
-    MOVEMENTFLAG2_FULL_SPEED_TURNING       = 0x00000004,
-    MOVEMENTFLAG2_FULL_SPEED_PITCHING      = 0x00000008,
-    MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING    = 0x00000010,
-    MOVEMENTFLAG2_UNK5                     = 0x00000020,
-    MOVEMENTFLAG2_UNK6                     = 0x00000040,
-    MOVEMENTFLAG2_UNK7                     = 0x00000080,
-    MOVEMENTFLAG2_UNK8                     = 0x00000100,
-    MOVEMENTFLAG2_UNK9                     = 0x00000200,
-    MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS    = 0x00000400,
-    MOVEMENTFLAG2_UNK11                    = 0x00000800,
-    MOVEMENTFLAG2_AWAITING_LOAD            = 0x00001000,
-    MOVEMENTFLAG2_INTERPOLATED_MOVEMENT    = 0x00002000,
-    MOVEMENTFLAG2_INTERPOLATED_TURNING     = 0x00004000,
-    MOVEMENTFLAG2_INTERPOLATED_PITCHING    = 0x00008000
+    MOVEMENTFLAG2_NONE                      = 0x00000000,
+    MOVEMENTFLAG2_NO_STRAFE                 = 0x00000001,
+    MOVEMENTFLAG2_NO_JUMPING                = 0x00000002,
+    MOVEMENTFLAG2_FULL_SPEED_TURNING        = 0x00000004,
+    MOVEMENTFLAG2_FULL_SPEED_PITCHING       = 0x00000008,
+    MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING     = 0x00000010,
+    MOVEMENTFLAG2_IS_VEHICLE_EXIT_VOLUNTARY = 0x00000020,
+    MOVEMENTFLAG2_UNK6                      = 0x00000040,
+    MOVEMENTFLAG2_UNK7                      = 0x00000080,
+    MOVEMENTFLAG2_UNK8                      = 0x00000100,
+    MOVEMENTFLAG2_UNK9                      = 0x00000200,
+    MOVEMENTFLAG2_CAN_SWIM_TO_FLY_TRANS     = 0x00000400,
+    MOVEMENTFLAG2_UNK11                     = 0x00000800,
+    MOVEMENTFLAG2_AWAITING_LOAD             = 0x00001000,
+    MOVEMENTFLAG2_INTERPOLATED_MOVEMENT     = 0x00002000,
+    MOVEMENTFLAG2_INTERPOLATED_TURNING      = 0x00004000,
+    MOVEMENTFLAG2_INTERPOLATED_PITCHING     = 0x00008000
 };
 
 enum HitInfo

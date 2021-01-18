@@ -17,7 +17,13 @@
 
 #include "ScriptMgr.h"
 #include "InstanceScript.h"
+#include "Map.h"
 #include "the_stockade.h"
+
+enum SpawnGroups
+{
+    SPAWN_GROUP_ALLIANCE_ENTRANCE = 450
+};
 
 class instance_the_stockade : public InstanceMapScript
 {
@@ -30,6 +36,18 @@ public:
         {
             SetHeaders(DataHeader);
             SetBossNumber(EncounterCount);
+        }
+
+        void Create() override
+        {
+            if (instance->GetTeamInInstance() == ALLIANCE)
+                instance->SpawnGroupSpawn(SPAWN_GROUP_ALLIANCE_ENTRANCE);
+        }
+
+        void Load(char const* /*data*/) override
+        {
+            if (instance->GetTeamInInstance() == ALLIANCE)
+                instance->SpawnGroupSpawn(SPAWN_GROUP_ALLIANCE_ENTRANCE);
         }
     };
 

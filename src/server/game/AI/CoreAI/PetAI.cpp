@@ -71,7 +71,6 @@ void PetAI::_stopAttack()
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MoveIdle();
         me->CombatStop();
-        me->getHostileRefManager().deleteReferences();
         return;
     }
 
@@ -245,18 +244,13 @@ void PetAI::UpdateAI(uint32 diff)
             SpellCastTargets targets;
             targets.SetUnitTarget(target);
 
-            spell->prepare(&targets);
+            spell->prepare(targets);
         }
 
         // deleted cached Spell objects
         for (TargetSpellList::const_iterator itr = targetSpellStore.begin(); itr != targetSpellStore.end(); ++itr)
             delete itr->second;
     }
-
-    // Update speed as needed to prevent dropping too far behind and despawning
-    me->UpdateSpeed(MOVE_RUN);
-    me->UpdateSpeed(MOVE_WALK);
-    me->UpdateSpeed(MOVE_FLIGHT);
 }
 
 void PetAI::UpdateAllies()
@@ -460,7 +454,7 @@ void PetAI::HandleReturnMovement()
         }
     }
 
-    me->ClearInPetCombat();
+    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PET_IN_COMBAT); // on player pets, this flag indicates that we're actively going after a target - we're returning, so remove it
 }
 
 void PetAI::DoAttack(Unit* target, bool chase)
@@ -470,11 +464,7 @@ void PetAI::DoAttack(Unit* target, bool chase)
 
     if (me->Attack(target, true))
     {
-        // properly fix fake combat after pet is sent to attack
-        if (Unit* owner = me->GetOwner())
-            owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PET_IN_COMBAT);
-
-        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PET_IN_COMBAT);
+        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PET_IN_COMBAT); // on player pets, this flag indicates we're actively going after a target - that's what we're doing, so set it
 
         // Play sound to let the player know the pet is attacking something it picked on its own
         if (me->HasReactState(REACT_AGGRESSIVE) && !me->GetCharmInfo()->IsCommandAttack())

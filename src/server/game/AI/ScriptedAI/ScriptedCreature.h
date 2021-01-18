@@ -102,7 +102,7 @@ public:
         DoActionImpl(info, listCopy);
     }
 
-    void DoZoneInCombat(uint32 entry = 0, float maxRangeToNearestTarget = 250.0f);
+    void DoZoneInCombat(uint32 entry = 0);
     void RemoveNotExisting();
     bool HasEntry(uint32 entry) const;
 
@@ -185,7 +185,7 @@ struct TC_GAME_API ScriptedAI : public CreatureAI
     void Reset() override { }
 
     //Called at creature aggro either by MoveInLOS or Attack Start
-    void JustEngagedWith(Unit* /*victim*/) override { }
+    void JustEngagedWith(Unit* /*who*/) override { }
 
     // Called before JustEngagedWith even before the creature is in combat.
     void AttackStart(Unit* /*target*/) override;
@@ -209,11 +209,16 @@ struct TC_GAME_API ScriptedAI : public CreatureAI
     //Plays a sound to all nearby players
     void DoPlaySoundToSet(WorldObject* source, uint32 soundId);
 
-    //Drops all threat to 0%. Does not remove players from the threat list
-    void DoResetThreat();
-
-    float DoGetThreat(Unit* unit);
-    void DoModifyThreatPercent(Unit* unit, int32 pct);
+    // Add specified amount of threat directly to victim (ignores redirection effects) - also puts victim in combat and engages them if necessary
+    void AddThreat(Unit* victim, float amount, Unit* who = nullptr);
+    // Adds/removes the specified percentage from the specified victim's threat (to who, or me if not specified)
+    void ModifyThreatByPercent(Unit* victim, int32 pct, Unit* who = nullptr);
+    // Resets the victim's threat level to who (or me if not specified) to zero
+    void ResetThreat(Unit* victim, Unit* who = nullptr);
+    // Resets the specified unit's threat list (me if not specified) - does not delete entries, just sets their threat to zero
+    void ResetThreatList(Unit* who = nullptr);
+    // Returns the threat level of victim towards who (or me if not specified)
+    float GetThreat(Unit const* victim, Unit const* who = nullptr);
 
     void DoTeleportTo(float x, float y, float z, uint32 time = 0);
     void DoTeleportTo(float const pos[4]);
@@ -349,7 +354,7 @@ class TC_GAME_API BossAI : public ScriptedAI
         virtual void ScheduleTasks() { }
 
         void Reset() override { _Reset(); }
-        void JustEngagedWith(Unit* /*who*/) override { _JustEngagedWith(); }
+        void JustEngagedWith(Unit* who) override { _JustEngagedWith(who); }
         void JustDied(Unit* /*killer*/) override { _JustDied(); }
         void JustReachedHome() override { _JustReachedHome(); }
 
@@ -357,7 +362,7 @@ class TC_GAME_API BossAI : public ScriptedAI
 
     protected:
         void _Reset();
-        void _JustEngagedWith();
+        void _JustEngagedWith(Unit* who);
         void _JustDied();
         void _JustReachedHome();
         void _DespawnAtEvade(Seconds delayToRespawn, Creature* who = nullptr);

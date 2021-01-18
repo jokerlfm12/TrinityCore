@@ -72,9 +72,9 @@ class boss_ozruk : public CreatureScript
         {
             boss_ozrukAI(Creature* creature) : BossAI(creature, DATA_OZRUK), _enraged(false) { }
 
-            void JustEngagedWith(Unit* /*victim*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 
@@ -185,8 +185,6 @@ class boss_ozruk : public CreatureScript
 
 class spell_ozruk_rupture : public AuraScript
 {
-    PrepareAuraScript(spell_ozruk_rupture);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_RUPTURE_SUMMON });
@@ -205,21 +203,19 @@ class spell_ozruk_rupture : public AuraScript
             float y = caster->GetPositionY() + sin(angle) * dist;
             float z = caster->GetMap()->GetStaticHeight(caster->GetPhaseShift(), x, y, caster->GetPositionZ() + 3.0f);
             if (std::abs(z) < caster->GetPositionZ() + 5.0f)
-                caster->CastSpell(x, y, z, SPELL_RUPTURE_SUMMON, true);
+                caster->CastSpell({ x, y, z }, SPELL_RUPTURE_SUMMON, true);
             angle += 0.2f;
         }
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_ozruk_rupture::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_ozruk_rupture::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_ozuruk_rupture_summon : public SpellScript
 {
-    PrepareSpellScript(spell_ozuruk_rupture_summon);
-
     void SetDest(SpellDestination& dest)
     {
         Unit* caster = GetCaster();
@@ -238,14 +234,12 @@ class spell_ozuruk_rupture_summon : public SpellScript
 
     void Register() override
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_ozuruk_rupture_summon::SetDest, EFFECT_0, TARGET_DEST_CASTER_FRONT);
+        OnDestinationTargetSelect.Register(&spell_ozuruk_rupture_summon::SetDest, EFFECT_0, TARGET_DEST_CASTER_FRONT);
     }
 };
 
 class spell_ozruk_elementium_spike_shield : public SpellScript
 {
-    PrepareSpellScript(spell_ozruk_elementium_spike_shield);
-
     void HandleBouncerSpikes()
     {
         Unit* caster = GetCaster();
@@ -260,14 +254,12 @@ class spell_ozruk_elementium_spike_shield : public SpellScript
 
     void Register() override
     {
-        OnCast += SpellCastFn(spell_ozruk_elementium_spike_shield::HandleBouncerSpikes);
+        OnCast.Register(&spell_ozruk_elementium_spike_shield::HandleBouncerSpikes);
     }
 };
 
 class spell_ozruk_paralyze : public SpellScript
 {
-    PrepareSpellScript(spell_ozruk_paralyze);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_PARALYZE_STUN });
@@ -281,14 +273,12 @@ class spell_ozruk_paralyze : public SpellScript
 
     void Register() override
     {
-        OnHit += SpellHitFn(spell_ozruk_paralyze::HandleDummy);
+        OnHit.Register(&spell_ozruk_paralyze::HandleDummy);
     }
 };
 
 class spell_ozruk_paralyze_stun : public AuraScript
 {
-    PrepareAuraScript(spell_ozruk_paralyze_stun);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_PARALYZE_DAMAGE });
@@ -303,7 +293,7 @@ class spell_ozruk_paralyze_stun : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_ozruk_paralyze_stun::OnAuraRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_ozruk_paralyze_stun::OnAuraRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -311,9 +301,9 @@ class spell_ozruk_paralyze_stun : public AuraScript
 void AddSC_boss_ozruk()
 {
     new boss_ozruk();
-    RegisterAuraScript(spell_ozruk_rupture);
+    RegisterSpellScript(spell_ozruk_rupture);
     RegisterSpellScript(spell_ozuruk_rupture_summon);
     RegisterSpellScript(spell_ozruk_elementium_spike_shield);
     RegisterSpellScript(spell_ozruk_paralyze);
-    RegisterAuraScript(spell_ozruk_paralyze_stun);
+    RegisterSpellScript(spell_ozruk_paralyze_stun);
 }

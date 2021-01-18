@@ -19,17 +19,22 @@
 #define AllPackets_h__
 
 #include "AuthenticationPackets.h"
+#include "BattlegroundPackets.h"
 #include "CharacterPackets.h"
 #include "CombatLogPackets.h"
 #include "CombatPackets.h"
 #include "GuildPackets.h"
+#include "InstancePackets.h"
+#include "ItemPackets.h"
 #include "LFGPackets.h"
 #include "MiscPackets.h"
 #include "MovementPackets.h"
 #include "NPCPackets.h"
+#include "PartyPackets.h"
 #include "QuestPackets.h"
 #include "QueryPackets.h"
 #include "SystemPackets.h"
+#include "VehiclePackets.h"
 #include "WhoPackets.h"
 #include "WorldStatePackets.h"
 

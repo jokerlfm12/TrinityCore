@@ -91,7 +91,7 @@ public:
 
             DoCast(me, SPELL_IRRIDATION, true);
 
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IN_COMBAT);
             me->SetHealth(me->CountPctFromMaxHealth(10));
             me->SetStandState(UNIT_STAND_STATE_SLEEP);
@@ -115,7 +115,7 @@ public:
         {
             if (Spell->SpellFamilyFlags[2] & 0x080000000)
             {
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
                 me->SetStandState(UNIT_STAND_STATE_STAND);
 
                 DoCast(me, SPELL_STUNNED, true);
@@ -532,8 +532,8 @@ public:
                     return 1000;
                 case 2:
                     Talk(GEEZLE_SAY_1, Spark);
-                    Spark->SetInFront(me);
-                    me->SetInFront(Spark);
+                    Spark->SetOrientationTowards(me);
+                    me->SetOrientationTowards(Spark);
                     return 5000;
                 case 3:
                     Spark->AI()->Talk(SPARK_SAY_2);
@@ -562,7 +562,9 @@ public:
                     Spark->DisappearAndDie();
                     DespawnNagaFlag(false);
                     me->DisappearAndDie();
-                default: return 99999999;
+                    return 99999999;
+                default:
+                    return 99999999;
             }
         }
 

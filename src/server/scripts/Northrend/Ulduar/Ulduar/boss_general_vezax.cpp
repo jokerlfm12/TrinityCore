@@ -106,7 +106,7 @@ class boss_general_vezax : public CreatureScript
 
         struct boss_general_vezaxAI : public BossAI
         {
-            boss_general_vezaxAI(Creature* creature) : BossAI(creature, BOSS_VEZAX)
+            boss_general_vezaxAI(Creature* creature) : BossAI(creature, DATA_VEZAX)
             {
                 Initialize();
             }
@@ -131,9 +131,9 @@ class boss_general_vezax : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 Talk(SAY_AGGRO);
                 DoCast(me, SPELL_AURA_OF_DESPAIR);
@@ -334,7 +334,7 @@ class boss_saronite_animus : public CreatureScript
 
             void JustDied(Unit* /*killer*/) override
             {
-                if (Creature* vezax = instance->GetCreature(BOSS_VEZAX))
+                if (Creature* vezax = instance->GetCreature(DATA_VEZAX))
                     vezax->AI()->DoAction(ACTION_ANIMUS_DIE);
             }
 
@@ -432,7 +432,7 @@ class npc_saronite_vapors : public CreatureScript
                     DoCast(me, SPELL_SARONITE_VAPORS);
                     me->DespawnOrUnsummon(30000);
 
-                    if (Creature* vezax = instance->GetCreature(BOSS_VEZAX))
+                    if (Creature* vezax = instance->GetCreature(DATA_VEZAX))
                         vezax->AI()->DoAction(ACTION_VAPORS_DIE);
                 }
             }
@@ -455,8 +455,6 @@ class spell_general_vezax_mark_of_the_faceless : public SpellScriptLoader
 
         class spell_general_vezax_mark_of_the_faceless_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_general_vezax_mark_of_the_faceless_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_MARK_OF_THE_FACELESS_DAMAGE });
@@ -465,12 +463,12 @@ class spell_general_vezax_mark_of_the_faceless : public SpellScriptLoader
             void HandleEffectPeriodic(AuraEffect const* aurEff)
             {
                 if (Unit* caster = GetCaster())
-                    caster->CastCustomSpell(SPELL_MARK_OF_THE_FACELESS_DAMAGE, SPELLVALUE_BASE_POINT1, aurEff->GetAmount(), GetTarget(), true);
+                    caster->CastSpell(GetTarget(), SPELL_MARK_OF_THE_FACELESS_DAMAGE, CastSpellExtraArgs(aurEff).AddSpellMod(SPELLVALUE_BASE_POINT1, aurEff->GetAmount()));
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_general_vezax_mark_of_the_faceless_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_general_vezax_mark_of_the_faceless_AuraScript::HandleEffectPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -487,8 +485,6 @@ class spell_general_vezax_mark_of_the_faceless_leech : public SpellScriptLoader
 
         class spell_general_vezax_mark_of_the_faceless_leech_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_general_vezax_mark_of_the_faceless_leech_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove(GetExplTargetWorldObject());
@@ -499,7 +495,7 @@ class spell_general_vezax_mark_of_the_faceless_leech : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_general_vezax_mark_of_the_faceless_leech_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_general_vezax_mark_of_the_faceless_leech_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENEMY);
             }
         };
 
@@ -516,8 +512,6 @@ class spell_general_vezax_saronite_vapors : public SpellScriptLoader
 
         class spell_general_vezax_saronite_vapors_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_general_vezax_saronite_vapors_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SARONITE_VAPORS_ENERGIZE, SPELL_SARONITE_VAPORS_DAMAGE });
@@ -529,14 +523,14 @@ class spell_general_vezax_saronite_vapors : public SpellScriptLoader
                 {
                     int32 mana = int32(aurEff->GetAmount() * std::pow(2.0f, GetStackAmount())); // mana restore - bp * 2^stackamount
                     int32 damage = mana * 2;
-                    caster->CastCustomSpell(GetTarget(), SPELL_SARONITE_VAPORS_ENERGIZE, &mana, nullptr, nullptr, true);
-                    caster->CastCustomSpell(GetTarget(), SPELL_SARONITE_VAPORS_DAMAGE, &damage, nullptr, nullptr, true);
+                    caster->CastSpell(GetTarget(), SPELL_SARONITE_VAPORS_ENERGIZE, CastSpellExtraArgs(aurEff).AddSpellBP0(mana));
+                    caster->CastSpell(GetTarget(), SPELL_SARONITE_VAPORS_DAMAGE, CastSpellExtraArgs(aurEff).AddSpellBP0(damage));
                 }
             }
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_general_vezax_saronite_vapors_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+                AfterEffectApply.Register(&spell_general_vezax_saronite_vapors_AuraScript::HandleEffectApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
             }
         };
 

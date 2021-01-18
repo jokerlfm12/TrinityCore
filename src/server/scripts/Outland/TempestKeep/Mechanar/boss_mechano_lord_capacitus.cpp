@@ -76,9 +76,9 @@ class boss_mechano_lord_capacitus : public CreatureScript
         {
             boss_mechano_lord_capacitusAI(Creature* creature) : BossAI(creature, DATA_MECHANOLORD_CAPACITUS) { }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(YELL_AGGRO);
                 events.ScheduleEvent(EVENT_HEADCRACK, 10 * IN_MILLISECONDS);
                 events.ScheduleEvent(EVENT_REFLECTIVE_DAMAGE_SHIELD, 15 * IN_MILLISECONDS);
@@ -167,8 +167,6 @@ class spell_capacitus_polarity_charge : public SpellScriptLoader
 
         class spell_capacitus_polarity_charge_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_capacitus_polarity_charge_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo(
@@ -215,8 +213,8 @@ class spell_capacitus_polarity_charge : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_capacitus_polarity_charge_SpellScript::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_capacitus_polarity_charge_SpellScript::HandleTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnEffectHitTarget.Register(&spell_capacitus_polarity_charge_SpellScript::HandleDamage, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnObjectAreaTargetSelect.Register(&spell_capacitus_polarity_charge_SpellScript::HandleTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
             }
         };
 
@@ -233,8 +231,6 @@ class spell_capacitus_polarity_shift : public SpellScriptLoader
 
         class spell_capacitus_polarity_shift_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_capacitus_polarity_shift_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_POSITIVE_POLARITY, SPELL_NEGATIVE_POLARITY });
@@ -245,12 +241,12 @@ class spell_capacitus_polarity_shift : public SpellScriptLoader
                 Unit* target = GetHitUnit();
                 Unit* caster = GetCaster();
 
-                target->CastSpell(target, roll_chance_i(50) ? SPELL_POSITIVE_POLARITY : SPELL_NEGATIVE_POLARITY, true, nullptr, nullptr, caster->GetGUID());
+                target->CastSpell(target, roll_chance_i(50) ? SPELL_POSITIVE_POLARITY : SPELL_NEGATIVE_POLARITY, caster->GetGUID());
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_capacitus_polarity_shift_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_capacitus_polarity_shift_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

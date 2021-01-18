@@ -243,7 +243,8 @@ class boss_blood_council_controller : public CreatureScript
                     for (uint32 bossData : PrincesData)
                         if (Creature* prince = ObjectAccessor::GetCreature(*me, instance->GetGuidData(bossData)))
                         {
-                            prince->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                            prince->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                            prince->SetImmuneToPC(false);
                             if (bossData == DATA_PRINCE_VALANAR)
                                 prince->SetHealth(prince->GetMaxHealth());
                         }
@@ -451,7 +452,7 @@ struct BloodPrincesBossAI : public BossAI
         summons.DespawnAll();
         me->SetCombatPulseDelay(0);
 
-        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+        me->SetImmuneToPC(false);
         _isEmpowered = false;
         me->SetHealth(_spawnHealth);
         instance->SetData(DATA_ORB_WHISPERER_ACHIEVEMENT, uint32(true));
@@ -503,7 +504,7 @@ struct BloodPrincesBossAI : public BossAI
     {
         if (!_isEmpowered)
         {
-            me->AddThreat(attacker, float(damage));
+            AddThreat(attacker, float(damage));
             damage = 0;
         }
     }
@@ -560,7 +561,8 @@ struct BloodPrincesBossAI : public BossAI
         {
             case ACTION_STAND_UP:
                 me->RemoveAurasDueToSpell(SPELL_FEIGN_DEATH);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToPC(false);
                 me->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);
                 me->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
                 me->ForceValuesUpdateAtIndex(UNIT_NPC_FLAGS);   // was in sniff. don't ask why
@@ -804,7 +806,7 @@ class boss_prince_valanar_icc : public CreatureScript
                 {
                     case NPC_KINETIC_BOMB_TARGET:
                         summon->SetReactState(REACT_PASSIVE);
-                        summon->CastSpell(summon, SPELL_KINETIC_BOMB, true, nullptr, nullptr, me->GetGUID());
+                        summon->CastSpell(summon, SPELL_KINETIC_BOMB, me->GetGUID());
                         break;
                     case NPC_KINETIC_BOMB:
                     {
@@ -1149,8 +1151,8 @@ class npc_dark_nucleus : public CreatureScript
                 if (attacker == me)
                     return;
 
-                me->DeleteThreatList();
-                me->AddThreat(attacker, 500000000.0f);
+                me->GetThreatManager().ResetAllThreat();
+                AddThreat(attacker, 500000000.0f);
             }
 
             void UpdateAI(uint32 diff) override
@@ -1179,8 +1181,6 @@ class spell_taldaram_glittering_sparks : public SpellScriptLoader
 
         class spell_taldaram_glittering_sparks_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_taldaram_glittering_sparks_SpellScript);
-
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1189,7 +1189,7 @@ class spell_taldaram_glittering_sparks : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_taldaram_glittering_sparks_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_taldaram_glittering_sparks_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1208,8 +1208,6 @@ class spell_taldaram_summon_flame_ball : public SpellScriptLoader
 
         class spell_taldaram_summon_flame_ball_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_taldaram_summon_flame_ball_SpellScript);
-
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1218,7 +1216,7 @@ class spell_taldaram_summon_flame_ball : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_taldaram_summon_flame_ball_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_taldaram_summon_flame_ball_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -1237,8 +1235,6 @@ class spell_taldaram_flame_ball_visual : public SpellScriptLoader
 
         class spell_flame_ball_visual_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_flame_ball_visual_AuraScript);
-
             bool Load() override
             {
                 if (GetCaster()->GetEntry() == NPC_BALL_OF_FLAME || GetCaster()->GetEntry() == NPC_BALL_OF_INFERNO_FLAME)
@@ -1269,7 +1265,7 @@ class spell_taldaram_flame_ball_visual : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_flame_ball_visual_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_flame_ball_visual_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1290,8 +1286,6 @@ class spell_taldaram_ball_of_inferno_flame : public SpellScriptLoader
 
         class spell_taldaram_ball_of_inferno_flame_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_taldaram_ball_of_inferno_flame_SpellScript);
-
             void ModAuraStack()
             {
                 if (Aura* aur = GetHitAura())
@@ -1300,7 +1294,7 @@ class spell_taldaram_ball_of_inferno_flame : public SpellScriptLoader
 
             void Register() override
             {
-                AfterHit += SpellHitFn(spell_taldaram_ball_of_inferno_flame_SpellScript::ModAuraStack);
+                AfterHit.Register(&spell_taldaram_ball_of_inferno_flame_SpellScript::ModAuraStack);
             }
         };
 
@@ -1311,8 +1305,6 @@ class spell_taldaram_ball_of_inferno_flame : public SpellScriptLoader
 
         class spell_taldaram_ball_of_inferno_flame_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_taldaram_ball_of_inferno_flame_AuraScript);
-
             void HandleStackDrop(ProcEventInfo& /*eventInfo*/)
             {
                 ModStackAmount(-1);
@@ -1320,7 +1312,7 @@ class spell_taldaram_ball_of_inferno_flame : public SpellScriptLoader
 
             void Register() override
             {
-                OnProc += AuraProcFn(spell_taldaram_ball_of_inferno_flame_AuraScript::HandleStackDrop);
+                OnProc.Register(&spell_taldaram_ball_of_inferno_flame_AuraScript::HandleStackDrop);
             }
         };
 
@@ -1338,8 +1330,6 @@ class spell_valanar_kinetic_bomb : public SpellScriptLoader
 
         class spell_valanar_kinetic_bomb_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_valanar_kinetic_bomb_SpellScript);
-
             void SetDest(SpellDestination& dest)
             {
                 Position const offset = { 0.0f, 0.0f, 20.0f, 0.0f };
@@ -1348,14 +1338,12 @@ class spell_valanar_kinetic_bomb : public SpellScriptLoader
 
             void Register() override
             {
-                OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_valanar_kinetic_bomb_SpellScript::SetDest, EFFECT_0, TARGET_DEST_CASTER);
+                OnDestinationTargetSelect.Register(&spell_valanar_kinetic_bomb_SpellScript::SetDest, EFFECT_0, TARGET_DEST_CASTER);
             }
         };
 
         class spell_valanar_kinetic_bomb_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_valanar_kinetic_bomb_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_KINETIC_BOMB_EXPLOSION, SPELL_KINETIC_BOMB_VISUAL });
@@ -1378,7 +1366,7 @@ class spell_valanar_kinetic_bomb : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_valanar_kinetic_bomb_AuraScript::HandleDummyTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_valanar_kinetic_bomb_AuraScript::HandleDummyTick, EFFECT_1, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -1401,8 +1389,6 @@ class spell_valanar_kinetic_bomb_knockback : public SpellScriptLoader
 
         class spell_valanar_kinetic_bomb_knockback_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_valanar_kinetic_bomb_knockback_SpellScript);
-
             void KnockIntoAir()
             {
                 if (Creature* target = GetHitCreature())
@@ -1411,7 +1397,7 @@ class spell_valanar_kinetic_bomb_knockback : public SpellScriptLoader
 
             void Register() override
             {
-                BeforeHit += SpellHitFn(spell_valanar_kinetic_bomb_knockback_SpellScript::KnockIntoAir);
+                BeforeHit.Register(&spell_valanar_kinetic_bomb_knockback_SpellScript::KnockIntoAir);
             }
         };
 
@@ -1429,8 +1415,6 @@ class spell_valanar_kinetic_bomb_absorb : public SpellScriptLoader
 
         class spell_valanar_kinetic_bomb_absorb_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_valanar_kinetic_bomb_absorb_AuraScript);
-
             void OnAbsorb(AuraEffect* aurEff, DamageInfo& dmgInfo, uint32& absorbAmount)
             {
                 absorbAmount = CalculatePct(dmgInfo.GetDamage(), aurEff->GetAmount());
@@ -1440,7 +1424,7 @@ class spell_valanar_kinetic_bomb_absorb : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectAbsorb += AuraEffectAbsorbFn(spell_valanar_kinetic_bomb_absorb_AuraScript::OnAbsorb, EFFECT_0);
+                OnEffectAbsorb.Register(&spell_valanar_kinetic_bomb_absorb_AuraScript::OnAbsorb, EFFECT_0);
             }
         };
 
@@ -1458,8 +1442,6 @@ class spell_blood_council_shadow_prison : public SpellScriptLoader
 
         class spell_blood_council_shadow_prison_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_blood_council_shadow_prison_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SHADOW_PRISON_DAMAGE });
@@ -1468,12 +1450,12 @@ class spell_blood_council_shadow_prison : public SpellScriptLoader
             void HandleDummyTick(AuraEffect const* aurEff)
             {
                 if (GetTarget()->isMoving())
-                    GetTarget()->CastSpell(GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, nullptr, aurEff);
+                    GetTarget()->CastSpell(GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, aurEff);
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_blood_council_shadow_prison_AuraScript::HandleDummyTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_blood_council_shadow_prison_AuraScript::HandleDummyTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -1491,8 +1473,6 @@ class spell_blood_council_shadow_prison_damage : public SpellScriptLoader
 
         class spell_blood_council_shadow_prison_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_blood_council_shadow_prison_SpellScript);
-
             void AddExtraDamage()
             {
                 if (Aura* aur = GetHitUnit()->GetAura(GetSpellInfo()->Id))
@@ -1502,7 +1482,7 @@ class spell_blood_council_shadow_prison_damage : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_blood_council_shadow_prison_SpellScript::AddExtraDamage);
+                OnHit.Register(&spell_blood_council_shadow_prison_SpellScript::AddExtraDamage);
             }
         };
 

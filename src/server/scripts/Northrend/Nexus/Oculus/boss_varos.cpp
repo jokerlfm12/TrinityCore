@@ -92,9 +92,9 @@ class boss_varos : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 Talk(SAY_AGGRO);
             }
@@ -269,8 +269,6 @@ class spell_varos_centrifuge_shield : public SpellScriptLoader
 
         class spell_varos_centrifuge_shield_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_varos_centrifuge_shield_AuraScript);
-
             bool Load() override
             {
                 Unit* caster = GetCaster();
@@ -282,10 +280,11 @@ class spell_varos_centrifuge_shield : public SpellScriptLoader
                 if (Unit* caster = GetCaster())
                 {
                     // flags taken from sniffs
-                    if (caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_15|UNIT_FLAG_IMMUNE_TO_NPC|UNIT_FLAG_IMMUNE_TO_PC|UNIT_FLAG_UNK_6))
+                    if (caster->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SWIMMING | UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_UNK_6))
                     {
                         caster->ToCreature()->SetReactState(REACT_PASSIVE);
-                        caster->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_15|UNIT_FLAG_IMMUNE_TO_NPC|UNIT_FLAG_IMMUNE_TO_PC|UNIT_FLAG_UNK_6);
+                        caster->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SWIMMING | UNIT_FLAG_UNK_6);
+                        caster->SetImmuneToAll(true, true);
                     }
                 }
             }
@@ -295,14 +294,15 @@ class spell_varos_centrifuge_shield : public SpellScriptLoader
                 if (Unit* caster = GetCaster())
                 {
                     caster->ToCreature()->SetReactState(REACT_AGGRESSIVE);
-                    caster->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_15|UNIT_FLAG_IMMUNE_TO_NPC|UNIT_FLAG_IMMUNE_TO_PC|UNIT_FLAG_UNK_6);
+                    caster->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SWIMMING | UNIT_FLAG_UNK_6);
+                    caster->SetImmuneToAll(false);
                 }
             }
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_varos_centrifuge_shield_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                OnEffectApply += AuraEffectApplyFn(spell_varos_centrifuge_shield_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_varos_centrifuge_shield_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectApply.Register(&spell_varos_centrifuge_shield_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -319,8 +319,6 @@ class spell_varos_energize_core_area_enemy : public SpellScriptLoader
 
         class spell_varos_energize_core_area_enemySpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_varos_energize_core_area_enemySpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 Creature* varos = GetCaster()->ToCreature();
@@ -346,7 +344,7 @@ class spell_varos_energize_core_area_enemy : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_varos_energize_core_area_enemySpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_varos_energize_core_area_enemySpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -363,8 +361,6 @@ class spell_varos_energize_core_area_entry : public SpellScriptLoader
 
         class spell_varos_energize_core_area_entrySpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_varos_energize_core_area_entrySpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 Creature* varos = GetCaster()->ToCreature();
@@ -390,7 +386,7 @@ class spell_varos_energize_core_area_entry : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_varos_energize_core_area_entrySpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnObjectAreaTargetSelect.Register(&spell_varos_energize_core_area_entrySpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
             }
         };
 

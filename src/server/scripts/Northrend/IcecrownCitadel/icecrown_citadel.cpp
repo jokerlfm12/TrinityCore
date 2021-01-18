@@ -671,9 +671,9 @@ class boss_sister_svalna : public CreatureScript
                 }
             }
 
-            void JustEngagedWith(Unit* /*attacker*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 if (Creature* crok = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_CROK_SCOURGEBANE)))
                     crok->AI()->Talk(SAY_CROK_COMBAT_SVALNA);
                 DoCastSelf(SPELL_DIVINE_SURGE, true);
@@ -720,13 +720,13 @@ class boss_sister_svalna : public CreatureScript
                 switch (action)
                 {
                     case ACTION_KILL_CAPTAIN:
-                        me->CastCustomSpell(SPELL_CARESS_OF_DEATH, SPELLVALUE_MAX_TARGETS, 1, me, true);
+                        me->CastSpell(me, SPELL_CARESS_OF_DEATH, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_MAX_TARGETS, 1));
                         break;
                     case ACTION_START_GAUNTLET:
                         me->setActive(true);
                         me->SetFarVisible(true);
                         _isEventInProgress = true;
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                        me->SetImmuneToAll(true);
                         events.ScheduleEvent(EVENT_SVALNA_START, 25000);
                         break;
                     case ACTION_RESURRECT_CAPTAINS:
@@ -761,8 +761,7 @@ class boss_sister_svalna : public CreatureScript
 
                 _isEventInProgress = false;
                 me->setActive(false);
-                me->SetFarVisible(false);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                me->SetImmuneToAll(false);
                 me->SetDisableGravity(false);
                 me->SetHover(false);
             }
@@ -778,7 +777,7 @@ class boss_sister_svalna : public CreatureScript
                         if (TempSummon* summon = target->SummonCreature(NPC_IMPALING_SPEAR, *target))
                         {
                             Talk(EMOTE_SVALNA_IMPALE, target);
-                            summon->CastCustomSpell(VEHICLE_SPELL_RIDE_HARDCODED, SPELLVALUE_BASE_POINT0, 1, target, false);
+                            summon->CastSpell(target, VEHICLE_SPELL_RIDE_HARDCODED, { SPELLVALUE_BASE_POINT0, 1 });
                             summon->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_UNK1 | UNIT_FLAG2_ALLOW_ENEMY_INTERACT);
                         }
                         break;
@@ -813,7 +812,7 @@ class boss_sister_svalna : public CreatureScript
                             Talk(SAY_SVALNA_AGGRO);
                             break;
                         case EVENT_IMPALING_SPEAR:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_IMPALING_SPEAR))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, -SPELL_IMPALING_SPEAR))
                             {
                                 DoCast(me, SPELL_AETHER_SHIELD);
                                 DoCast(target, SPELL_IMPALING_SPEAR);
@@ -936,7 +935,7 @@ class npc_crok_scourgebane : public CreatureScript
                 {
                     // pause pathing until trash pack is cleared
                     case 0:
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC);
+                        me->SetImmuneToNPC(false);
                         Talk(SAY_CROK_COMBAT_WP_0);
                         if (!_aliveTrash.empty())
                             SetEscortPaused(true);
@@ -1673,14 +1672,13 @@ class spell_icc_stoneform : public SpellScriptLoader
 
         class spell_icc_stoneform_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_icc_stoneform_AuraScript);
-
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (Creature* target = GetTarget()->ToCreature())
                 {
                     target->SetReactState(REACT_PASSIVE);
-                    target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                    target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    target->SetImmuneToPC(true);
                     target->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_CUSTOM_SPELL_02);
                 }
             }
@@ -1690,15 +1688,16 @@ class spell_icc_stoneform : public SpellScriptLoader
                 if (Creature* target = GetTarget()->ToCreature())
                 {
                     target->SetReactState(REACT_AGGRESSIVE);
-                    target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                    target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    target->SetImmuneToPC(false);
                     target->SetUInt32Value(UNIT_NPC_EMOTESTATE, 0);
                 }
             }
 
             void Register() override
             {
-                OnEffectApply += AuraEffectApplyFn(spell_icc_stoneform_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                OnEffectRemove += AuraEffectRemoveFn(spell_icc_stoneform_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectApply.Register(&spell_icc_stoneform_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_icc_stoneform_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1715,8 +1714,6 @@ class spell_icc_sprit_alarm : public SpellScriptLoader
 
         class spell_icc_sprit_alarm_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_icc_sprit_alarm_SpellScript);
-
             void HandleEvent(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1760,7 +1757,7 @@ class spell_icc_sprit_alarm : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_icc_sprit_alarm_SpellScript::HandleEvent, EFFECT_2, SPELL_EFFECT_SEND_EVENT);
+                OnEffectHit.Register(&spell_icc_sprit_alarm_SpellScript::HandleEvent, EFFECT_2, SPELL_EFFECT_SEND_EVENT);
             }
         };
 
@@ -1788,8 +1785,6 @@ class spell_svalna_revive_champion : public SpellScriptLoader
 
         class spell_svalna_revive_champion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_svalna_revive_champion_SpellScript);
-
             void RemoveAliveTarget(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(AliveCheck());
@@ -1811,8 +1806,8 @@ class spell_svalna_revive_champion : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_svalna_revive_champion_SpellScript::RemoveAliveTarget, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
-                OnEffectHit += SpellEffectFn(spell_svalna_revive_champion_SpellScript::Land, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_svalna_revive_champion_SpellScript::RemoveAliveTarget, EFFECT_0, TARGET_UNIT_DEST_AREA_ENTRY);
+                OnEffectHit.Register(&spell_svalna_revive_champion_SpellScript::Land, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1829,8 +1824,6 @@ class spell_svalna_remove_spear : public SpellScriptLoader
 
         class spell_svalna_remove_spear_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_svalna_remove_spear_SpellScript);
-
             void HandleScript(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
@@ -1844,7 +1837,7 @@ class spell_svalna_remove_spear : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_svalna_remove_spear_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_svalna_remove_spear_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -1862,8 +1855,6 @@ class spell_icc_soul_missile : public SpellScriptLoader
 
         class spell_icc_soul_missile_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_icc_soul_missile_SpellScript);
-
             void RelocateDest(SpellDestination& dest)
             {
                 static Position const offset = { 0.0f, 0.0f, 200.0f, 0.0f };
@@ -1872,7 +1863,7 @@ class spell_icc_soul_missile : public SpellScriptLoader
 
             void Register() override
             {
-                OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_icc_soul_missile_SpellScript::RelocateDest, EFFECT_0, TARGET_DEST_CASTER);
+                OnDestinationTargetSelect.Register(&spell_icc_soul_missile_SpellScript::RelocateDest, EFFECT_0, TARGET_DEST_CASTER);
             }
         };
 
@@ -1884,8 +1875,6 @@ class spell_icc_soul_missile : public SpellScriptLoader
 
 class spell_trigger_spell_from_caster_SpellScript : public SpellScript
 {
-    PrepareSpellScript(spell_trigger_spell_from_caster_SpellScript);
-
     public:
         spell_trigger_spell_from_caster_SpellScript(uint32 triggerId, TriggerCastFlags triggerFlags)
             : SpellScript(), _triggerId(triggerId), _triggerFlags(triggerFlags) { }
@@ -1903,7 +1892,7 @@ class spell_trigger_spell_from_caster_SpellScript : public SpellScript
 
         void Register() override
         {
-            AfterHit += SpellHitFn(spell_trigger_spell_from_caster_SpellScript::HandleTrigger);
+            AfterHit.Register(&spell_trigger_spell_from_caster_SpellScript::HandleTrigger);
         }
 
         uint32 _triggerId;

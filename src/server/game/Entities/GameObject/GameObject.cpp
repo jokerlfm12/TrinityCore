@@ -37,6 +37,7 @@
 #include "OutdoorPvPMgr.h"
 #include "PhasingHandler.h"
 #include "PoolMgr.h"
+#include "QueryPackets.h"
 #include "ScriptMgr.h"
 #include "SpellMgr.h"
 #include "Transport.h"
@@ -55,6 +56,60 @@ QuaternionData QuaternionData::fromEulerAnglesZYX(float Z, float Y, float X)
 {
     G3D::Quat quat(G3D::Matrix3::fromEulerAnglesZYX(Z, Y, X));
     return QuaternionData(quat.x, quat.y, quat.z, quat.w);
+}
+
+void GameObjectTemplate::InitializeQueryData()
+{
+    WorldPacket queryTemp;
+    for (uint8 loc = LOCALE_enUS; loc < TOTAL_LOCALES; ++loc)
+    {
+        queryTemp = BuildQueryData(static_cast<LocaleConstant>(loc));
+        QueryData[loc] = queryTemp;
+    }
+}
+
+WorldPacket GameObjectTemplate::BuildQueryData(LocaleConstant loc) const
+{
+    WorldPackets::Query::QueryGameObjectResponse queryTemp;
+
+    std::string locName = name;
+    std::string locIconName = IconName;
+    std::string locCastBarCaption = castBarCaption;
+
+    if (GameObjectLocale const* gameObjectLocale = sObjectMgr->GetGameObjectLocale(entry))
+    {
+        ObjectMgr::GetLocaleString(gameObjectLocale->Name, loc, locName);
+        ObjectMgr::GetLocaleString(gameObjectLocale->CastBarCaption, loc, locCastBarCaption);
+    }
+
+    queryTemp.GameObjectID = entry;
+    queryTemp.Allow = true;
+
+    queryTemp.Stats.Type = type;
+    queryTemp.Stats.DisplayID = displayId;
+    queryTemp.Stats.Name[0] = locName;
+    queryTemp.Stats.IconName = locIconName;
+    queryTemp.Stats.CastBarCaption = locCastBarCaption;
+    queryTemp.Stats.UnkString = unk1;
+
+    for (uint8 i = 0; i < MAX_GAMEOBJECT_DATA; ++i)
+        queryTemp.Stats.Data[i] = raw.data[i];
+
+    queryTemp.Stats.Size = size;
+
+    for (uint32 i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
+        queryTemp.Stats.QuestItems[i] = 0;
+
+    if (std::vector<uint32> const* items = sObjectMgr->GetCreatureQuestItemList(entry))
+        for (uint32 i = 0; i < MAX_GAMEOBJECT_QUEST_ITEMS; ++i)
+            if (i < items->size())
+                queryTemp.Stats.QuestItems[i] = (*items)[i];
+
+    queryTemp.Stats.RequiredLevel = RequiredLevel;
+
+    queryTemp.Write();
+    queryTemp.ShrinkToFit();
+    return queryTemp.Move();
 }
 
 GameObject::GameObject() : WorldObject(false), MapObject(),
@@ -192,6 +247,10 @@ void GameObject::RemoveFromWorld()
         if (m_model)
             if (GetMap()->ContainsGameObjectModel(*m_model))
                 GetMap()->RemoveGameObjectModel(*m_model);
+
+        // If linked trap exists, despawn it
+        if (GameObject* linkedTrap = GetLinkedTrap())
+            linkedTrap->DespawnOrUnsummon();
 
         WorldObject::RemoveFromWorld();
 
@@ -440,7 +499,7 @@ void GameObject::Update(uint32 diff)
                     break;
             }
         }
-        /* fallthrough */
+        [[fallthrough]];
         case GO_READY:
         {
             // EJ auto fish
@@ -474,10 +533,6 @@ void GameObject::Update(uint32 diff)
                         m_respawnTime = 0;
                         m_SkillupList.clear();
                         m_usetimes = 0;
-
-                        // If nearby linked trap exists, respawn it
-                        if (GameObject* linkedTrap = GetLinkedTrap())
-                            linkedTrap->SetLootState(GO_READY);
 
                         switch (GetGoType())
                         {
@@ -679,7 +734,7 @@ void GameObject::Update(uint32 diff)
         {
             // If nearby linked trap exists, despawn it
             if (GameObject* linkedTrap = GetLinkedTrap())
-                linkedTrap->SetLootState(GO_JUST_DEACTIVATED);
+                linkedTrap->DespawnOrUnsummon();
 
             //if Gameobject should cast spell, then this, but some GOs (type = 10) should be destroyed
             if (GetGoType() == GAMEOBJECT_TYPE_GOOBER)
@@ -1177,6 +1232,14 @@ uint8 GameObject::getLevelForTarget(WorldObject const* target) const
     if (Unit* owner = GetOwner())
         return owner->getLevelForTarget(target);
 
+    if (GetGoType() == GAMEOBJECT_TYPE_TRAP)
+    {
+        if (GetGOInfo()->trap.level != 0)
+            return GetGOInfo()->trap.level;
+        if (const Unit* targetUnit = target->ToUnit())
+            return targetUnit->getLevel();
+    }
+
     return 1;
 }
 
@@ -1381,6 +1444,12 @@ void GameObject::Use(Unit* user)
 
     if (Player* playerUser = user->ToPlayer())
     {
+        if (m_goInfo->CannotBeUsedUnderImmunity() && playerUser->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE))
+            return;
+
+        if (!m_goInfo->IsUsableMounted())
+            playerUser->RemoveAurasByType(SPELL_AURA_MOUNTED);
+
         playerUser->PlayerTalkClass->ClearMenus();
         if (AI()->GossipHello(playerUser))
             return;
@@ -1967,8 +2036,7 @@ void GameObject::Use(Unit* user)
     if (!spellId)
         return;
 
-    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-    if (!spellInfo)
+    if (!sSpellMgr->GetSpellInfo(spellId))
     {
         if (user->GetTypeId() != TYPEID_PLAYER || !sOutdoorPvPMgr->HandleCustomSpell(user->ToPlayer(), spellId, this))
             TC_LOG_ERROR("misc", "WORLD: unknown spell id %u at use action for gameobject (Entry: %u GoType: %u)", spellId, GetEntry(), GetGoType());
@@ -1981,7 +2049,7 @@ void GameObject::Use(Unit* user)
         sOutdoorPvPMgr->HandleCustomSpell(player, spellId, this);
 
     if (spellCaster)
-        spellCaster->CastSpell(user, spellInfo, triggered);
+        spellCaster->CastSpell(user, spellId, triggered);
     else
         CastSpell(user, spellId);
 }
@@ -2010,7 +2078,7 @@ void GameObject::CastSpell(Unit* target, uint32 spellId, TriggerCastFlags trigge
     if (self)
     {
         if (target)
-            target->CastSpell(target, spellInfo, triggered);
+            target->CastSpell(target, spellInfo->Id, triggered);
         return;
     }
 
@@ -2020,25 +2088,32 @@ void GameObject::CastSpell(Unit* target, uint32 spellId, TriggerCastFlags trigge
         return;
 
     // remove immunity flags, to allow spell to target anything
-    trigger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_IMMUNE_TO_PC);
+    trigger->SetImmuneToAll(false);
+    PhasingHandler::InheritPhaseShift(trigger, this);
 
+    CastSpellExtraArgs args;
+    args.TriggerFlags = triggered;
     if (Unit* owner = GetOwner())
     {
         trigger->SetFaction(owner->GetFaction());
-        if (owner->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE))
-            trigger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+        if (owner->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
+            trigger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
         // copy pvp state flags from owner
         trigger->SetByteValue(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, owner->GetByteValue(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG));
         // needed for GO casts for proper target validation checks
         trigger->SetOwnerGUID(owner->GetGUID());
-        trigger->CastSpell(target ? target : trigger, spellInfo, triggered, nullptr, nullptr, owner->GetGUID());
+
+        args.OriginalCaster = owner->GetGUID();
+        trigger->CastSpell(target ? target : trigger, spellInfo->Id, args);
     }
     else
     {
         trigger->SetFaction(spellInfo->IsPositive() ? FACTION_FRIENDLY : FACTION_MONSTER);
         // Set owner guid for target if no owner available - needed by trigger auras
         // - trigger gets despawned and there's no caster avalible (see AuraEffect::TriggerSpell())
-        trigger->CastSpell(target ? target : trigger, spellInfo, triggered, nullptr, nullptr, target ? target->GetGUID() : ObjectGuid::Empty);
+
+        args.OriginalCaster = target ? target->GetGUID() : ObjectGuid::Empty;
+        trigger->CastSpell(target ? target : trigger, spellInfo->Id, args);
     }
 }
 

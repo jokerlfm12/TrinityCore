@@ -77,7 +77,10 @@ class boss_general_zarithrian : public CreatureScript
             {
                 _Reset();
                 if (instance->GetBossState(DATA_SAVIANA_RAGEFIRE) == DONE && instance->GetBossState(DATA_BALTHARUS_THE_WARBORN) == DONE)
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
+                {
+                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    me->SetImmuneToPC(false);
+                }
             }
 
             bool CanAIAttack(Unit const* target) const override
@@ -85,9 +88,9 @@ class boss_general_zarithrian : public CreatureScript
                 return (instance->GetBossState(DATA_SAVIANA_RAGEFIRE) == DONE && instance->GetBossState(DATA_BALTHARUS_THE_WARBORN) == DONE && BossAI::CanAIAttack(target));
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 events.ScheduleEvent(EVENT_CLEAVE, Seconds(8));
                 events.ScheduleEvent(EVENT_INTIDMDATING_ROAR, Seconds(14));

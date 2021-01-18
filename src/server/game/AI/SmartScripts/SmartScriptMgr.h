@@ -586,7 +586,14 @@ enum SMART_ACTION
     SMART_ACTION_RESPAWN_BY_SPAWNID                 = 133,    // spawnType, spawnId
     SMART_ACTION_INVOKER_CAST                       = 134,    // spellID, castFlags
     SMART_ACTION_PLAY_CINEMATIC                     = 135,
-    SMART_ACTION_END                                = 136
+    SMART_ACTION_SET_MOVEMENT_SPEED                 = 136,    // movementType, speedInteger, speedFraction
+    SMART_ACTION_PLAY_SPELL_VISUAL_KIT              = 137,    // spellVisualKitId (RESERVED, PENDING CHERRYPICK)
+    SMART_ACTION_OVERRIDE_LIGHT                     = 138,    // zoneId, overrideLightID, transitionMilliseconds
+    SMART_ACTION_OVERRIDE_WEATHER                   = 139,    // zoneId, weatherId, intensity
+    SMART_ACTION_SET_AI_ANIM_KIT                    = 140,    // animKitId
+    SMART_ACTION_SET_HOVER                          = 141,    // enable
+
+    SMART_ACTION_END                                = 142
 };
 
 struct SmartAction
@@ -821,6 +828,11 @@ struct SmartAction
 
         struct
         {
+            uint32 speed;
+        } moveOffset;
+
+        struct
+        {
             uint32 state;
         } visibility;
 
@@ -1020,6 +1032,7 @@ struct SmartAction
             uint32 transport;
             uint32 disablePathfinding;
             uint32 ContactDistance;
+            uint32 speed;
         } MoveToPos;
 
         struct
@@ -1164,6 +1177,38 @@ struct SmartAction
 
         //! Note for any new future actions
         //! All parameters must have type uint32
+
+        struct
+        {
+            uint32 movementType;
+            uint32 speedInteger;
+            uint32 speedFraction;
+        } movementSpeed;
+
+        struct
+        {
+            uint32 zoneId;
+            uint32 areaLightId;
+            uint32 overrideLightId;
+            uint32 transitionMilliseconds;
+        } overrideLight;
+
+        struct
+        {
+            uint32 zoneId;
+            uint32 weatherId;
+            uint32 intensity;
+        } overrideWeather;
+
+        struct
+        {
+            uint32 animKitId;
+        } setAIAnimKit;
+
+        struct
+        {
+            uint32 enable;
+        } setHover;
 
         struct
         {

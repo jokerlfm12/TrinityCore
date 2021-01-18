@@ -140,8 +140,6 @@ class spell_marwyn_shared_suffering : public SpellScriptLoader
 
         class spell_marwyn_shared_suffering_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_marwyn_shared_suffering_AuraScript);
-
             void HandleEffectRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
             {
                 if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByEnemySpell))
@@ -151,13 +149,13 @@ class spell_marwyn_shared_suffering : public SpellScriptLoader
                 {
                     int32 remainingDamage = aurEff->GetAmount() * (aurEff->GetTotalTicks() - aurEff->GetTickNumber());
                     if (remainingDamage > 0)
-                        caster->CastCustomSpell(SPELL_SHARED_SUFFERING_DISPEL, SPELLVALUE_BASE_POINT1, remainingDamage, GetTarget(), TRIGGERED_FULL_MASK);
+                        caster->CastSpell(GetTarget(), SPELL_SHARED_SUFFERING_DISPEL, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_BASE_POINT1, remainingDamage));
                 }
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_marwyn_shared_suffering_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_marwyn_shared_suffering_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

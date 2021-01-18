@@ -16,9 +16,11 @@
  */
 
 #include "MoveSplineInit.h"
+#include "MovementPackets.h"
 #include "MoveSpline.h"
 #include "MovementPacketBuilder.h"
 #include "Creature.h"
+#include "G3DPosition.hpp"
 #include "Unit.h"
 #include "PathGenerator.h"
 #include "Transport.h"
@@ -119,17 +121,20 @@ namespace Movement
         unit->m_movementInfo.SetMovementFlags(moveFlags);
         move_spline.Initialize(args);
 
-        WorldPacket data(SMSG_MONSTER_MOVE, 64);
-        data << unit->GetPackGUID();
-        if (unit->GetTransGUID())
+        WorldPackets::Movement::MonsterMove packet(transport);
+        packet.MoverGUID = unit->GetGUID();
+        packet.Pos = Position(real_position.x, real_position.y, real_position.z, real_position.orientation);
+        packet.InitializeSplineData(move_spline);
+        if (unit->m_movementInfo.HasExtraMovementFlag(MOVEMENTFLAG2_IS_VEHICLE_EXIT_VOLUNTARY))
+            packet.SplineData.Move.VehicleExitVoluntary = true;
+
+        if (transport)
         {
-            data.SetOpcode(SMSG_MONSTER_MOVE_TRANSPORT);
-            data << unit->GetTransGUID().WriteAsPacked();
-            data << int8(unit->GetTransSeat());
+            packet.SplineData.Move.TransportGUID = unit->GetTransGUID();
+            packet.SplineData.Move.VehicleSeat = unit->GetTransSeat();
         }
 
-        PacketBuilder::WriteMonsterMove(move_spline, data);
-        unit->SendMessageToSet(&data, true);
+        unit->SendMessageToSet(packet.Write(), true);
 
         return move_spline.Duration();
     }
@@ -165,17 +170,26 @@ namespace Movement
         move_spline.onTransport = transport;
         move_spline.Initialize(args);
 
-        WorldPacket data(SMSG_MONSTER_MOVE, 64);
-        data << unit->GetPackGUID();
-        if (transport)
+        WorldPackets::Movement::MonsterMove packet(transport);
+        packet.MoverGUID = unit->GetGUID();
+        packet.Pos = Position(loc.x, loc.y, loc.z, loc.orientation);
+        packet.SplineData.ID = move_spline.GetId();
+
+        if (unit->IsAlive())
+            packet.SplineData.Move.Face = MONSTER_MOVE_STOP;
+        else
         {
-            data.SetOpcode(SMSG_MONSTER_MOVE_TRANSPORT);
-            data << unit->GetTransGUID().WriteAsPacked();
-            data << int8(unit->GetTransSeat());
+            // Stopping splines for killed creatures send a normal packet with their current position as first path point
+            packet.SplineData.Move.Face = MONSTER_MOVE_NORMAL;
+            packet.SplineData.Move.Points.push_back({ loc.x, loc.y, loc.z });
         }
 
-        PacketBuilder::WriteStopMovement(loc, args.splineId, data);
-        unit->SendMessageToSet(&data, true);
+        if (transport)
+        {
+            packet.SplineData.Move.TransportGUID = unit->GetTransGUID();
+            packet.SplineData.Move.VehicleSeat = unit->GetTransSeat();
+        }
+        unit->SendMessageToSet(packet.Write(), true);
     }
 
     MoveSplineInit::MoveSplineInit(Unit* m) : unit(m)
@@ -229,17 +243,12 @@ namespace Movement
         std::transform(controls.begin(), controls.end(), args.path.begin(), TransportPathTransform(unit, args.TransformForTransport));
     }
 
-    void MoveSplineInit::MoveTo(float x, float y, float z, bool generatePath, bool forceDestination)
-    {
-        MoveTo(G3D::Vector3(x, y, z), generatePath, forceDestination);
-    }
-
-    void MoveSplineInit::MoveTo(Vector3 const& dest, bool generatePath, bool forceDestination)
+    void MoveSplineInit::MoveTo(Vector3 const& start, Vector3 const& dest, bool generatePath, bool forceDestination)
     {
         if (generatePath)
         {
             PathGenerator path(unit);
-            bool result = path.CalculatePath(dest.x, dest.y, dest.z, forceDestination);
+            bool result = path.CalculatePath(start, dest, forceDestination);
             if (result && !(path.GetPathType() & PATHFIND_NOPATH))
             {
                 MovebyPath(path.GetPath());
@@ -251,6 +260,16 @@ namespace Movement
         args.path.resize(2);
         TransportPathTransform transform(unit, args.TransformForTransport);
         args.path[1] = transform(dest);
+    }
+
+    void MoveSplineInit::MoveTo(float x, float y, float z, bool generatePath, bool forceDestination)
+    {
+        MoveTo(PositionToVector3(unit->GetPosition()), G3D::Vector3(x, y, z), generatePath, forceDestination);
+    }
+
+    void MoveSplineInit::MoveTo(Vector3 const& dest, bool generatePath, bool forceDestination)
+    {
+        MoveTo(PositionToVector3(unit->GetPosition()), dest, generatePath, forceDestination);
     }
 
     void MoveSplineInit::SetFall()

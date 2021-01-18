@@ -218,6 +218,198 @@ namespace WorldPackets
             ObjectGuid UnitGUID;
             std::vector<AuraInfo> Auras;
         };
+
+        class MissileCancel final : public ServerPacket
+        {
+        public:
+            MissileCancel() : ServerPacket(SMSG_MISSILE_CANCEL, 13) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid OwnerGUID;
+            bool Reverse = false;
+            int32 SpellID = 0;
+        };
+
+        class CategoryCooldown final : public ServerPacket
+        {
+        public:
+            struct CategoryCooldownInfo
+            {
+                CategoryCooldownInfo(uint32 category, int32 cooldown)
+                    : Category(category), ModCooldown(cooldown) { }
+
+                uint32 Category   = 0; ///< SpellCategory Id
+                int32 ModCooldown = 0; ///< Reduced Cooldown in ms
+            };
+
+            CategoryCooldown() : ServerPacket(SMSG_CATEGORY_COOLDOWN, 4) { }
+
+            WorldPacket const* Write() override;
+
+            std::vector<CategoryCooldownInfo> CategoryCooldowns;
+        };
+
+        class PlaySpellVisualKit final : public ServerPacket
+        {
+        public:
+            PlaySpellVisualKit() : ServerPacket(SMSG_PLAY_SPELL_VISUAL_KIT, 8 + 4 + 4 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Unit;
+            int32 KitRecID = 0;
+            int32 KitType = 0;
+            uint32 Duration = 0;
+        };
+
+        struct SpellHistoryEntry
+        {
+            SpellHistoryEntry(uint32 spellId, uint32 itemId, uint16 category, int32 recoveryTime, int32 categoryRecoveryTime) :
+                SpellID(spellId), ItemID(itemId), Category(category), RecoveryTime(recoveryTime), CategoryRecoveryTime(categoryRecoveryTime) { }
+
+            uint32 SpellID = 0;
+            uint32 ItemID = 0;
+            uint16 Category = 0;
+            int32 RecoveryTime = 0;
+            int32 CategoryRecoveryTime = 0;
+        };
+
+        class SendKnownSpells final : public ServerPacket
+        {
+        public:
+            SendKnownSpells() : ServerPacket(SMSG_SEND_KNOWN_SPELLS, 1) { }
+
+            WorldPacket const* Write() override;
+
+            bool InitialLogin = false;
+            std::vector<uint32> KnownSpells;
+            std::vector<SpellHistoryEntry> SpellHistoryEntries;
+        };
+
+        class SendUnlearnSpells final : public ServerPacket
+        {
+        public:
+            SendUnlearnSpells() : ServerPacket(SMSG_SEND_UNLEARN_SPELLS, 4) { }
+
+            WorldPacket const* Write() override;
+
+            std::vector<uint32> Spells;
+        };
+
+        class UnlearnedSpells final : public ServerPacket
+        {
+        public:
+            UnlearnedSpells() : ServerPacket(SMSG_UNLEARNED_SPELLS, 4) { }
+
+            WorldPacket const* Write() override;
+
+            uint32 SpellID = 0;
+        };
+
+        class UpdateActionButtons final : public ServerPacket
+        {
+        public:
+            static std::size_t constexpr NumActionButtons = 144;
+
+            UpdateActionButtons() : ServerPacket(SMSG_UPDATE_ACTION_BUTTONS, NumActionButtons * 8 + 1)
+            {
+                ActionButtons.fill(0);
+            }
+
+            WorldPacket const* Write() override;
+
+            std::array<uint32, NumActionButtons> ActionButtons;
+            uint8 Reason = 0;
+            /*
+                Reason can be 0, 1, 2
+                0 - Sends initial action buttons, client does not validate if we have the spell or not
+                1 - Used used after spec swaps, client validates if a spell is known.
+                2 - Clears the action bars client sided. This is sent during spec swap before unlearning and before sending the new buttons
+            */
+        };
+
+        struct SpellModifierData
+        {
+            float ModifierValue = 0.0f;
+            uint8 ClassIndex = 0;
+        };
+
+        struct SpellModifier
+        {
+            uint8 ModIndex = 0;
+            std::vector<SpellModifierData> ModifierData;
+        };
+
+        class TC_GAME_API SetSpellModifier final : public ServerPacket
+        {
+        public:
+            SetSpellModifier(OpcodeServer opcode) : ServerPacket(opcode, 20) { }
+
+            WorldPacket const* Write() override;
+
+            std::vector<SpellModifier> Modifiers;
+        };
+
+        class ConvertRune final : public ServerPacket
+        {
+        public:
+            ConvertRune() : ServerPacket(SMSG_CONVERT_RUNE, 1 + 1) { }
+
+            WorldPacket const* Write() override;
+
+            uint8 Index = 0;
+            uint8 Rune = 0;
+        };
+
+        struct ResyncRune
+        {
+            uint8 RuneType = 0;
+            uint8 Cooldown = 0;
+        };
+
+        class ResyncRunes final : public ServerPacket
+        {
+        public:
+            ResyncRunes() : ServerPacket(SMSG_RESYNC_RUNES, 4) { }
+
+            WorldPacket const* Write() override;
+
+            std::vector<ResyncRune> Runes;
+        };
+
+        class AddRunePower final : public ServerPacket
+        {
+        public:
+            AddRunePower() : ServerPacket(SMSG_ADD_RUNE_POWER, 4) { }
+
+            WorldPacket const* Write() override;
+
+            uint32 AddedRunesMask = 0;
+        };
+
+        class SupercededSpells final : public ServerPacket
+        {
+        public:
+            SupercededSpells() : ServerPacket(SMSG_SUPERCEDED_SPELLS, 4 + 4) { }
+
+            WorldPacket const* Write() override;
+
+            int32 SpellID;
+            int32 Superceded;
+        };
+
+        class AuraPointsDepleted final : public ServerPacket
+        {
+        public:
+            AuraPointsDepleted() : ServerPacket(SMSG_AURA_POINTS_DEPLETED, 8 + 1 + 1) { }
+
+            WorldPacket const* Write() override;
+
+            ObjectGuid Unit;
+            uint8 Slot = 0;
+            uint8 EffectIndex = 0;
+        };
     }
 }
 

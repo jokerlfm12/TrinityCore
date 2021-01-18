@@ -150,10 +150,6 @@ public:
                         break;
                     case EVENT_CONFLAGRATION:
                         DoCastVictim(SPELL_CONFLAGRATION);
-                        // @todo is this even necessary? pretty sure AI ignores targets with disorient by default
-                        if (me->GetVictim() && me->EnsureVictim()->HasAura(SPELL_CONFLAGRATION))
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100, true))
-                                me->TauntApply(target);
                         events.ScheduleEvent(EVENT_CONFLAGRATION, 30000);
                         break;
                 }
@@ -212,8 +208,6 @@ class spell_egg_event : public SpellScriptLoader
 
         class spell_egg_eventSpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_egg_eventSpellScript);
-
             void HandleOnHit()
             {
                 if (InstanceScript* instance = GetCaster()->GetInstanceScript())
@@ -222,7 +216,7 @@ class spell_egg_event : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_egg_eventSpellScript::HandleOnHit);
+                OnHit.Register(&spell_egg_eventSpellScript::HandleOnHit);
             }
         };
 

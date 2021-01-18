@@ -16,6 +16,7 @@
  */
 
 #include "ScriptMgr.h"
+#include "AreaBoundary.h"
 #include "Creature.h"
 #include "GameObject.h"
 #include "InstanceScript.h"
@@ -44,6 +45,11 @@ DoorData const doorData[] =
     { 0,                   0,             DOOR_TYPE_ROOM } // END
 };
 
+BossBoundaryData const boundaries =
+{
+    { DATA_KALECGOS, new BoundaryUnionBoundary(new CircleBoundary(Position(1704.9f, 928.4f), 34.0), new RectangleBoundary(1689.2f, 1713.3f, 762.2f, 1074.8f)) }
+};
+
 class instance_sunwell_plateau : public InstanceMapScript
 {
     public:
@@ -59,6 +65,7 @@ class instance_sunwell_plateau : public InstanceMapScript
 
                 SpectralPlayers             = 0;
                 SpectralRealmTimer          = 5000;
+                LoadBossBoundaries(boundaries);
             }
 
             Player const* GetPlayerInMap() const

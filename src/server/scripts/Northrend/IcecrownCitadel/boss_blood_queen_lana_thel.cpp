@@ -428,15 +428,14 @@ class boss_blood_queen_lana_thel : public CreatureScript
             // offtank for this encounter is the player standing closest to main tank
             Player* SelectRandomTarget(bool includeOfftank, std::list<Player*>* targetList = nullptr)
             {
-                std::list<HostileReference*> const& threatlist = me->getThreatManager().getThreatList();
-                std::list<Player*> tempTargets;
-
-                if (threatlist.empty())
+                if (me->GetThreatManager().IsThreatListEmpty(true))
                     return nullptr;
 
-                for (std::list<HostileReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
-                    if (Unit* refTarget = (*itr)->getTarget())
-                        if (refTarget != me->GetVictim() && refTarget->GetTypeId() == TYPEID_PLAYER && (includeOfftank || (refTarget->GetGUID() != _offtankGUID)))
+                std::list<Player*> tempTargets;
+                Unit* maintank = me->GetThreatManager().GetCurrentVictim();
+                for (ThreatReference const* ref : me->GetThreatManager().GetUnsortedThreatList())
+                    if (Player* refTarget = ref->GetVictim()->ToPlayer())
+                        if (refTarget != maintank && (includeOfftank || (refTarget->GetGUID() != _offtankGUID)))
                             tempTargets.push_back(refTarget->ToPlayer());
 
                 if (tempTargets.empty())
@@ -478,8 +477,6 @@ class spell_blood_queen_vampiric_bite : public SpellScriptLoader
 
         class spell_blood_queen_vampiric_bite_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_blood_queen_vampiric_bite_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_PLR, SPELL_FRENZIED_BLOODTHIRST, SPELL_PRESENCE_OF_THE_DARKFALLEN });
@@ -530,9 +527,9 @@ class spell_blood_queen_vampiric_bite : public SpellScriptLoader
 
             void Register() override
             {
-                OnCheckCast += SpellCheckCastFn(spell_blood_queen_vampiric_bite_SpellScript::CheckTarget);
-                BeforeHit += SpellHitFn(spell_blood_queen_vampiric_bite_SpellScript::OnCast);
-                OnEffectHitTarget += SpellEffectFn(spell_blood_queen_vampiric_bite_SpellScript::HandlePresence, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
+                OnCheckCast.Register(&spell_blood_queen_vampiric_bite_SpellScript::CheckTarget);
+                BeforeHit.Register(&spell_blood_queen_vampiric_bite_SpellScript::OnCast);
+                OnEffectHitTarget.Register(&spell_blood_queen_vampiric_bite_SpellScript::HandlePresence, EFFECT_1, SPELL_EFFECT_TRIGGER_SPELL);
             }
         };
 
@@ -549,8 +546,6 @@ class spell_blood_queen_frenzied_bloodthirst : public SpellScriptLoader
 
         class spell_blood_queen_frenzied_bloodthirst_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_blood_queen_frenzied_bloodthirst_AuraScript);
-
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (InstanceScript* instance = GetTarget()->GetInstanceScript())
@@ -576,8 +571,8 @@ class spell_blood_queen_frenzied_bloodthirst : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectApply += AuraEffectApplyFn(spell_blood_queen_frenzied_bloodthirst_AuraScript::OnApply, EFFECT_0, SPELL_AURA_OVERRIDE_SPELLS, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_blood_queen_frenzied_bloodthirst_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_OVERRIDE_SPELLS, AURA_EFFECT_HANDLE_REAL);
+                OnEffectApply.Register(&spell_blood_queen_frenzied_bloodthirst_AuraScript::OnApply, EFFECT_0, SPELL_AURA_OVERRIDE_SPELLS, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_blood_queen_frenzied_bloodthirst_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_OVERRIDE_SPELLS, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -608,8 +603,6 @@ class spell_blood_queen_bloodbolt : public SpellScriptLoader
 
         class spell_blood_queen_bloodbolt_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_blood_queen_bloodbolt_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_TWILIGHT_BLOODBOLT });
@@ -638,8 +631,8 @@ class spell_blood_queen_bloodbolt : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_blood_queen_bloodbolt_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_blood_queen_bloodbolt_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_blood_queen_bloodbolt_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_blood_queen_bloodbolt_SpellScript::HandleScript, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -657,8 +650,6 @@ class spell_blood_queen_essence_of_the_blood_queen : public SpellScriptLoader
 
         class spell_blood_queen_essence_of_the_blood_queen_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_blood_queen_essence_of_the_blood_queen_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_HEAL });
@@ -672,12 +663,12 @@ class spell_blood_queen_essence_of_the_blood_queen : public SpellScriptLoader
                     return;
 
                 int32 heal = CalculatePct(static_cast<int32>(damageInfo->GetDamage()), aurEff->GetAmount());
-                GetTarget()->CastCustomSpell(SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_HEAL, SPELLVALUE_BASE_POINT0, heal, GetTarget(), TRIGGERED_FULL_MASK, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_ESSENCE_OF_THE_BLOOD_QUEEN_HEAL, CastSpellExtraArgs(aurEff).AddSpellBP0(heal));
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_blood_queen_essence_of_the_blood_queen_AuraScript::OnProc, EFFECT_1, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_blood_queen_essence_of_the_blood_queen_AuraScript::OnProc, EFFECT_1, SPELL_AURA_DUMMY);
             }
         };
 
@@ -694,8 +685,6 @@ class spell_blood_queen_pact_of_the_darkfallen : public SpellScriptLoader
 
         class spell_blood_queen_pact_of_the_darkfallen_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_blood_queen_pact_of_the_darkfallen_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(Trinity::UnitAuraCheck(false, SPELL_PACT_OF_THE_DARKFALLEN));
@@ -725,7 +714,7 @@ class spell_blood_queen_pact_of_the_darkfallen : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_blood_queen_pact_of_the_darkfallen_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnObjectAreaTargetSelect.Register(&spell_blood_queen_pact_of_the_darkfallen_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
             }
         };
 
@@ -742,8 +731,6 @@ class spell_blood_queen_pact_of_the_darkfallen_dmg : public SpellScriptLoader
 
         class spell_blood_queen_pact_of_the_darkfallen_dmg_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_blood_queen_pact_of_the_darkfallen_dmg_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_PACT_OF_THE_DARKFALLEN_DAMAGE });
@@ -756,12 +743,12 @@ class spell_blood_queen_pact_of_the_darkfallen_dmg : public SpellScriptLoader
                 int32 damage = damageSpell->Effects[EFFECT_0].CalcValue();
                 float multiplier = 0.3375f + 0.1f * uint32(aurEff->GetTickNumber()/10); // do not convert to 0.01f - we need tick number/10 as INT (damage increases every 10 ticks)
                 damage = int32(damage * multiplier);
-                GetTarget()->CastCustomSpell(SPELL_PACT_OF_THE_DARKFALLEN_DAMAGE, SPELLVALUE_BASE_POINT0, damage, GetTarget(), true);
+                GetTarget()->CastSpell(GetTarget(), SPELL_PACT_OF_THE_DARKFALLEN_DAMAGE, CastSpellExtraArgs(true).AddSpellBP0(damage));
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_blood_queen_pact_of_the_darkfallen_dmg_AuraScript::PeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_blood_queen_pact_of_the_darkfallen_dmg_AuraScript::PeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -778,8 +765,6 @@ class spell_blood_queen_pact_of_the_darkfallen_dmg_target : public SpellScriptLo
 
         class spell_blood_queen_pact_of_the_darkfallen_dmg_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_blood_queen_pact_of_the_darkfallen_dmg_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& unitList)
             {
                 unitList.remove_if(Trinity::UnitAuraCheck(true, SPELL_PACT_OF_THE_DARKFALLEN));
@@ -788,7 +773,7 @@ class spell_blood_queen_pact_of_the_darkfallen_dmg_target : public SpellScriptLo
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_blood_queen_pact_of_the_darkfallen_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnObjectAreaTargetSelect.Register(&spell_blood_queen_pact_of_the_darkfallen_dmg_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
             }
         };
 

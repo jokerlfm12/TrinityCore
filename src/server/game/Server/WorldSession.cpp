@@ -533,7 +533,7 @@ void WorldSession::LogoutPlayer(bool save)
         ///- If the player just died before logging out, make him appear as a ghost
         if (_player->GetDeathTimer())
         {
-            _player->getHostileRefManager().deleteReferences();
+            _player->CombatStop();
             _player->BuildPlayerRepop();
             _player->RepopAtGraveyard();
         }
@@ -1053,6 +1053,7 @@ void WorldSession::SendAddonsInfo()
         data.append(itr->VersionMD5, sizeof(itr->VersionMD5));
         data << uint32(itr->Timestamp);
         data << uint32(1);  // IsBanned
+        bannedAddonCount++;
     }
 
     data.put<uint32>(sizePos, bannedAddonCount);
@@ -1124,18 +1125,17 @@ void WorldSession::ProcessQueryCallbacks()
 {
     _queryProcessor.ProcessReadyCallbacks();
     _transactionCallbacks.ProcessReadyCallbacks();
-
-    if (_realmAccountLoginCallback.valid() && _realmAccountLoginCallback.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-        InitializeSessionCallback(static_cast<LoginDatabaseQueryHolder*>(_realmAccountLoginCallback.get()));
-
-    //! HandlePlayerLoginOpcode
-    if (_charLoginCallback.valid() && _charLoginCallback.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-        HandlePlayerLogin(reinterpret_cast<LoginQueryHolder*>(_charLoginCallback.get()));
+    _queryHolderProcessor.ProcessReadyCallbacks();
 }
 
 TransactionCallback& WorldSession::AddTransactionCallback(TransactionCallback&& callback)
 {
     return _transactionCallbacks.AddCallback(std::move(callback));
+}
+
+SQLQueryHolderCallback& WorldSession::AddQueryHolderCallback(SQLQueryHolderCallback&& callback)
+{
+    return _queryHolderProcessor.AddCallback(std::move(callback));
 }
 
 void WorldSession::InitWarden(BigNumber* k, std::string const& os)
@@ -1205,21 +1205,23 @@ public:
 
 void WorldSession::InitializeSession()
 {
-    AccountInfoQueryHolderPerRealm* realmHolder = new AccountInfoQueryHolderPerRealm();
+    std::shared_ptr<AccountInfoQueryHolderPerRealm> realmHolder = std::make_shared<AccountInfoQueryHolderPerRealm>();
     if (!realmHolder->Initialize(GetAccountId(), GetBattlenetAccountId()))
     {
-        delete realmHolder;
         SendAuthResponse(AUTH_SYSTEM_ERROR, false);
         return;
     }
 
-    _realmAccountLoginCallback = CharacterDatabase.DelayQueryHolder(realmHolder);
+    AddQueryHolderCallback(CharacterDatabase.DelayQueryHolder(realmHolder)).AfterComplete([this](SQLQueryHolderBase const& holder)
+    {
+            InitializeSessionCallback(static_cast<AccountInfoQueryHolderPerRealm const&>(holder));
+    });
 }
 
-void WorldSession::InitializeSessionCallback(LoginDatabaseQueryHolder* realmHolder)
+void WorldSession::InitializeSessionCallback(CharacterDatabaseQueryHolder const& realmHolder)
 {
-    LoadAccountData(realmHolder->GetPreparedResult(AccountInfoQueryHolderPerRealm::GLOBAL_ACCOUNT_DATA), GLOBAL_CACHE_MASK);
-    LoadTutorialsData(realmHolder->GetPreparedResult(AccountInfoQueryHolderPerRealm::TUTORIALS));
+    LoadAccountData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::GLOBAL_ACCOUNT_DATA), GLOBAL_CACHE_MASK);
+    LoadTutorialsData(realmHolder.GetPreparedResult(AccountInfoQueryHolderPerRealm::TUTORIALS));
 
     if (!m_inQueue)
         SendAuthResponse(AUTH_OK, false);
@@ -1232,8 +1234,6 @@ void WorldSession::InitializeSessionCallback(LoginDatabaseQueryHolder* realmHold
     SendAddonsInfo();
     SendClientCacheVersion(sWorld->getIntConfig(CONFIG_CLIENTCACHE_VERSION));
     SendTutorialsData();
-
-    delete realmHolder;
 }
 
 rbac::RBACData* WorldSession::GetRBACData()

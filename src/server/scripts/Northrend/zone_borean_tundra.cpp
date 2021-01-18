@@ -710,8 +710,6 @@ public:
 
     class spell_red_dragonblood_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_red_dragonblood_AuraScript);
-
         void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
         {
             if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired) || !GetCaster())
@@ -720,19 +718,18 @@ public:
             Creature* owner = GetOwner()->ToCreature();
             owner->RemoveAllAurasExceptType(SPELL_AURA_DUMMY);
             owner->CombatStop(true);
-            owner->DeleteThreatList();
             owner->GetMotionMaster()->Clear(false);
             owner->GetMotionMaster()->MoveFollow(GetCaster(), 4.0f, 0.0f);
             owner->CastSpell(owner, SPELL_SUBDUED, true);
             GetCaster()->CastSpell(GetCaster(), SPELL_DRAKE_HATCHLING_SUBDUED, true);
             owner->SetFaction(35);
-            owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+            owner->SetImmuneToAll(true);
             owner->DespawnOrUnsummon(3 * MINUTE*IN_MILLISECONDS);
         }
 
         void Register()
         {
-            AfterEffectRemove += AuraEffectRemoveFn(spell_red_dragonblood_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_red_dragonblood_AuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -963,7 +960,7 @@ public:
                     case 8:
                         if (arthas && talbot)
                         {
-                            arthas->SetInFront(me); //The client doesen't update with the new orientation :l
+                            arthas->SetOrientationTowards(me); //The client doesen't update with the new orientation :l
                             talbot->SetStandState(UNIT_STAND_STATE_STAND);
                             arthas->AI()->Talk(SAY_LICH_2);
                         }
@@ -1453,7 +1450,7 @@ struct npc_beryl_sorcerer : public FollowerAI
 
         me->AttackStop();
         me->SetReactState(REACT_PASSIVE);
-        me->DeleteThreatList();
+        me->GetThreatManager().ClearAllThreat();
         me->CombatStop(true);
         StartFollow(player);
         me->UpdateEntry(NPC_CAPTURED_BERLY_SORCERER);
@@ -2352,8 +2349,6 @@ public:
 
     class spell_windsoul_totem_aura_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_windsoul_totem_aura_AuraScript);
-
         void OnRemove(AuraEffect const*, AuraEffectHandleModes)
         {
             if (GetTarget()->isDead())
@@ -2363,7 +2358,7 @@ public:
 
         void Register() override
         {
-            OnEffectRemove += AuraEffectRemoveFn(spell_windsoul_totem_aura_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+            OnEffectRemove.Register(&spell_windsoul_totem_aura_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
         }
     };
 
@@ -2388,8 +2383,6 @@ public:
 
     class spell_q11719_bloodspore_ruination_45997_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_q11719_bloodspore_ruination_45997_SpellScript);
-
         void HandleEffect(SpellEffIndex /*effIndex*/)
         {
             if (Unit* caster = GetCaster())
@@ -2399,7 +2392,7 @@ public:
 
         void Register() override
         {
-            OnEffectHit += SpellEffectFn(spell_q11719_bloodspore_ruination_45997_SpellScript::HandleEffect, EFFECT_1, SPELL_EFFECT_SEND_EVENT);
+            OnEffectHit.Register(&spell_q11719_bloodspore_ruination_45997_SpellScript::HandleEffect, EFFECT_1, SPELL_EFFECT_SEND_EVENT);
         }
     };
 

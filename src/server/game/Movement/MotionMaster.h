@@ -49,7 +49,8 @@ enum MovementGeneratorType : uint8
     IDLE_MOTION_TYPE                = 0,                  // IdleMovementGenerator.h
     RANDOM_MOTION_TYPE              = 1,                  // RandomMovementGenerator.h
     WAYPOINT_MOTION_TYPE            = 2,                  // WaypointMovementGenerator.h
-    MAX_DB_MOTION_TYPE              = 3,                  // Below motion types can't be set in DB.
+    CYCLIC_SPLINE_MOTION_TYPE       = 3,                  // CyclicMovementGenerator.h
+    MAX_DB_MOTION_TYPE              = 4,                  // Below motion types can't be set in DB.
     CONFUSED_MOTION_TYPE            = 4,                  // ConfusedMovementGenerator.h
     CHASE_MOTION_TYPE               = 5,                  // TargetedMovementGenerator.h
     HOME_MOTION_TYPE                = 6,                  // HomeMovementGenerator.h
@@ -60,7 +61,7 @@ enum MovementGeneratorType : uint8
     ASSISTANCE_MOTION_TYPE          = 11,                 // PointMovementGenerator.h
     ASSISTANCE_DISTRACT_MOTION_TYPE = 12,                 // IdleMovementGenerator.h
     TIMED_FLEEING_MOTION_TYPE       = 13,                 // FleeingMovementGenerator.h
-    FOLLOW_MOTION_TYPE              = 14,
+    FOLLOW_MOTION_TYPE              = 14,                 // FollowMovementGenerator.h
     ROTATE_MOTION_TYPE              = 15,
     EFFECT_MOTION_TYPE              = 16,
     SPLINE_CHAIN_MOTION_TYPE        = 17,                 // SplineChainMovementGenerator.h
@@ -154,12 +155,12 @@ class TC_GAME_API MotionMaster
 
         void MoveConfused();
         void MoveFleeing(Unit* enemy, uint32 time = 0);
-        void MovePoint(uint32 id, Position const& pos, bool generatePath = true)
+        void MovePoint(uint32 id, Position const& pos, bool generatePath = true, float speed = 0.f)
         {
-            MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath);
+            MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath, speed);
         }
 
-        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true);
+        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true, float speed = 0.f);
 
         /*  Makes the unit move toward the target until it is at a certain distance from it. The unit then stops.
             Only works in 2D.
@@ -168,8 +169,8 @@ class TC_GAME_API MotionMaster
         void MoveCloserAndStop(uint32 id, Unit* target, float distance);
 
         // These two movement types should only be used with creatures having landing/takeoff animations
-        void MoveLand(uint32 id, Position const& pos, Optional<float> velocity = nullptr);
-        void MoveTakeoff(uint32 id, Position const& pos);
+        void MoveLand(uint32 id, Position const& pos, Optional<float> velocity = { });
+        void MoveTakeoff(uint32 id, Position const& pos, Optional<float> velocity = { });
 
         void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE, uint32 id = EVENT_CHARGE, bool generatePath = false);
         void MoveCharge(PathGenerator const& path, float speed = SPEED_CHARGE);
@@ -180,9 +181,10 @@ class TC_GAME_API MotionMaster
             MoveJump(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), speedXY, speedZ, id, hasOrientation);
         }
         void MoveJump(float x, float y, float z, float o, float speedXY, float speedZ, uint32 id = EVENT_JUMP, bool hasOrientation = false);
-        void MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount);
-        void MoveCyclicPath(Position const* pathPoints, size_t pathSize, bool walk = false, bool fly = false, float velocity = 0.0f);
-        void MoveSmoothPath(uint32 pointId, Position const* pathPoints, size_t pathSize, bool walk = false, bool fly = false, float velocity = 0.0f);
+        void MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount, float velocity = 0.f);
+        void MoveCyclicPath(Position const* pathPoints, size_t pathSize, bool walk = false, bool fly = false, float velocity = 0.f);
+        void MoveCyclicPath(uint32 pathId);
+        void MoveSmoothPath(uint32 pointId, Position const* pathPoints, size_t pathSize, bool walk = false, bool fly = false, float velocity = 0.f);
         // Walk along spline chain stored in DB (script_spline_chain_meta and script_spline_chain_waypoints)
         void MoveAlongSplineChain(uint32 pointId, uint16 dbChainId, bool walk);
         void MoveAlongSplineChain(uint32 pointId, std::vector<SplineChainLink> const& chain, bool walk);
@@ -197,7 +199,7 @@ class TC_GAME_API MotionMaster
         void MovePath(WaypointPath& path, bool repeatable);
         void MoveRotate(uint32 time, RotateDirection direction);
 
-        void MoveFormation(Unit* leader, float range, float angle, uint32 point1, uint32 point2);
+        void MoveFormation(Unit* leader, float range, float angle, int32 point1, int32 point2);
 
         void LaunchMoveSpline(Movement::MoveSplineInit&& init, uint32 id = 0, MovementSlot slot = MOTION_SLOT_ACTIVE, MovementGeneratorType type = EFFECT_MOTION_TYPE);
     private:

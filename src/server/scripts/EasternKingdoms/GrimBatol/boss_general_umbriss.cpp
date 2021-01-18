@@ -55,7 +55,6 @@ enum Events
     EVENT_BLITZ,
     EVENT_GROUND_SIEGE,
     EVENT_SUMMON_SKARDYN,
-    EVENT_MAKE_AGGRESSIVE,
 
     // Skardyn
     EVENT_ATTACK_PLAYER,
@@ -114,9 +113,9 @@ struct boss_general_umbriss : public BossAI
         _frenzyCasted = false;
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.ScheduleEvent(EVENT_SUMMON_SKARDYN, Seconds(6));
@@ -158,13 +157,9 @@ struct boss_general_umbriss : public BossAI
                 DoCast(summon, SPELL_BLITZ);
                 break;
             case NPC_GROUND_SIEGE_STALKER:
-                me->AttackStop();
-                me->SetReactState(REACT_PASSIVE);
-                me->StopMoving();
                 me->SetFacingToObject(summon);
                 DoCast(summon, SPELL_GROUND_SIEGE);
                 Talk(SAY_ANNOUNCE_GROUND_SIEGE);
-                events.ScheduleEvent(EVENT_MAKE_AGGRESSIVE, Seconds(4) + Milliseconds(500));
                 break;
             default:
                 break;
@@ -225,9 +220,6 @@ struct boss_general_umbriss : public BossAI
                                 troggDweller->GetMotionMaster()->MovePoint(POINT_SKARDYN_SUMMON, TroggDwellerMovePositions[i], false);
                     }
                     events.Repeat(Seconds(23));
-                    break;
-                case EVENT_MAKE_AGGRESSIVE:
-                    me->SetReactState(REACT_AGGRESSIVE);
                     break;
                 default:
                     break;
@@ -309,8 +301,6 @@ private:
 
 class spell_umbriss_summon_blitz_trigger : public SpellScript
 {
-    PrepareSpellScript(spell_umbriss_summon_blitz_trigger);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -332,15 +322,13 @@ class spell_umbriss_summon_blitz_trigger : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_umbriss_summon_blitz_trigger::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_umbriss_summon_blitz_trigger::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+        OnObjectAreaTargetSelect.Register(&spell_umbriss_summon_blitz_trigger::FilterTargets, EFFECT_ALL, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_umbriss_summon_blitz_trigger::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
     }
 };
 
 class spell_umbriss_summon_ground_siege_trigger : public SpellScript
 {
-    PrepareSpellScript(spell_umbriss_summon_ground_siege_trigger);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -357,15 +345,13 @@ class spell_umbriss_summon_ground_siege_trigger : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_umbriss_summon_ground_siege_trigger::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_umbriss_summon_ground_siege_trigger::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+        OnObjectAreaTargetSelect.Register(&spell_umbriss_summon_ground_siege_trigger::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_umbriss_summon_ground_siege_trigger::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
     }
 };
 
 class spell_umbriss_bleeding_wound : public AuraScript
 {
-    PrepareAuraScript(spell_umbriss_bleeding_wound);
-
     void HandleRemoval(AuraEffect const* aurEff)
     {
         if (Unit* owner = GetOwner()->ToUnit())
@@ -375,7 +361,7 @@ class spell_umbriss_bleeding_wound : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_umbriss_bleeding_wound::HandleRemoval, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectPeriodic.Register(&spell_umbriss_bleeding_wound::HandleRemoval, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
@@ -385,5 +371,5 @@ void AddSC_boss_general_umbriss()
     RegisterGrimBatolCreatureAI(npc_umbriss_skardyn);
     RegisterSpellScript(spell_umbriss_summon_blitz_trigger);
     RegisterSpellScript(spell_umbriss_summon_ground_siege_trigger);
-    RegisterAuraScript(spell_umbriss_bleeding_wound);
+    RegisterSpellScript(spell_umbriss_bleeding_wound);
 }

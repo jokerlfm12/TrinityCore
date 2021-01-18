@@ -87,9 +87,9 @@ struct boss_baron_ashbury : public BossAI
         Initialize();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
 
@@ -138,7 +138,7 @@ struct boss_baron_ashbury : public BossAI
         if (spell->Id == SPELL_STAY_OF_EXECUTION)
         {
             // Failing achievement when Baron Ashbury finished channeling Stay of Execution
-            if (reason == SPELL_FINISHED_FINISHED && IsHeroic())
+            if (reason == SPELL_FINISHED_CHANNELING_COMPLETE && IsHeroic())
                 _pardonDenied = false;
 
             me->SetReactState(REACT_AGGRESSIVE);
@@ -221,8 +221,6 @@ private:
 
 class spell_ashbury_asphyxiate : public AuraScript
 {
-    PrepareAuraScript(spell_ashbury_asphyxiate);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_ASPHYXIATE_ROOT });
@@ -244,21 +242,19 @@ class spell_ashbury_asphyxiate : public AuraScript
                 if (!target->HasAura(SPELL_ASPHYXIATE_ROOT))
                     target->CastSpell(target, SPELL_ASPHYXIATE_ROOT, true);
 
-                target->CastCustomSpell(triggerSpell, SPELLVALUE_BASE_POINT0, damage, target, true, nullptr, aurEff, caster->GetGUID());
+                target->CastSpell(target, triggerSpell, CastSpellExtraArgs(aurEff).SetOriginalCaster(caster->GetGUID()).AddSpellBP0(damage));
             }
         }
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_ashbury_asphyxiate::HandleTriggerSpell, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_ashbury_asphyxiate::HandleTriggerSpell, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_ashbury_pain_and_suffering : public AuraScript
 {
-    PrepareAuraScript(spell_ashbury_pain_and_suffering);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_PAIN_AND_SUFFERING_DUMMY });
@@ -276,14 +272,12 @@ class spell_ashbury_pain_and_suffering : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_ashbury_pain_and_suffering::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectPeriodic.Register(&spell_ashbury_pain_and_suffering::OnPeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
 class spell_ashbury_dark_archangel_form : public AuraScript
 {
-    PrepareAuraScript(spell_ashbury_dark_archangel_form);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_CALAMITY });
@@ -300,7 +294,7 @@ class spell_ashbury_dark_archangel_form : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_ashbury_dark_archangel_form::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_ashbury_dark_archangel_form::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -324,8 +318,8 @@ class achievement_pardon_denied : public AchievementCriteriaScript
 void AddSC_boss_baron_ashbury()
 {
     RegisterShadowfangKeepCreatureAI(boss_baron_ashbury);
-    RegisterAuraScript(spell_ashbury_asphyxiate);
-    RegisterAuraScript(spell_ashbury_pain_and_suffering);
-    RegisterAuraScript(spell_ashbury_dark_archangel_form);
+    RegisterSpellScript(spell_ashbury_asphyxiate);
+    RegisterSpellScript(spell_ashbury_pain_and_suffering);
+    RegisterSpellScript(spell_ashbury_dark_archangel_form);
     new achievement_pardon_denied();
 }

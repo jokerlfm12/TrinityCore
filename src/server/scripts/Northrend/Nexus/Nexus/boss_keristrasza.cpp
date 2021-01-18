@@ -92,11 +92,11 @@ class boss_keristrasza : public CreatureScript
                 _Reset();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_AGGRO);
                 DoCastAOE(SPELL_INTENSE_COLD);
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 events.ScheduleEvent(EVENT_CRYSTAL_FIRE_BREATH, 14000);
                 events.ScheduleEvent(EVENT_CRYSTAL_CHAINS_CRYSTALIZE, DUNGEON_MODE(30000, 11000));
@@ -138,14 +138,14 @@ class boss_keristrasza : public CreatureScript
             {
                 if (remove)
                 {
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
                     me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                     if (me->HasAura(SPELL_FROZEN_PRISON))
                         me->RemoveAurasDueToSpell(SPELL_FROZEN_PRISON);
                 }
                 else
                 {
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(true);
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                     DoCast(me, SPELL_FROZEN_PRISON, false);
                 }
@@ -262,8 +262,6 @@ class spell_intense_cold : public SpellScriptLoader
 
         class spell_intense_cold_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_intense_cold_AuraScript);
-
             void HandlePeriodicTick(AuraEffect const* aurEff)
             {
                 if (aurEff->GetBase()->GetStackAmount() < 2)
@@ -277,7 +275,7 @@ class spell_intense_cold : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_intense_cold_AuraScript::HandlePeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
+                OnEffectPeriodic.Register(&spell_intense_cold_AuraScript::HandlePeriodicTick, EFFECT_1, SPELL_AURA_PERIODIC_DAMAGE);
             }
         };
 

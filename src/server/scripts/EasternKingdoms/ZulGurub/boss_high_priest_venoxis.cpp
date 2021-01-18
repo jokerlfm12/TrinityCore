@@ -210,9 +210,9 @@ struct boss_high_priest_venoxis : public BossAI
                 eyes->CastSpell(eyes, SPELL_SNAKE_EYES);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         Talk(SAY_AGGRO);
         me->RemoveAurasDueToSpell(SPELL_TOTEM_BEAM_LEFT);
@@ -326,7 +326,7 @@ struct boss_high_priest_venoxis : public BossAI
                     }
                     break;
                 case EVENT_WHISPERS_OF_HETHISS:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                     {
                         me->StopMoving();
                         DoCast(target, SPELL_WHISPERS_OF_HETHISS);
@@ -347,7 +347,7 @@ struct boss_high_priest_venoxis : public BossAI
                     events.ScheduleEvent(EVENT_PREPARE_BLOODVENOM, 24s);
                     break;
                 case EVENT_POOL_OF_ACRID_TEARS:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 50.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 50.0f, true))
                         DoCast(target, SPELL_POOL_OF_ACRID_TEARS);
                     events.Repeat(3s + 500ms);
                     break;
@@ -429,8 +429,6 @@ private:
 
 class spell_venoxis_venomous_effusion : public SpellScript
 {
-    PrepareSpellScript(spell_venoxis_venomous_effusion);
-
     void SetDest(SpellDestination& dest)
     {
         Unit* caster = GetCaster();
@@ -443,14 +441,12 @@ class spell_venoxis_venomous_effusion : public SpellScript
 
     void Register()
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_venoxis_venomous_effusion::SetDest, EFFECT_1, TARGET_DEST_CASTER);
+        OnDestinationTargetSelect.Register(&spell_venoxis_venomous_effusion::SetDest, EFFECT_1, TARGET_DEST_CASTER);
     }
 };
 
 class spell_venoxis_whispers_of_hethiss : public AuraScript
 {
-    PrepareAuraScript(spell_venoxis_whispers_of_hethiss);
-
     void HandleTick(AuraEffect const* /*aurEff*/)
     {
         PreventDefaultAction();
@@ -461,14 +457,12 @@ class spell_venoxis_whispers_of_hethiss : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_venoxis_whispers_of_hethiss::HandleTick, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_venoxis_whispers_of_hethiss::HandleTick, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_venoxis_toxic_link_targeting : public SpellScript
 {
-    PrepareSpellScript(spell_venoxis_toxic_link_targeting);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.size() > 2)
@@ -483,15 +477,13 @@ class spell_venoxis_toxic_link_targeting : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_venoxis_toxic_link_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_venoxis_toxic_link_targeting::HandleEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnObjectAreaTargetSelect.Register(&spell_venoxis_toxic_link_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_venoxis_toxic_link_targeting::HandleEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_venoxis_toxic_link : public AuraScript
 {
-    PrepareAuraScript(spell_venoxis_toxic_link);
-
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Unit* target = GetTarget())
@@ -500,14 +492,12 @@ class spell_venoxis_toxic_link : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_venoxis_toxic_link::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_venoxis_toxic_link::AfterRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_venoxis_toxic_link_ally : public SpellScript
 {
-    PrepareSpellScript(spell_venoxis_toxic_link_ally);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_TOXIC_LINK_AURA });
@@ -530,14 +520,12 @@ class spell_venoxis_toxic_link_ally : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_venoxis_toxic_link_ally::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+        OnObjectAreaTargetSelect.Register(&spell_venoxis_toxic_link_ally::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
     }
 };
 
 class spell_venoxis_pool_of_acrid_tears : public AuraScript
 {
-    PrepareAuraScript(spell_venoxis_pool_of_acrid_tears);
-
     void HandlePeriodic(AuraEffect const* aurEff)
     {
         PreventDefaultAction();
@@ -545,20 +533,18 @@ class spell_venoxis_pool_of_acrid_tears : public AuraScript
         {
             uint32 triggerSpell = GetSpellInfo()->Effects[EFFECT_0].TriggerSpell;
             int32 radius = target->GetObjectScale() * 75;
-            target->CastCustomSpell(triggerSpell, SPELLVALUE_RADIUS_MOD, radius, nullptr, true, nullptr, aurEff, target->GetGUID());
+            target->CastSpell(nullptr, triggerSpell, CastSpellExtraArgs(aurEff).SetOriginalCaster(target->GetGUID()).AddSpellMod(SPELLVALUE_RADIUS_MOD, radius));
         }
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_venoxis_pool_of_acrid_tears::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_venoxis_pool_of_acrid_tears::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_venoxis_blood_venom_forcecast : public SpellScript
 {
-    PrepareSpellScript(spell_venoxis_blood_venom_forcecast);
-
     void FilterTargets(std::list<WorldObject*>& targets)
     {
         if (targets.empty())
@@ -576,15 +562,13 @@ class spell_venoxis_blood_venom_forcecast : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_venoxis_blood_venom_forcecast::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_venoxis_blood_venom_forcecast::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
+        OnObjectAreaTargetSelect.Register(&spell_venoxis_blood_venom_forcecast::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_venoxis_blood_venom_forcecast::HandleSummon, EFFECT_0, SPELL_EFFECT_FORCE_CAST);
     }
 };
 
 class spell_venom_withdrawal : public SpellScript
 {
-    PrepareSpellScript(spell_venom_withdrawal);
-
     void HandleKnockback(SpellEffIndex effIndex)
     {
         // Let's do our own knockback to make sure that we hit our sniffed position
@@ -602,7 +586,7 @@ class spell_venom_withdrawal : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_venom_withdrawal::HandleKnockback, EFFECT_2, SPELL_EFFECT_LEAP_BACK);
+        OnEffectHitTarget.Register(&spell_venom_withdrawal::HandleKnockback, EFFECT_2, SPELL_EFFECT_LEAP_BACK);
     }
 };
 
@@ -610,11 +594,11 @@ void AddSC_boss_high_priest_venoxis()
 {
     RegisterZulGurubCreatureAI(boss_high_priest_venoxis);
     RegisterSpellScript(spell_venoxis_venomous_effusion);
-    RegisterAuraScript(spell_venoxis_whispers_of_hethiss);
+    RegisterSpellScript(spell_venoxis_whispers_of_hethiss);
     RegisterSpellScript(spell_venoxis_toxic_link_targeting);
-    RegisterAuraScript(spell_venoxis_toxic_link);
+    RegisterSpellScript(spell_venoxis_toxic_link);
     RegisterSpellScript(spell_venoxis_toxic_link_ally);
-    RegisterAuraScript(spell_venoxis_pool_of_acrid_tears);
+    RegisterSpellScript(spell_venoxis_pool_of_acrid_tears);
     RegisterSpellScript(spell_venoxis_blood_venom_forcecast);
     RegisterSpellScript(spell_venom_withdrawal);
 }

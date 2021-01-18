@@ -212,14 +212,14 @@ bool Pet::LoadPetData(Player* owner, uint32 petEntry, uint32 petnumber, bool cur
         case SUMMON_PET:
             petlevel = owner->getLevel();
             SetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_CLASS, uint8(CLASS_MAGE));
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
             break;
         case HUNTER_PET:
             SetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_CLASS, CLASS_WARRIOR);
             SetByteValue(UNIT_FIELD_BYTES_0, UNIT_BYTES_0_OFFSET_GENDER, GENDER_NONE);
             SetSheath(SHEATH_STATE_MELEE);
             SetByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PET_FLAGS, playerPetData->Renamed ? UNIT_CAN_BE_ABANDONED : UNIT_CAN_BE_RENAMED | UNIT_CAN_BE_ABANDONED);
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
             break;
         default:
             if (!IsPetGhoul())
@@ -857,6 +857,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
         {
             SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
             SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
+            break;
         }
         case HUNTER_PET:
         {
@@ -971,6 +972,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                 case ENTRY_BLOODWORM:
                 {
                     SetCreateHealth(m_owner->CountPctFromMaxHealth(18));
+                    SetAttackTime(BASE_ATTACK, 1400);
                     SetBonusDamage(int32(m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * 0.006f));
                     float minDamage = m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * 0.05f;
                     float maxDamage = m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * 0.05f;
@@ -1846,6 +1848,8 @@ bool Pet::Create(ObjectGuid::LowType guidlow, Map* map, uint32 Entry, uint32 pet
     SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
     SetSheath(SHEATH_STATE_MELEE);
 
+    GetThreatManager().Initialize();
+
     return true;
 }
 
@@ -1908,13 +1912,13 @@ void Pet::CastPetAura(PetAura const* aura)
     if (!auraId)
         return;
 
+    CastSpellExtraArgs args;
+    args.TriggerFlags = TRIGGERED_FULL_MASK;
+
     if (auraId == 35696)                                      // Demonic Knowledge
-    {
-        int32 basePoints = CalculatePct(aura->GetDamage(), GetStat(STAT_STAMINA) + GetStat(STAT_INTELLECT));
-        CastCustomSpell(this, auraId, &basePoints, nullptr, nullptr, true);
-    }
-    else
-        CastSpell(this, auraId, true);
+        args.SpellValueOverrides.AddMod(SPELLVALUE_BASE_POINT0, CalculatePct(aura->GetDamage(), GetStat(STAT_STAMINA) + GetStat(STAT_INTELLECT)));
+
+    CastSpell(this, auraId, args);
 }
 
 bool Pet::IsPetAura(Aura const* aura)

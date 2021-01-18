@@ -487,7 +487,8 @@ class boss_toc_champion_controller : public CreatureScript
                     {
                         _summons.Summon(champion);
                         champion->SetReactState(REACT_PASSIVE);
-                        champion->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                        champion->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                        champion->SetImmuneToPC(false);
                         if (playerTeam == ALLIANCE)
                         {
                             champion->SetHomePosition(vChampionJumpTarget[pos].GetPositionX(), vChampionJumpTarget[pos].GetPositionY(), vChampionJumpTarget[pos].GetPositionZ(), 0);
@@ -518,7 +519,8 @@ class boss_toc_champion_controller : public CreatureScript
                             if (Creature* summon = ObjectAccessor::GetCreature(*me, *i))
                             {
                                 summon->SetReactState(REACT_AGGRESSIVE);
-                                summon->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                                summon->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                                summon->SetImmuneToPC(false);
                             }
                         }
                         break;
@@ -610,20 +612,12 @@ struct boss_faction_championsAI : public BossAI
 
     void UpdateThreat()
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        for (std::list<HostileReference*>::const_iterator itr = tList.begin(); itr != tList.end(); ++itr)
-        {
-            Unit* unit = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid());
-            if (unit && me->getThreatManager().getThreat(unit))
+        for (ThreatReference* ref : me->GetThreatManager().GetModifiableThreatList())
+            if (Player* victim = ref->GetVictim()->ToPlayer())
             {
-                if (unit->GetTypeId() == TYPEID_PLAYER)
-                {
-                    float threat = CalculateThreat(me->GetDistance2d(unit), (float)unit->GetArmor(), unit->GetHealth());
-                    me->getThreatManager().modifyThreatPercent(unit, -100);
-                    me->AddThreat(unit, 1000000.0f * threat);
-                }
+                ref->ScaleThreat(0.0f);
+                ref->AddThreat(1000000.0f * CalculateThreat(me->GetDistance2d(victim), victim->GetArmor(), victim->GetHealth()));
             }
-        }
     }
 
     void UpdatePower()
@@ -649,10 +643,10 @@ struct boss_faction_championsAI : public BossAI
                 pChampionController->AI()->SetData(2, DONE);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
+        BossAI::JustEngagedWith(who);
         DoCast(me, SPELL_ANTI_AOE, true);
-        _JustEngagedWith();
         if (Creature* pChampionController = ObjectAccessor::GetCreature((*me), instance->GetGuidData(NPC_CHAMPIONS_CONTROLLER)))
             pChampionController->AI()->SetData(2, IN_PROGRESS);
     }
@@ -692,28 +686,19 @@ struct boss_faction_championsAI : public BossAI
 
     Unit* SelectEnemyCaster(bool /*casting*/)
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        std::list<HostileReference*>::const_iterator iter;
-        for (iter = tList.begin(); iter!=tList.end(); ++iter)
-        {
-            Unit* target = ObjectAccessor::GetUnit(*me, (*iter)->getUnitGuid());
-            if (target && target->GetPowerType() == POWER_MANA)
-                return target;
-        }
+        for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
+            if (Player* player = pair.second->GetOther(me)->ToPlayer())
+                if (player->GetPowerType() == POWER_MANA)
+                    return player;
         return nullptr;
     }
 
     uint32 EnemiesInRange(float distance)
     {
-        std::list<HostileReference*> const& tList = me->getThreatManager().getThreatList();
-        std::list<HostileReference*>::const_iterator iter;
         uint32 count = 0;
-        for (iter = tList.begin(); iter != tList.end(); ++iter)
-        {
-            Unit* target = ObjectAccessor::GetUnit(*me, (*iter)->getUnitGuid());
-                if (target && me->GetDistance2d(target) < distance)
-                    ++count;
-        }
+        for (ThreatReference const* ref : me->GetThreatManager().GetUnsortedThreatList())
+            if (me->GetDistance2d(ref->GetVictim()) < distance)
+                ++count;
         return count;
     }
 
@@ -724,9 +709,7 @@ struct boss_faction_championsAI : public BossAI
 
         if (me->Attack(who, true))
         {
-            me->AddThreat(who, 10.0f);
-            me->SetInCombatWith(who);
-            who->SetInCombatWith(me);
+            AddThreat(who, 10.0f);
 
             if (_aiType == AI_MELEE || _aiType == AI_PET)
                 DoStartMovement(who);
@@ -2280,8 +2263,6 @@ class spell_faction_champion_warl_unstable_affliction : public SpellScriptLoader
 
         class spell_faction_champion_warl_unstable_affliction_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_faction_champion_warl_unstable_affliction_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_UNSTABLE_AFFLICTION_DISPEL });
@@ -2290,12 +2271,12 @@ class spell_faction_champion_warl_unstable_affliction : public SpellScriptLoader
             void HandleDispel(DispelInfo* dispelInfo)
             {
                 if (Unit* caster = GetCaster())
-                    caster->CastSpell(dispelInfo->GetDispeller(), SPELL_UNSTABLE_AFFLICTION_DISPEL, true, nullptr, GetEffect(EFFECT_0));
+                    caster->CastSpell(dispelInfo->GetDispeller(), SPELL_UNSTABLE_AFFLICTION_DISPEL, GetEffect(EFFECT_0));
             }
 
             void Register() override
             {
-                AfterDispel += AuraDispelFn(spell_faction_champion_warl_unstable_affliction_AuraScript::HandleDispel);
+                AfterDispel.Register(&spell_faction_champion_warl_unstable_affliction_AuraScript::HandleDispel);
             }
         };
 
@@ -2312,8 +2293,6 @@ class spell_faction_champion_death_grip : public SpellScriptLoader
 
         class spell_faction_champion_death_grip_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_faction_champion_death_grip_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_DEATH_GRIP_PULL });
@@ -2330,7 +2309,7 @@ class spell_faction_champion_death_grip : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_faction_champion_death_grip_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_faction_champion_death_grip_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
 
         };
@@ -2348,8 +2327,6 @@ class spell_toc_bloodlust : public SpellScriptLoader
 
         class spell_toc_bloodlust_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_toc_bloodlust_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ AURA_SATED });
@@ -2368,9 +2345,9 @@ class spell_toc_bloodlust : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_toc_bloodlust_SpellScript::RemoveInvalidTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_toc_bloodlust_SpellScript::RemoveInvalidTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ALLY);
-                AfterHit += SpellHitFn(spell_toc_bloodlust_SpellScript::ApplyDebuff);
+                OnObjectAreaTargetSelect.Register(&spell_toc_bloodlust_SpellScript::RemoveInvalidTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnObjectAreaTargetSelect.Register(&spell_toc_bloodlust_SpellScript::RemoveInvalidTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ALLY);
+                AfterHit.Register(&spell_toc_bloodlust_SpellScript::ApplyDebuff);
             }
         };
 
@@ -2387,8 +2364,6 @@ class spell_toc_heroism : public SpellScriptLoader
 
         class spell_toc_heroism_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_toc_heroism_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ AURA_EXHAUSTION });
@@ -2407,9 +2382,9 @@ class spell_toc_heroism : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_toc_heroism_SpellScript::RemoveInvalidTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_toc_heroism_SpellScript::RemoveInvalidTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ALLY);
-                AfterHit += SpellHitFn(spell_toc_heroism_SpellScript::ApplyDebuff);
+                OnObjectAreaTargetSelect.Register(&spell_toc_heroism_SpellScript::RemoveInvalidTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ALLY);
+                OnObjectAreaTargetSelect.Register(&spell_toc_heroism_SpellScript::RemoveInvalidTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ALLY);
+                AfterHit.Register(&spell_toc_heroism_SpellScript::ApplyDebuff);
             }
         };
 

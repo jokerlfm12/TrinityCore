@@ -262,9 +262,9 @@ struct boss_maloriak : public BossAI
         me->SummonCreatureGroup(SUMMON_GROUP_EXPERIMENTS);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
         events.SetPhase(PHASE_ONE);
@@ -324,7 +324,7 @@ struct boss_maloriak : public BossAI
         switch (spell->Id)
         {
             case SPELL_ARCANE_STORM:
-                if (reason == SPELL_FINISHED_FINISHED || reason == SPELL_FINISHED_CANCELED)
+                if (reason == SPELL_FINISHED_CHANNELING_COMPLETE || reason == SPELL_FINISHED_CANCELED)
                 {
                     me->MakeInterruptable(false);
                     me->m_Events.KillAllEvents(true);
@@ -333,7 +333,10 @@ struct boss_maloriak : public BossAI
             case SPELL_RELEASE_ABERRATIONS:
                 me->MakeInterruptable(false);
                 if (reason == SPELL_FINISHED_SUCCESSFUL_CAST)
+                {
                     Talk(SAY_RELEASE_ABERRATIONS);
+                    ++_releasedAberrationsCount;
+                }
                 break;
             default:
                 break;
@@ -444,7 +447,6 @@ struct boss_maloriak : public BossAI
                         me->MakeInterruptable(true);
                         DoCastAOE(SPELL_RELEASE_ABERRATIONS);
                         events.Repeat(17s, 18s);
-                        _releasedAberrationsCount++;
                     }
                     break;
                 case EVENT_FACE_TO_CAULDRON:
@@ -516,7 +518,7 @@ struct boss_maloriak : public BossAI
                     events.Repeat(14s + 500ms);
                     break;
                 case EVENT_SCORCHING_BLAST:
-                    DoCastSelf(SPELL_SCORCHING_BLAST);
+                    DoCastVictim(SPELL_SCORCHING_BLAST);
                     events.Repeat(17s);
                     break;
                 case EVENT_BITING_CHILL:
@@ -878,8 +880,6 @@ private:
 
 class spell_maloriak_throw_bottle : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_throw_bottle);
-
     void HandleDummyEffect(SpellEffIndex effIndex)
     {
         if (Unit* caster = GetCaster())
@@ -888,14 +888,12 @@ class spell_maloriak_throw_bottle : public SpellScript
 
     void Register() override
     {
-        OnEffectLaunchTarget += SpellEffectFn(spell_maloriak_throw_bottle::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectLaunchTarget.Register(&spell_maloriak_throw_bottle::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_maloriak_throw_bottle_triggered : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_throw_bottle_triggered);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -937,17 +935,18 @@ class spell_maloriak_throw_bottle_triggered : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_maloriak_throw_bottle_triggered::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_maloriak_throw_bottle_triggered::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_maloriak_consuming_flames: public AuraScript
 {
-    PrepareAuraScript(spell_maloriak_consuming_flames);
-
     bool CheckProc(ProcEventInfo& eventInfo)
     {
-        return eventInfo.GetSpellInfo() && eventInfo.GetDamageInfo();
+        if (!eventInfo.GetSpellInfo() || eventInfo.GetSpellInfo()->DmgClass != SPELL_DAMAGE_CLASS_MAGIC || eventInfo.GetSpellInfo()->Id == GetId())
+            return false;
+
+        return eventInfo.GetDamageInfo();
     }
 
     void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
@@ -958,14 +957,12 @@ class spell_maloriak_consuming_flames: public AuraScript
 
     void Register() override
     {
-        OnEffectProc += AuraEffectProcFn(spell_maloriak_consuming_flames::HandleProc, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+        OnEffectProc.Register(&spell_maloriak_consuming_flames::HandleProc, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
     }
 };
 
 class spell_maloriak_flash_freeze_targeting : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_flash_freeze_targeting);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_FLASH_FREEZE_SUMMON });
@@ -1009,15 +1006,13 @@ class spell_maloriak_flash_freeze_targeting : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_flash_freeze_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_maloriak_flash_freeze_targeting::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnObjectAreaTargetSelect.Register(&spell_maloriak_flash_freeze_targeting::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnEffectHitTarget.Register(&spell_maloriak_flash_freeze_targeting::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 class spell_maloriak_flash_freeze_dummy : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_flash_freeze_dummy);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_FLASH_FREEZE_STUN_NORMAL });
@@ -1047,14 +1042,12 @@ class spell_maloriak_flash_freeze_dummy : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_flash_freeze_dummy::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnObjectAreaTargetSelect.Register(&spell_maloriak_flash_freeze_dummy::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
     }
 };
 
 class spell_maloriak_release_experiments : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_release_experiments);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1084,37 +1077,32 @@ class spell_maloriak_release_experiments : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_release_experiments::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-        OnEffectHitTarget += SpellEffectFn(spell_maloriak_release_experiments::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnObjectAreaTargetSelect.Register(&spell_maloriak_release_experiments::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+        OnEffectHitTarget.Register(&spell_maloriak_release_experiments::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
         if (m_scriptSpellId == SPELL_RELEASE_ALL_MINIONS)
         {
-            OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_release_experiments::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENTRY);
-            OnEffectHitTarget += SpellEffectFn(spell_maloriak_release_experiments::HandleDummyEffect, EFFECT_1, SPELL_EFFECT_DUMMY);
+            OnObjectAreaTargetSelect.Register(&spell_maloriak_release_experiments::FilterTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENTRY);
+            OnEffectHitTarget.Register(&spell_maloriak_release_experiments::HandleDummyEffect, EFFECT_1, SPELL_EFFECT_DUMMY);
         }
     }
 };
 
 class spell_maloriak_magma_jets_script : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_magma_jets_script);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_MAGMA_JETS_SUMMON });
     }
 
-    void FilterTargets(std::list<WorldObject*>& targets)
-    {
-        if (targets.empty())
-            return;
-
-        Trinity::Containers::RandomResize(targets, 1);
-    }
-
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)
     {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
         Unit* target = GetHitUnit();
-        if (Unit* caster = GetCaster())
+
+        if (target == caster->GetVictim())
         {
             caster->SetOrientation(caster->GetAngle(target));
             caster->SetFacingToObject(target); // update orientation immediately
@@ -1124,15 +1112,12 @@ class spell_maloriak_magma_jets_script : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_magma_jets_script::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnEffectHitTarget += SpellEffectFn(spell_maloriak_magma_jets_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_maloriak_magma_jets_script::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
 class spell_maloriak_magma_jets_periodic : public AuraScript
 {
-    PrepareAuraScript(spell_maloriak_magma_jets_periodic);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_MAGMA_JETS_SUMMON_FIRE });
@@ -1149,21 +1134,19 @@ class spell_maloriak_magma_jets_periodic : public AuraScript
         float y = target->GetPositionY() + sin(target->GetOrientation()) * dist;
         float z = target->GetMapHeight(x, y, target->GetPositionZ() + 5.0f);
         if (target->IsWithinLOS(x, y, z))
-            target->CastSpell(x, y, z, SPELL_MAGMA_JETS_SUMMON_FIRE, true);
+            target->CastSpell({ x, y, z }, SPELL_MAGMA_JETS_SUMMON_FIRE, true);
         else
             Remove();
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_maloriak_magma_jets_periodic::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_maloriak_magma_jets_periodic::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_maloriak_absolute_zero : public SpellScript
 {
-    PrepareSpellScript(spell_maloriak_absolute_zero);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_ABSOLUTE_ZERO_EXPLOSION });
@@ -1183,14 +1166,12 @@ class spell_maloriak_absolute_zero : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_maloriak_absolute_zero::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_maloriak_absolute_zero::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
 class spell_maloriak_vile_swill: public AuraScript
 {
-    PrepareAuraScript(spell_maloriak_vile_swill);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_VILE_SWILL_SUMMON });
@@ -1201,19 +1182,17 @@ class spell_maloriak_vile_swill: public AuraScript
         PreventDefaultAction();
         Unit* target = GetTarget();
         Position const destination = target->GetRandomPoint(target->GetPosition(), 11.0f);
-        target->CastSpell(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ(), SPELL_VILE_SWILL_SUMMON, true);
+        target->CastSpell({ destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ() }, SPELL_VILE_SWILL_SUMMON, true);
     }
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_maloriak_vile_swill::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_maloriak_vile_swill::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
 class spell_maloriak_vile_swill_summon: public AuraScript
 {
-    PrepareAuraScript(spell_maloriak_vile_swill_summon);
-
     void AfterApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         int32 summonSpellId = GetSpellInfo()->Effects[EFFECT_0].TriggerSpell;
@@ -1235,14 +1214,12 @@ class spell_maloriak_vile_swill_summon: public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_maloriak_vile_swill_summon::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_maloriak_vile_swill_summon::AfterApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 class spell_maloriak_master_adventurer_award : public AuraScript
 {
-    PrepareAuraScript(spell_maloriak_master_adventurer_award);
-
     void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         Player* player = GetTarget()->ToPlayer();
@@ -1275,8 +1252,8 @@ class spell_maloriak_master_adventurer_award : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_maloriak_master_adventurer_award::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_maloriak_master_adventurer_award::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_maloriak_master_adventurer_award::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_maloriak_master_adventurer_award::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
@@ -1290,14 +1267,14 @@ void AddSC_boss_maloriak()
     RegisterBlackwingDescentCreatureAI(npc_maloriak_vile_swill);
     RegisterSpellScript(spell_maloriak_throw_bottle);
     RegisterSpellScript(spell_maloriak_throw_bottle_triggered);
-    RegisterAuraScript(spell_maloriak_consuming_flames);
+    RegisterSpellScript(spell_maloriak_consuming_flames);
     RegisterSpellScript(spell_maloriak_flash_freeze_targeting);
     RegisterSpellScript(spell_maloriak_flash_freeze_dummy);
     RegisterSpellScript(spell_maloriak_release_experiments);
     RegisterSpellScript(spell_maloriak_magma_jets_script);
-    RegisterAuraScript(spell_maloriak_magma_jets_periodic);
+    RegisterSpellScript(spell_maloriak_magma_jets_periodic);
     RegisterSpellScript(spell_maloriak_absolute_zero);
-    RegisterAuraScript(spell_maloriak_vile_swill);
-    RegisterAuraScript(spell_maloriak_vile_swill_summon);
-    RegisterAuraScript(spell_maloriak_master_adventurer_award);
+    RegisterSpellScript(spell_maloriak_vile_swill);
+    RegisterSpellScript(spell_maloriak_vile_swill_summon);
+    RegisterSpellScript(spell_maloriak_master_adventurer_award);
 }

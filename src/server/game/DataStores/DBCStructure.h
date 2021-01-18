@@ -765,8 +765,8 @@ struct BattlemasterListEntry
     char* Name;                                             // 11
     uint32  MaxGroupSize;                                   // 12 maxGroupSize, used for checking if queue as group
     uint32  HolidayWorldState;                              // 13 new 3.1
-    uint32  Minlevel;                                       // 14, min level (sync with PvPDifficulty.dbc content)
-    uint32  Maxlevel;                                       // 15, max level (sync with PvPDifficulty.dbc content)
+    uint32  MinLevel;                                       // 14, min level (sync with PvPDifficulty.dbc content)
+    uint32  MaxLevel;                                       // 15, max level (sync with PvPDifficulty.dbc content)
     //uint32  RatedPlayers;                                 // 16 4.0.1
     //uint32  MinPlayers;                                   // 17 - 4.0.6.13596
     //uint32  MaxPlayers;                                   // 18 4.0.1
@@ -2379,6 +2379,32 @@ struct SpellVisualEntry
     //DBCPosition3D MissileCastOffset;
     //DBCPosition3D MissileImpactOffset;
     uint32 AlternativeVisualID;
+};
+
+struct SpellVisualKitEntry
+{
+    uint32 ID;
+    uint32 StartAnimID;
+    uint32 AnimID;
+    uint32 AnimKitID;
+    uint32 HeadEffect;
+    uint32 ChestEffect;
+    uint32 BaseEffect;
+    uint32 LeftHandEffect;
+    uint32 RightHandEffect;
+    uint32 BreathEffect;
+    uint32 LeftWeaponEffect;
+    uint32 RightWeaponEffect;
+    uint32 SpecialEffect[3];
+    uint32 WorldEffect;
+    uint32 SoundID;
+    uint32 ShakeID;
+    uint32 CharProc[4];
+    uint32 CharParamZero[4];
+    uint32 CharParamOne[4];
+    uint32 CharParamTwo[4];
+    uint32 CharParamThree[4];
+    uint32 Flags;
 };
 
 struct SummonPropertiesEntry

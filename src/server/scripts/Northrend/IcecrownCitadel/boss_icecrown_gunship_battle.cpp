@@ -578,8 +578,8 @@ struct gunship_npc_AI : public ScriptedAI
         if (!me->IsAlive() || !me->IsInCombat())
             return;
 
-        me->DeleteThreatList();
         me->CombatStop(true);
+        EngagementOver();
         me->GetMotionMaster()->MoveTargetedHome();
     }
 
@@ -634,7 +634,7 @@ protected:
 
             return me->GetVictim() != nullptr;
         }
-        else if (me->getThreatManager().isThreatListEmpty())
+        else if (me->GetThreatManager().IsThreatListEmpty())
         {
             EnterEvadeMode(EVADE_REASON_OTHER);
             return false;
@@ -723,7 +723,6 @@ class npc_gunship : public CreatureScript
                 {
                     Creature* stalker = *itr;
                     stalker->RemoveAllAuras();
-                    stalker->DeleteThreatList();
                     stalker->CombatStop(true);
                 }
 
@@ -747,12 +746,6 @@ class npc_gunship : public CreatureScript
                     if (isVictory)
                     {
                         cannon->CastSpell(cannon, SPELL_EJECT_ALL_PASSENGERS_BELOW_ZERO, TRIGGERED_FULL_MASK);
-
-                        WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, cannon->GetPackGUID().size() + 4);
-                        data << cannon->GetPackGUID();
-                        data << uint32(0);
-                        cannon->SendMessageToSet(&data, true);
-
                         cannon->RemoveVehicleKit();
                     }
                     else
@@ -882,8 +875,8 @@ class npc_high_overlord_saurfang_igb : public CreatureScript
                 if (!me->IsAlive())
                     return;
 
-                me->DeleteThreatList();
                 me->CombatStop(true);
+                EngagementOver();
                 me->GetMotionMaster()->MoveTargetedHome();
 
                 Reset();
@@ -1146,8 +1139,8 @@ class npc_muradin_bronzebeard_igb : public CreatureScript
                 if (!me->IsAlive())
                     return;
 
-                me->DeleteThreatList();
                 me->CombatStop(true);
+                EngagementOver();
                 me->GetMotionMaster()->MoveTargetedHome();
 
                 Reset();
@@ -1477,7 +1470,7 @@ struct npc_gunship_boarding_addAI : public gunship_npc_AI
             {
                 players.sort(Trinity::ObjectDistanceOrderPred(me));
                 for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
-                    me->AddThreat(*itr, 1.0f);
+                    AddThreat(*itr, 1.0f);
 
                 AttackStart(players.front());
             }
@@ -1816,8 +1809,6 @@ class spell_igb_rocket_pack : public SpellScriptLoader
 
         class spell_igb_rocket_pack_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_igb_rocket_pack_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_ROCKET_PACK_DAMAGE, SPELL_ROCKET_BURST });
@@ -1832,14 +1823,15 @@ class spell_igb_rocket_pack : public SpellScriptLoader
             void HandleRemove(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
             {
                 SpellInfo const* damageInfo = sSpellMgr->AssertSpellInfo(SPELL_ROCKET_PACK_DAMAGE);
-                GetTarget()->CastCustomSpell(SPELL_ROCKET_PACK_DAMAGE, SPELLVALUE_BASE_POINT0, 2 * (damageInfo->Effects[EFFECT_0].CalcValue() + aurEff->GetTickNumber() * aurEff->GetPeriodic()), nullptr, TRIGGERED_FULL_MASK);
+                int32 bp = 2 * (damageInfo->Effects[EFFECT_0].CalcValue() + aurEff->GetTickNumber() * aurEff->GetPeriodic());
+                GetTarget()->CastSpell(nullptr, SPELL_ROCKET_PACK_DAMAGE, CastSpellExtraArgs(true).AddSpellBP0(bp));
                 GetTarget()->CastSpell(nullptr, SPELL_ROCKET_BURST, TRIGGERED_FULL_MASK);
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_igb_rocket_pack_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-                OnEffectRemove += AuraEffectRemoveFn(spell_igb_rocket_pack_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_igb_rocket_pack_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectRemove.Register(&spell_igb_rocket_pack_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1856,8 +1848,6 @@ class spell_igb_rocket_pack_useable : public SpellScriptLoader
 
         class spell_igb_rocket_pack_useable_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_igb_rocket_pack_useable_AuraScript);
-
             bool Load() override
             {
                 return GetOwner()->GetInstanceScript() != nullptr;
@@ -1886,9 +1876,9 @@ class spell_igb_rocket_pack_useable : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckAreaTarget += AuraCheckAreaTargetFn(spell_igb_rocket_pack_useable_AuraScript::CheckAreaTarget);
-                AfterEffectApply += AuraEffectApplyFn(spell_igb_rocket_pack_useable_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_igb_rocket_pack_useable_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                DoCheckAreaTarget.Register(&spell_igb_rocket_pack_useable_AuraScript::CheckAreaTarget);
+                AfterEffectApply.Register(&spell_igb_rocket_pack_useable_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_igb_rocket_pack_useable_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1905,8 +1895,6 @@ class spell_igb_on_gunship_deck : public SpellScriptLoader
 
         class spell_igb_on_gunship_deck_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_igb_on_gunship_deck_AuraScript);
-
             bool Load() override
             {
                 if (InstanceScript* instance = GetOwner()->GetInstanceScript())
@@ -1930,8 +1918,8 @@ class spell_igb_on_gunship_deck : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckAreaTarget += AuraCheckAreaTargetFn(spell_igb_on_gunship_deck_AuraScript::CheckAreaTarget);
-                AfterEffectApply += AuraEffectApplyFn(spell_igb_on_gunship_deck_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                DoCheckAreaTarget.Register(&spell_igb_on_gunship_deck_AuraScript::CheckAreaTarget);
+                AfterEffectApply.Register(&spell_igb_on_gunship_deck_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
 
             uint32 _teamInInstance = 0;
@@ -1950,8 +1938,6 @@ class spell_igb_periodic_trigger_with_power_cost : public SpellScriptLoader
 
         class spell_igb_periodic_trigger_with_power_cost_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_igb_periodic_trigger_with_power_cost_AuraScript);
-
             void HandlePeriodicTick(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -1960,7 +1946,7 @@ class spell_igb_periodic_trigger_with_power_cost : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_igb_periodic_trigger_with_power_cost_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_igb_periodic_trigger_with_power_cost_AuraScript::HandlePeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -1977,8 +1963,6 @@ class spell_igb_cannon_blast : public SpellScriptLoader
 
         class spell_igb_cannon_blast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_cannon_blast_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -1997,7 +1981,7 @@ class spell_igb_cannon_blast : public SpellScriptLoader
 
             void Register() override
             {
-                AfterHit += SpellHitFn(spell_igb_cannon_blast_SpellScript::CheckEnergy);
+                AfterHit.Register(&spell_igb_cannon_blast_SpellScript::CheckEnergy);
             }
         };
 
@@ -2014,8 +1998,6 @@ class spell_igb_incinerating_blast : public SpellScriptLoader
 
         class spell_igb_incinerating_blast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_incinerating_blast_SpellScript);
-
             void StoreEnergy()
             {
                 _energyLeft = GetCaster()->GetPower(POWER_ENERGY) - 10;
@@ -2033,9 +2015,9 @@ class spell_igb_incinerating_blast : public SpellScriptLoader
 
             void Register() override
             {
-                OnCast += SpellCastFn(spell_igb_incinerating_blast_SpellScript::StoreEnergy);
-                AfterCast += SpellCastFn(spell_igb_incinerating_blast_SpellScript::RemoveEnergy);
-                OnEffectLaunchTarget += SpellEffectFn(spell_igb_incinerating_blast_SpellScript::CalculateDamage, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
+                OnCast.Register(&spell_igb_incinerating_blast_SpellScript::StoreEnergy);
+                AfterCast.Register(&spell_igb_incinerating_blast_SpellScript::RemoveEnergy);
+                OnEffectLaunchTarget.Register(&spell_igb_incinerating_blast_SpellScript::CalculateDamage, EFFECT_1, SPELL_EFFECT_SCHOOL_DAMAGE);
             }
 
             uint32 _energyLeft = 0;
@@ -2054,8 +2036,6 @@ class spell_igb_overheat : public SpellScriptLoader
 
         class spell_igb_overheat_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_igb_overheat_AuraScript);
-
             bool Load() override
             {
                 if (GetAura()->GetType() != UNIT_AURA_TYPE)
@@ -2092,8 +2072,8 @@ class spell_igb_overheat : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_igb_overheat_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_igb_overheat_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_igb_overheat_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_igb_overheat_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -2110,8 +2090,6 @@ class spell_igb_below_zero : public SpellScriptLoader
 
         class spell_igb_below_zero_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_below_zero_SpellScript);
-
             void RemovePassengers()
             {
                 GetHitUnit()->CastSpell(GetHitUnit(), SPELL_EJECT_ALL_PASSENGERS_BELOW_ZERO, TRIGGERED_FULL_MASK);
@@ -2119,7 +2097,7 @@ class spell_igb_below_zero : public SpellScriptLoader
 
             void Register() override
             {
-                BeforeHit += SpellHitFn(spell_igb_below_zero_SpellScript::RemovePassengers);
+                BeforeHit.Register(&spell_igb_below_zero_SpellScript::RemovePassengers);
             }
         };
 
@@ -2136,8 +2114,6 @@ class spell_igb_teleport_to_enemy_ship : public SpellScriptLoader
 
         class spell_igb_teleport_to_enemy_ship_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_teleport_to_enemy_ship_SpellScript);
-
             void RelocateTransportOffset(SpellEffIndex /*effIndex*/)
             {
                 WorldLocation const* dest = GetHitDest();
@@ -2153,7 +2129,7 @@ class spell_igb_teleport_to_enemy_ship : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_igb_teleport_to_enemy_ship_SpellScript::RelocateTransportOffset, EFFECT_0, SPELL_EFFECT_TELEPORT_UNITS);
+                OnEffectHitTarget.Register(&spell_igb_teleport_to_enemy_ship_SpellScript::RelocateTransportOffset, EFFECT_0, SPELL_EFFECT_TELEPORT_UNITS);
             }
         };
 
@@ -2170,8 +2146,6 @@ class spell_igb_burning_pitch_selector : public SpellScriptLoader
 
         class spell_igb_burning_pitch_selector_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_burning_pitch_selector_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 uint32 team = HORDE;
@@ -2201,8 +2175,8 @@ class spell_igb_burning_pitch_selector : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_igb_burning_pitch_selector_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_igb_burning_pitch_selector_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_igb_burning_pitch_selector_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_igb_burning_pitch_selector_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2219,18 +2193,16 @@ class spell_igb_burning_pitch : public SpellScriptLoader
 
         class spell_igb_burning_pitch_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_burning_pitch_SpellScript);
-
             void HandleDummy(SpellEffIndex effIndex)
             {
                 PreventHitDefaultEffect(effIndex);
-                GetCaster()->CastCustomSpell(uint32(GetEffectValue()), SPELLVALUE_BASE_POINT0, 8000, nullptr, TRIGGERED_FULL_MASK);
+                GetCaster()->CastSpell(nullptr, uint32(GetEffectValue()), CastSpellExtraArgs(true).AddSpellBP0(8000));
                 GetHitUnit()->CastSpell(GetHitUnit(), SPELL_BURNING_PITCH, TRIGGERED_FULL_MASK);
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_igb_burning_pitch_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_igb_burning_pitch_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -2247,8 +2219,6 @@ class spell_igb_rocket_artillery : public SpellScriptLoader
 
         class spell_igb_rocket_artillery_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_rocket_artillery_SpellScript);
-
             void SelectRandomTarget(std::list<WorldObject*>& targets)
             {
                 if (!targets.empty())
@@ -2267,8 +2237,8 @@ class spell_igb_rocket_artillery : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_igb_rocket_artillery_SpellScript::SelectRandomTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_igb_rocket_artillery_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_igb_rocket_artillery_SpellScript::SelectRandomTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_igb_rocket_artillery_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -2285,17 +2255,15 @@ class spell_igb_rocket_artillery_explosion : public SpellScriptLoader
 
         class spell_igb_rocket_artillery_explosion_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_rocket_artillery_explosion_SpellScript);
-
             void DamageGunship(SpellEffIndex /*effIndex*/)
             {
                 if (InstanceScript* instance = GetCaster()->GetInstanceScript())
-                    GetCaster()->CastCustomSpell(instance->GetData(DATA_TEAM_IN_INSTANCE) == HORDE ? SPELL_BURNING_PITCH_DAMAGE_A : SPELL_BURNING_PITCH_DAMAGE_H, SPELLVALUE_BASE_POINT0, 5000, nullptr, TRIGGERED_FULL_MASK);
+                    GetCaster()->CastSpell(nullptr, instance->GetData(DATA_TEAM_IN_INSTANCE) == HORDE ? SPELL_BURNING_PITCH_DAMAGE_A : SPELL_BURNING_PITCH_DAMAGE_H, CastSpellExtraArgs(true).AddSpellBP0(5000));
             }
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_igb_rocket_artillery_explosion_SpellScript::DamageGunship, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
+                OnEffectHit.Register(&spell_igb_rocket_artillery_explosion_SpellScript::DamageGunship, EFFECT_0, SPELL_EFFECT_TRIGGER_MISSILE);
             }
         };
 
@@ -2312,8 +2280,6 @@ class spell_igb_gunship_fall_teleport : public SpellScriptLoader
 
         class spell_igb_gunship_fall_teleport_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_gunship_fall_teleport_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetInstanceScript() != nullptr;
@@ -2335,8 +2301,8 @@ class spell_igb_gunship_fall_teleport : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_igb_gunship_fall_teleport_SpellScript::SelectTransport, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
-                OnEffectLaunch += SpellEffectFn(spell_igb_gunship_fall_teleport_SpellScript::RelocateDest, EFFECT_0, SPELL_EFFECT_TELEPORT_UNITS);
+                OnObjectTargetSelect.Register(&spell_igb_gunship_fall_teleport_SpellScript::SelectTransport, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
+                OnEffectLaunch.Register(&spell_igb_gunship_fall_teleport_SpellScript::RelocateDest, EFFECT_0, SPELL_EFFECT_TELEPORT_UNITS);
             }
         };
 
@@ -2353,8 +2319,6 @@ class spell_igb_check_for_players : public SpellScriptLoader
 
         class spell_igb_check_for_players_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_check_for_players_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_UNIT;
@@ -2379,9 +2343,9 @@ class spell_igb_check_for_players : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_igb_check_for_players_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                AfterCast += SpellCastFn(spell_igb_check_for_players_SpellScript::TriggerWipe);
-                OnEffectHitTarget += SpellEffectFn(spell_igb_check_for_players_SpellScript::TeleportPlayer, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_igb_check_for_players_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                AfterCast.Register(&spell_igb_check_for_players_SpellScript::TriggerWipe);
+                OnEffectHitTarget.Register(&spell_igb_check_for_players_SpellScript::TeleportPlayer, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
 
             uint32 _playerCount = 0;
@@ -2400,8 +2364,6 @@ class spell_igb_teleport_players_on_victory : public SpellScriptLoader
 
         class spell_igb_teleport_players_on_victory_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_igb_teleport_players_on_victory_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetInstanceScript() != nullptr;
@@ -2418,7 +2380,7 @@ class spell_igb_teleport_players_on_victory : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_igb_teleport_players_on_victory_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENTRY);
+                OnObjectAreaTargetSelect.Register(&spell_igb_teleport_players_on_victory_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_DEST_AREA_ENTRY);
             }
         };
 
@@ -2436,8 +2398,6 @@ public:
 
     class spell_igb_battle_experience_check_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_igb_battle_experience_check_AuraScript);
-
         bool CheckProc(ProcEventInfo& /*eventInfo*/)
         {
             return false;
@@ -2445,7 +2405,7 @@ public:
 
         void Register() override
         {
-            DoCheckProc += AuraCheckProcFn(spell_igb_battle_experience_check_AuraScript::CheckProc);
+            DoCheckProc.Register(&spell_igb_battle_experience_check_AuraScript::CheckProc);
         }
     };
 

@@ -251,7 +251,7 @@ class ActivateLivingConstellation : public BasicEvent
 
         bool Execute(uint64 execTime, uint32 /*diff*/) override
         {
-            if (!_instance || _instance->GetBossState(BOSS_ALGALON) != IN_PROGRESS)
+            if (!_instance || _instance->GetBossState(DATA_ALGALON) != IN_PROGRESS)
                 return true;    // delete event
 
             _owner->CastSpell((Unit*)nullptr, SPELL_TRIGGER_3_ADDS, TRIGGERED_FULL_MASK);
@@ -306,7 +306,7 @@ class boss_algalon_the_observer : public CreatureScript
 
         struct boss_algalon_the_observerAI : public BossAI
         {
-            boss_algalon_the_observerAI(Creature* creature) : BossAI(creature, BOSS_ALGALON)
+            boss_algalon_the_observerAI(Creature* creature) : BossAI(creature, DATA_ALGALON)
             {
                 Initialize();
                 _firstPull = true;
@@ -379,11 +379,12 @@ class boss_algalon_the_observer : public CreatureScript
                         events.ScheduleEvent(EVENT_DESPAWN_ALGALON_2, 17000);
                         events.ScheduleEvent(EVENT_DESPAWN_ALGALON_3, 26000);
                         me->DespawnOrUnsummon(34000);
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_NPC);
+                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetImmuneToNPC(true);
                         break;
                     case ACTION_INIT_ALGALON:
                         _firstPull = false;
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetImmuneToPC(false);
                         break;
                 }
             }
@@ -393,17 +394,18 @@ class boss_algalon_the_observer : public CreatureScript
                 return type == DATA_HAS_FED_ON_TEARS ? _fedOnTears : 1;
             }
 
-            void JustEngagedWith(Unit* /*target*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 uint32 introDelay = 0;
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_NPC);
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                me->SetImmuneToNPC(true);
                 events.Reset();
                 events.SetPhase(PHASE_ROLE_PLAY);
 
                 if (!_firstPull)
                 {
                     Talk(SAY_ALGALON_AGGRO);
-                    _JustEngagedWith();
+                    _JustEngagedWith(who);
                     introDelay = 8000;
                 }
                 else
@@ -502,9 +504,9 @@ class boss_algalon_the_observer : public CreatureScript
 
             void EnterEvadeMode(EvadeReason why) override
             {
-                instance->SetBossState(BOSS_ALGALON, FAIL);
+                instance->SetBossState(DATA_ALGALON, FAIL);
                 BossAI::EnterEvadeMode(why);
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                me->SetImmuneToPC(false);
                 me->SetSheath(SHEATH_STATE_UNARMED);
             }
 
@@ -579,23 +581,24 @@ class boss_algalon_the_observer : public CreatureScript
                             break;
                         case EVENT_INTRO_FINISH:
                             events.Reset();
-                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                            me->SetImmuneToPC(false);
                             break;
                         case EVENT_START_COMBAT:
-                            instance->SetBossState(BOSS_ALGALON, IN_PROGRESS);
+                            instance->SetBossState(DATA_ALGALON, IN_PROGRESS);
                             break;
                         case EVENT_INTRO_TIMER_DONE:
                         {
                             events.SetPhase(PHASE_NORMAL);
                             me->SetSheath(SHEATH_STATE_MELEE);
-                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_IMMUNE_TO_NPC);
+                            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                            me->SetImmuneToNPC(false);
                             me->SetReactState(REACT_DEFENSIVE);
                             DoCastAOE(SPELL_SUPERMASSIVE_FAIL, true);
                             //! Workaround for Creature::_IsTargetAcceptable returning false
                             //! for creatures that start combat in REACT_PASSIVE and UNIT_FLAG_NOT_SELECTABLE
                             //! causing them to immediately evade
-                            if (!me->getThreatManager().isThreatListEmpty())
-                                AttackStart(me->getThreatManager().getHostilTarget());
+                            if (!me->GetThreatManager().IsThreatListEmpty())
+                                AttackStart(me->GetThreatManager().GetCurrentVictim());
                             for (uint32 i = 0; i < LIVING_CONSTELLATION_COUNT; ++i)
                                 if (Creature* summon = DoSummon(NPC_LIVING_CONSTELLATION, ConstellationPos[i], 0, TEMPSUMMON_DEAD_DESPAWN))
                                     summon->SetReactState(REACT_PASSIVE);
@@ -658,7 +661,7 @@ class boss_algalon_the_observer : public CreatureScript
                             _hasYelled = false;
                             break;
                         case EVENT_OUTRO_START:
-                            instance->SetBossState(BOSS_ALGALON, DONE);
+                            instance->SetBossState(DATA_ALGALON, DONE);
                             break;
                         case EVENT_OUTRO_1:
                             me->RemoveAllAuras();
@@ -1063,8 +1066,6 @@ class spell_algalon_phase_punch : public SpellScriptLoader
 
         class spell_algalon_phase_punch_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_algalon_phase_punch_AuraScript);
-
             void HandlePeriodic(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -1083,8 +1084,8 @@ class spell_algalon_phase_punch : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_algalon_phase_punch_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-                OnEffectRemove += AuraEffectRemoveFn(spell_algalon_phase_punch_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_algalon_phase_punch_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectRemove.Register(&spell_algalon_phase_punch_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -1117,8 +1118,6 @@ class spell_algalon_arcane_barrage : public SpellScriptLoader
 
         class spell_algalon_arcane_barrage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_arcane_barrage_SpellScript);
-
             void SelectTarget(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(NotVictimFilter(GetCaster()));
@@ -1126,7 +1125,7 @@ class spell_algalon_arcane_barrage : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_algalon_arcane_barrage_SpellScript::SelectTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnObjectAreaTargetSelect.Register(&spell_algalon_arcane_barrage_SpellScript::SelectTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
             }
         };
 
@@ -1152,8 +1151,6 @@ class spell_algalon_trigger_3_adds : public SpellScriptLoader
 
         class spell_algalon_trigger_3_adds_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_trigger_3_adds_SpellScript);
-
             void SelectTarget(std::list<WorldObject*>& targets)
             {
                 targets.remove_if(ActiveConstellationFilter());
@@ -1171,8 +1168,8 @@ class spell_algalon_trigger_3_adds : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_algalon_trigger_3_adds_SpellScript::SelectTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
-                OnEffectHitTarget += SpellEffectFn(spell_algalon_trigger_3_adds_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnObjectAreaTargetSelect.Register(&spell_algalon_trigger_3_adds_SpellScript::SelectTarget, EFFECT_0, TARGET_UNIT_SRC_AREA_ENTRY);
+                OnEffectHitTarget.Register(&spell_algalon_trigger_3_adds_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -1189,8 +1186,6 @@ class spell_algalon_collapse : public SpellScriptLoader
 
         class spell_algalon_collapse_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_algalon_collapse_AuraScript);
-
             void HandlePeriodic(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -1199,7 +1194,7 @@ class spell_algalon_collapse : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_algalon_collapse_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_algalon_collapse_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -1216,8 +1211,6 @@ class spell_algalon_big_bang : public SpellScriptLoader
 
         class spell_algalon_big_bang_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_big_bang_SpellScript);
-
         public:
             spell_algalon_big_bang_SpellScript()
             {
@@ -1243,8 +1236,8 @@ class spell_algalon_big_bang : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_algalon_big_bang_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                AfterCast += SpellCastFn(spell_algalon_big_bang_SpellScript::CheckTargets);
+                OnObjectAreaTargetSelect.Register(&spell_algalon_big_bang_SpellScript::CountTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                AfterCast.Register(&spell_algalon_big_bang_SpellScript::CheckTargets);
             }
 
             uint32 _targetCount;
@@ -1263,8 +1256,6 @@ class spell_algalon_remove_phase : public SpellScriptLoader
 
         class spell_algalon_remove_phase_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_algalon_remove_phase_AuraScript);
-
             void HandlePeriodic(AuraEffect const* /*aurEff*/)
             {
                 PreventDefaultAction();
@@ -1273,7 +1264,7 @@ class spell_algalon_remove_phase : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_algalon_remove_phase_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_algalon_remove_phase_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -1291,8 +1282,6 @@ class spell_algalon_cosmic_smash : public SpellScriptLoader
 
         class spell_algalon_cosmic_smash_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_cosmic_smash_SpellScript);
-
             void ModDestHeight(SpellDestination& dest)
             {
                 Position const offset = { 0.0f, 0.0f, 65.0f, 0.0f };
@@ -1301,7 +1290,7 @@ class spell_algalon_cosmic_smash : public SpellScriptLoader
 
             void Register() override
             {
-                OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_algalon_cosmic_smash_SpellScript::ModDestHeight, EFFECT_0, TARGET_DEST_CASTER_SUMMON);
+                OnDestinationTargetSelect.Register(&spell_algalon_cosmic_smash_SpellScript::ModDestHeight, EFFECT_0, TARGET_DEST_CASTER_SUMMON);
             }
         };
 
@@ -1318,8 +1307,6 @@ class spell_algalon_cosmic_smash_damage : public SpellScriptLoader
 
         class spell_algalon_cosmic_smash_damage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_cosmic_smash_damage_SpellScript);
-
             void RecalculateDamage()
             {
                 if (!GetExplTargetDest() || !GetHitUnit())
@@ -1332,7 +1319,7 @@ class spell_algalon_cosmic_smash_damage : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_algalon_cosmic_smash_damage_SpellScript::RecalculateDamage);
+                OnHit.Register(&spell_algalon_cosmic_smash_damage_SpellScript::RecalculateDamage);
             }
         };
 
@@ -1349,8 +1336,6 @@ class spell_algalon_supermassive_fail : public SpellScriptLoader
 
         class spell_algalon_supermassive_fail_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_algalon_supermassive_fail_SpellScript);
-
             void RecalculateDamage()
             {
                 if (!GetHitPlayer())
@@ -1361,7 +1346,7 @@ class spell_algalon_supermassive_fail : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_algalon_supermassive_fail_SpellScript::RecalculateDamage);
+                OnHit.Register(&spell_algalon_supermassive_fail_SpellScript::RecalculateDamage);
             }
         };
 

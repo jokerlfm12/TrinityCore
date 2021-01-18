@@ -181,9 +181,9 @@ public:
             instance->HandleGameObject(instance->GetGuidData(DATA_MASTERS_TERRACE_DOOR_2), open);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(YELL_AGGRO);
             SetupGroundPhase();
         }
@@ -299,7 +299,7 @@ public:
                     me->GetMotionMaster()->MoveAlongSplineChain(POINT_PHASE_TWO_LANDING, SPLINE_CHAIN_SECOND_LANDING, false);
                     break;
                 case EVENT_INTRO_LANDING:
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
                     me->SetInCombatWithZone();
                     break;
                 case EVENT_LAND:
@@ -322,7 +322,7 @@ public:
                     me->GetMotionMaster()->MoveAlongSplineChain(POINT_INTRO_END, SPLINE_CHAIN_INTRO_END, false);
                     break;
                 case EVENT_RAIN_OF_BONES:
-                    DoResetThreat();
+                    ResetThreatList();
                     if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                     {
                         me->SetFacingToObject(target);
@@ -392,8 +392,6 @@ class spell_rain_of_bones : public SpellScriptLoader
 
         class spell_rain_of_bones_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_rain_of_bones_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_SKELETON });
@@ -407,7 +405,7 @@ class spell_rain_of_bones : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_rain_of_bones_AuraScript::OnTrigger, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_rain_of_bones_AuraScript::OnTrigger, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 

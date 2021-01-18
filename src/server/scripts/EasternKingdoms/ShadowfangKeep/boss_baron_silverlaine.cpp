@@ -111,10 +111,10 @@ public:
             _worgenCounter = 0;
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
-            _JustEngagedWith();
             instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             if (IsHeroic())
                 events.ScheduleEvent(EVENT_CURSED_VEIL, Seconds(6));
@@ -439,7 +439,7 @@ public:
                 switch (eventId)
                 {
                     case EVENT_SPECTRAL_RUSH:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 0.0f, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 50.0f, true))
                         {
                             _events.ScheduleEvent(EVENT_SPECTRAL_RAVAGING, Milliseconds(500));
                             DoCast(target, SPELL_SPECTRAL_RUSH);
@@ -519,7 +519,7 @@ public:
                 switch (eventId)
                 {
                     case EVENT_SOUL_DRAIN:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
+                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50.0f, true))
                             DoCast(target, SPELL_SOUL_DRAIN);
                         break;
                     default:
@@ -546,9 +546,7 @@ public:
 
     class spell_sfk_summon_worgen_spirit_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_sfk_summon_worgen_spirit_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+             bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo(
             {
@@ -583,7 +581,7 @@ public:
 
         void Register() override
         {
-            OnEffectLaunch += SpellEffectFn(spell_sfk_summon_worgen_spirit_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectLaunch.Register(&spell_sfk_summon_worgen_spirit_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 

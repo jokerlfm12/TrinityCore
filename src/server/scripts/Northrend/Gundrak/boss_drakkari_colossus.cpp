@@ -108,7 +108,7 @@ class boss_drakkari_colossus : public CreatureScript
                 if (GetData(DATA_INTRO_DONE))
                 {
                     me->SetReactState(REACT_AGGRESSIVE);
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
                     me->RemoveAura(SPELL_FREEZE_ANIM);
                 }
 
@@ -117,9 +117,9 @@ class boss_drakkari_colossus : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->RemoveAura(SPELL_FREEZE_ANIM);
             }
 
@@ -140,7 +140,7 @@ class boss_drakkari_colossus : public CreatureScript
                         me->GetMotionMaster()->MoveIdle();
 
                         me->SetReactState(REACT_PASSIVE);
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetImmuneToPC(true);
                         DoCast(me, SPELL_FREEZE_ANIM);
                         break;
                     case ACTION_UNFREEZE_COLOSSUS:
@@ -148,14 +148,11 @@ class boss_drakkari_colossus : public CreatureScript
                         if (me->GetReactState() == REACT_AGGRESSIVE)
                             return;
 
+                        me->SetImmuneToPC(false);
                         me->SetReactState(REACT_AGGRESSIVE);
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
                         me->RemoveAura(SPELL_FREEZE_ANIM);
 
                         me->SetInCombatWithZone();
-
-                        if (me->GetVictim())
-                            me->GetMotionMaster()->MoveChase(me->GetVictim(), 0, 0);
 
                         break;
                 }
@@ -163,7 +160,7 @@ class boss_drakkari_colossus : public CreatureScript
 
             void DamageTaken(Unit* /*attacker*/, uint32& damage) override
             {
-                if (me->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC))
+                if (me->IsImmuneToPC())
                     damage = 0;
 
                 if (phase == COLOSSUS_PHASE_NORMAL ||

@@ -144,7 +144,6 @@ void WorldSession::HandlePetStopAttack(WorldPacket &recvData)
         return;
 
     pet->AttackStop();
-    pet->ClearInPetCombat();
 }
 
 void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spellid, uint16 flag, ObjectGuid guid2, float x, float y, float z)
@@ -181,7 +180,6 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
                 case COMMAND_FOLLOW:                        //spellid=1792  //FOLLOW
                     pet->AttackStop();
                     pet->InterruptNonMeleeSpells(false);
-                    pet->ClearInPetCombat();
                     pet->FollowTarget(_player);
                     charmInfo->SetCommandState(COMMAND_FOLLOW);
 
@@ -292,8 +290,7 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
             {
                 case REACT_PASSIVE:                         //passive
                     pet->AttackStop();
-                    pet->ClearInPetCombat();
-                    /* fallthrough */
+                    [[fallthrough]];
                 case REACT_DEFENSIVE:                       //recovery
                 case REACT_AGGRESSIVE:                      //activete
                 case REACT_ASSIST:
@@ -348,13 +345,13 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
             {
                 if (unit_target)
                 {
-                    pet->SetInFront(unit_target);
+                    pet->SetOrientationTowards(unit_target);
                     if (Player* player = unit_target->ToPlayer())
                         pet->SendUpdateToPlayer(player);
                 }
                 else if (Unit* unit_target2 = spell->m_targets.GetUnitTarget())
                 {
-                    pet->SetInFront(unit_target2);
+                    pet->SetOrientationTowards(unit_target2);
                     if (Player* player = unit_target2->ToPlayer())
                         pet->SendUpdateToPlayer(player);
                 }
@@ -396,7 +393,7 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
                     }
                 }
 
-                spell->prepare(&(spell->m_targets));
+                spell->prepare(spell->m_targets);
             }
             else
             {
@@ -823,7 +820,7 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
             }
         }
 
-        spell->prepare(&(spell->m_targets));
+        spell->prepare(spell->m_targets);
     }
     else
     {

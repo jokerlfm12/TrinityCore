@@ -104,9 +104,9 @@ class boss_garfrost : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 DoCast(me, SPELL_PERMAFROST);
                 me->CallForHelp(70.0f);
@@ -261,8 +261,6 @@ class spell_garfrost_permafrost : public SpellScriptLoader
 
         class spell_garfrost_permafrost_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_garfrost_permafrost_SpellScript);
-
             void PreventHitByLoS()
             {
                 if (Unit* target = GetHitUnit())
@@ -305,8 +303,8 @@ class spell_garfrost_permafrost : public SpellScriptLoader
 
             void Register() override
             {
-                BeforeHit += SpellHitFn(spell_garfrost_permafrost_SpellScript::PreventHitByLoS);
-                AfterHit += SpellHitFn(spell_garfrost_permafrost_SpellScript::RestoreImmunity);
+                BeforeHit.Register(&spell_garfrost_permafrost_SpellScript::PreventHitByLoS);
+                AfterHit.Register(&spell_garfrost_permafrost_SpellScript::RestoreImmunity);
             }
 
             bool prevented = false;

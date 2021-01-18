@@ -68,7 +68,7 @@ class TC_GAME_API SmartAI : public CreatureAI
         void StopFollow(bool complete);
         bool IsEscortInvokerInRange();
 
-        void WaypointPathStarted(uint32 nodeId, uint32 pathId) override;
+        void WaypointPathStarted(uint32 pathId) override;
         void WaypointStarted(uint32 nodeId, uint32 pathId) override;
         void WaypointReached(uint32 nodeId, uint32 pathId) override;
         void WaypointPathEnded(uint32 nodeId, uint32 pathId) override;
@@ -144,9 +144,6 @@ class TC_GAME_API SmartAI : public CreatureAI
 
         // Called when creature gets charmed by another unit
         void OnCharmed(bool apply) override;
-
-        // Called when victim is in line of sight
-        bool CanAIAttack(Unit const* who) const override;
 
         // Used in scripts to share variables
         void DoAction(int32 param = 0) override;

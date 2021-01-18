@@ -60,7 +60,7 @@ class boss_koralon : public CreatureScript
             {
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 DoCast(me, SPELL_BURNING_FURY);
 
@@ -69,7 +69,7 @@ class boss_koralon : public CreatureScript
                 events.ScheduleEvent(EVENT_METEOR_FISTS, 75000);    // 1st after 75sec, then every 45sec
                 events.ScheduleEvent(EVENT_FLAME_CINDER, 30000);    /// @todo check timer
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
             }
 
             void UpdateAI(uint32 diff) override
@@ -191,8 +191,6 @@ class spell_koralon_meteor_fists : public SpellScriptLoader
 
         class spell_koralon_meteor_fists_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_koralon_meteor_fists_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_METEOR_FISTS_DAMAGE });
@@ -201,12 +199,12 @@ class spell_koralon_meteor_fists : public SpellScriptLoader
             void TriggerFists(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
             {
                 PreventDefaultAction();
-                GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_METEOR_FISTS_DAMAGE, true, nullptr, aurEff);
+                GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_METEOR_FISTS_DAMAGE, aurEff);
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_koralon_meteor_fists_AuraScript::TriggerFists, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_koralon_meteor_fists_AuraScript::TriggerFists, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -223,8 +221,6 @@ class spell_koralon_meteor_fists_damage : public SpellScriptLoader
 
         class spell_koralon_meteor_fists_damage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_koralon_meteor_fists_damage_SpellScript);
-
         public:
             spell_koralon_meteor_fists_damage_SpellScript()
             {
@@ -245,8 +241,8 @@ class spell_koralon_meteor_fists_damage : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_koralon_meteor_fists_damage_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_TARGET_ENEMY);
-                OnHit += SpellHitFn(spell_koralon_meteor_fists_damage_SpellScript::CalculateSplitDamage);
+                OnObjectAreaTargetSelect.Register(&spell_koralon_meteor_fists_damage_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_TARGET_ENEMY);
+                OnHit.Register(&spell_koralon_meteor_fists_damage_SpellScript::CalculateSplitDamage);
             }
 
         private:
@@ -266,8 +262,6 @@ class spell_flame_warder_meteor_fists : public SpellScriptLoader
 
         class spell_flame_warder_meteor_fists_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_flame_warder_meteor_fists_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_FW_METEOR_FISTS_DAMAGE });
@@ -276,12 +270,12 @@ class spell_flame_warder_meteor_fists : public SpellScriptLoader
             void TriggerFists(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
             {
                 PreventDefaultAction();
-                GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_FW_METEOR_FISTS_DAMAGE, true, nullptr, aurEff);
+                GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_FW_METEOR_FISTS_DAMAGE, aurEff);
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_flame_warder_meteor_fists_AuraScript::TriggerFists, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_flame_warder_meteor_fists_AuraScript::TriggerFists, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 

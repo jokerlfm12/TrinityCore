@@ -163,16 +163,9 @@ public:
             Talk(SAY_AGGRO);
 
             for (uint8 i = 0; i < MAX_ACTIVE_LACKEY; ++i)
-            {
                 if (Unit* pAdd = ObjectAccessor::GetUnit(*me, m_auiLackeyGUID[i]))
-                {
-                    if (!pAdd->GetVictim())
-                    {
-                        who->SetInCombatWith(pAdd);
-                        pAdd->AddThreat(who, 0.0f);
-                    }
-                }
-            }
+                    if (!pAdd->IsEngaged())
+                        AddThreat(who, 0.0f, pAdd);
 
             instance->SetBossState(DATA_PRIESTESS_DELRISSA, IN_PROGRESS);
         }
@@ -401,25 +394,14 @@ struct boss_priestess_lackey_commonAI : public ScriptedAI
             return;
 
         for (uint8 i = 0; i < MAX_ACTIVE_LACKEY; ++i)
-        {
             if (Unit* pAdd = ObjectAccessor::GetUnit(*me, m_auiLackeyGUIDs[i]))
-            {
-                if (!pAdd->GetVictim() && pAdd != me)
-                {
-                    who->SetInCombatWith(pAdd);
-                    pAdd->AddThreat(who, 0.0f);
-                }
-            }
-        }
+                if (!pAdd->IsEngaged() && pAdd != me)
+                    AddThreat(who, 0.0f, pAdd);
+
 
         if (Creature* delrissa = instance->GetCreature(DATA_PRIESTESS_DELRISSA))
-        {
-            if (delrissa->IsAlive() && !delrissa->GetVictim())
-            {
-                who->SetInCombatWith(delrissa);
-                delrissa->AddThreat(who, 0.0f);
-            }
-        }
+            if (delrissa->IsAlive() && !delrissa->IsEngaged())
+                AddThreat(who, 0.0f, delrissa);
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -476,7 +458,7 @@ struct boss_priestess_lackey_commonAI : public ScriptedAI
 
         if (ResetThreatTimer <= diff)
         {
-            DoResetThreat();
+            ResetThreatList();
             ResetThreatTimer = urand(5000, 20000);
         } else ResetThreatTimer -= diff;
     }
@@ -543,10 +525,10 @@ public:
 
                 Unit* unit = SelectTarget(SELECT_TARGET_RANDOM, 0);
 
-                DoResetThreat();
+                ResetThreatList();
 
                 if (unit)
-                    me->AddThreat(unit, 1000.0f);
+                    AddThreat(unit, 1000.0f);
 
                 InVanish = true;
                 Vanish_Timer = 30000;
@@ -868,17 +850,12 @@ public:
             if (Blink_Timer <= diff)
             {
                 bool InMeleeRange = false;
-                ThreatContainer::StorageType const &t_list = me->getThreatManager().getThreatList();
-                for (ThreatContainer::StorageType::const_iterator itr = t_list.begin(); itr!= t_list.end(); ++itr)
+                for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
                 {
-                    if (Unit* target = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid()))
+                    if (pair.second->GetOther(me)->IsWithinMeleeRange(me))
                     {
-                        //if in melee range
-                        if (target->IsWithinDistInMap(me, 5))
-                        {
-                            InMeleeRange = true;
-                            break;
-                        }
+                        InMeleeRange = true;
+                        break;
                     }
                 }
 
@@ -962,17 +939,12 @@ public:
             if (Intercept_Stun_Timer <= diff)
             {
                 bool InMeleeRange = false;
-                ThreatContainer::StorageType const &t_list = me->getThreatManager().getThreatList();
-                for (ThreatContainer::StorageType::const_iterator itr = t_list.begin(); itr!= t_list.end(); ++itr)
+                for (auto const& pair : me->GetCombatManager().GetPvECombatRefs())
                 {
-                    if (Unit* target = ObjectAccessor::GetUnit(*me, (*itr)->getUnitGuid()))
+                    if (pair.second->GetOther(me)->IsWithinMeleeRange(me))
                     {
-                        //if in melee range
-                        if (target->IsWithinDistInMap(me, ATTACK_DISTANCE))
-                        {
-                            InMeleeRange = true;
-                            break;
-                        }
+                        InMeleeRange = true;
+                        break;
                     }
                 }
 

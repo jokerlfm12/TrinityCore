@@ -56,81 +56,74 @@ class npc_pet_hunter_snake_trap : public CreatureScript
 
         struct npc_pet_hunter_snake_trapAI : public ScriptedAI
         {
-            npc_pet_hunter_snake_trapAI(Creature* creature) : ScriptedAI(creature)
-            {
-                Initialize();
-            }
-
-            void Initialize()
-            {
-                _spellTimer = 0;
-                _isViper = false;
-            }
+            npc_pet_hunter_snake_trapAI(Creature* creature) : ScriptedAI(creature), _isViper(false), _spellTimer(0) { }
 
             void JustEngagedWith(Unit* /*who*/) override { }
 
-            void Reset() override
+            void JustAppeared() override
             {
-                Initialize();
-
-                CreatureTemplate const* Info = me->GetCreatureTemplate();
-
-                _isViper = Info->Entry == NPC_HUNTER_VIPER ? true : false;
+                _isViper = me->GetEntry() == NPC_HUNTER_VIPER ? true : false;
 
                 me->SetMaxHealth(uint32(107 * (me->getLevel() - 40) * 0.025f));
                 // Add delta to make them not all hit the same time
-                uint32 delta = (rand32() % 7) * 100;
-                me->SetAttackTime(BASE_ATTACK, Info->BaseAttackTime + delta);
-                //me->SetStatFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER, float(Info->attackpower));
+                me->SetAttackTime(BASE_ATTACK, me->GetAttackTime(BASE_ATTACK) + urandms(0,6));
 
-                // Start attacking attacker of owner on first ai update after spawn - move in line of sight may choose better target
-                if (!me->GetVictim() && me->IsSummon())
-                    if (Unit* Owner = me->ToTempSummon()->GetSummoner())
-                        if (Owner->getAttackerForHelper())
-                            AttackStart(Owner->getAttackerForHelper());
-
-                if (!_isViper)
+                if (!_isViper && !me->HasAura(SPELL_HUNTER_DEADLY_POISON_PASSIVE))
                     DoCast(me, SPELL_HUNTER_DEADLY_POISON_PASSIVE, true);
             }
 
             // Redefined for random target selection:
-            void MoveInLineOfSight(Unit* who) override
-            {
-                if (!me->GetVictim() && me->CanCreatureAttack(who))
-                {
-                    if (me->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
-                        return;
-
-                    float attackRadius = me->GetAttackDistance(who);
-                    if (me->IsWithinDistInMap(who, attackRadius) && me->IsWithinLOSInMap(who))
-                    {
-                        if (!(rand32() % 5))
-                        {
-                            me->setAttackTimer(BASE_ATTACK, (rand32() % 10) * 100);
-                            _spellTimer = (rand32() % 10) * 100;
-                            AttackStart(who);
-                        }
-                    }
-                }
-            }
+            void MoveInLineOfSight(Unit* /*who*/) override { }
 
             void UpdateAI(uint32 diff) override
             {
-                if (!UpdateVictim() || !me->GetVictim())
-                    return;
-
-                if (me->EnsureVictim()->HasBreakableByDamageCrowdControlAura(me))
-                {
+                if (me->GetVictim() && me->GetVictim()->HasBreakableByDamageCrowdControlAura())
+                { // don't break cc
+                    me->GetThreatManager().ClearFixate();
                     me->InterruptNonMeleeSpells(false);
+                    me->AttackStop();
                     return;
                 }
+
+                if (me->IsSummon() && !me->GetThreatManager().GetFixateTarget())
+                { // find new target
+                    Unit* summoner = me->ToTempSummon()->GetSummoner();
+
+                    std::vector<Unit*> targets;
+                    for (std::pair<ObjectGuid const, PvPCombatReference*> const& pair : summoner->GetCombatManager().GetPvPCombatRefs())
+                    {
+                        Unit* enemy = pair.second->GetOther(summoner);
+                        if (!enemy->HasBreakableByDamageCrowdControlAura() && me->CanCreatureAttack(enemy) && me->IsWithinDistInMap(enemy, me->GetAttackDistance(enemy)))
+                            targets.push_back(enemy);
+                    }
+
+                    if (targets.empty())
+                        for (std::pair<ObjectGuid const, CombatReference*> const& pair : summoner->GetCombatManager().GetPvECombatRefs())
+                        {
+                            Unit* enemy = pair.second->GetOther(summoner);
+                            if (!enemy->HasBreakableByDamageCrowdControlAura() && me->CanCreatureAttack(enemy) && me->IsWithinDistInMap(enemy, me->GetAttackDistance(enemy)))
+                                targets.push_back(enemy);
+                        }
+
+                    for (Unit* target : targets)
+                        me->EngageWithTarget(target);
+
+                    if (!targets.empty())
+                    {
+                        Unit* target = Trinity::Containers::SelectRandomContainerElement(targets);
+                        me->GetThreatManager().FixateTarget(target);
+                    }
+                }
+
+                if (!UpdateVictim())
+                    return;
 
                 // Viper
                 if (_isViper)
                 {
                     if (_spellTimer <= diff)
                     {
-                        if (urand(0, 2) == 0) // 33% chance to cast
+                        if (!urand(0, 2)) // 33% chance to cast
                             DoCastVictim(RAND(SPELL_HUNTER_MIND_NUMBING_POISON, SPELL_HUNTER_CRIPPLING_POISON));
 
                         _spellTimer = 3000;
@@ -161,8 +154,6 @@ class spell_pet_guard_dog : public SpellScriptLoader
 
         class spell_pet_guard_dog_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_pet_guard_dog_AuraScript);
-
             bool CheckProc(ProcEventInfo& eventInfo)
             {
                 // Growl shares family flags with other spells
@@ -180,14 +171,18 @@ class spell_pet_guard_dog : public SpellScriptLoader
 
                 Unit* caster = eventInfo.GetActor();
 
+                Unit* target = eventInfo.GetProcTarget();
+                if (!target->CanHaveThreatList())
+                    return;
+
                 float addThreat = CalculatePct(ASSERT_NOTNULL(eventInfo.GetSpellInfo())->Effects[EFFECT_0].CalcValue(caster), aurEff->GetAmount());
-                eventInfo.GetProcTarget()->AddThreat(caster, addThreat);
+                target->GetThreatManager().AddThreat(caster, addThreat, GetSpellInfo(), false, true);
             }
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_pet_guard_dog_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_pet_guard_dog_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_pet_guard_dog_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_pet_guard_dog_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -205,8 +200,6 @@ class spell_pet_silverback : public SpellScriptLoader
 
         class spell_pet_silverback_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_pet_silverback_AuraScript);
-
             bool CheckProc(ProcEventInfo& eventInfo)
             {
                 // Growl shares family flags with other spells
@@ -225,13 +218,13 @@ class spell_pet_silverback : public SpellScriptLoader
                 PreventDefaultAction();
 
                 uint32 spellId = triggerSpell[GetSpellInfo()->GetRank() - 1];
-                eventInfo.GetActor()->CastSpell((Unit*)nullptr, spellId, true, nullptr, aurEff);
+                eventInfo.GetActor()->CastSpell((Unit*)nullptr, spellId, aurEff);
             }
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_pet_silverback_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_pet_silverback_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_pet_silverback_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_pet_silverback_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -249,8 +242,6 @@ class spell_pet_culling_the_herd : public SpellScriptLoader
 
         class spell_pet_culling_the_herd_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_pet_culling_the_herd_AuraScript);
-
             bool CheckProc(ProcEventInfo& eventInfo)
             {
                 // Claw, Bite and Smack share FamilyFlags with other spells
@@ -274,7 +265,7 @@ class spell_pet_culling_the_herd : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_pet_culling_the_herd_AuraScript::CheckProc);
+                DoCheckProc.Register(&spell_pet_culling_the_herd_AuraScript::CheckProc);
             }
         };
 

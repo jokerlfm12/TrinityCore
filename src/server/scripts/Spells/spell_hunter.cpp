@@ -45,19 +45,26 @@ enum HunterSpells
     SPELL_HUNTER_CAMOUFLAGE_PERIODIC_TRIGGERED      = 80325,
     SPELL_HUNTER_CHIMERA_SHOT                       = 53209,
     SPELL_HUNTER_CHIMERA_SHOT_HEAL                  = 53353,
+    SPELL_HUNTER_DISENGAGE                          = 781,
+    SPELL_HUNTER_DETERRENCE                         = 19263,
+    SPELL_HUNTER_FERVOR_PET_ENERGIZE                = 82728,
     SPELL_HUNTER_FIRE                               = 82926,
     SPELL_HUNTER_FRENZY_EFFECT                      = 19615,
     SPELL_HUNTER_FOCUS_FIRE_ENERGIZE                = 83468,
     SPELL_HUNTER_FOCUS_FIRE_DUMMY                   = 88843,
+    SPELL_HUNTER_FOCUS_FIRE                         = 82692,
     SPELL_HUNTER_GENERIC_ENERGIZE_FOCUS             = 91954,
     SPELL_HUNTER_IMPROVED_MEND_PET                  = 24406,
     SPELL_HUNTER_IMPROVED_SERPENT_STING_DAMAGE      = 83077,
     SPELL_HUNTER_INSANITY                           = 95809,
     SPELL_HUNTER_INVIGORATION_TRIGGERED             = 53398,
     SPELL_HUNTER_GLYPH_OF_KILL_SHOT_COOLDOWN        = 90967,
+    SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R1        = 94006,
+    SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R2        = 94007,
     SPELL_HUNTER_LOCK_AND_LOAD                      = 56453,
     SPELL_HUNTER_MARKED_FOR_DEATH_TRIGGERED         = 88691,
     SPELL_HUNTER_MASTERS_CALL_TRIGGERED             = 62305,
+    SPELL_HUNTER_MISDIRECTION                       = 34477,
     SPELL_HUNTER_MISDIRECTION_PROC                  = 35079,
     SPELL_HUNTER_MULTISHOT                          = 2643,
     SPELL_HUNTER_PET_LAST_STAND_TRIGGERED           = 53479,
@@ -104,8 +111,6 @@ class spell_hun_ancient_hysteria : public SpellScriptLoader
 
         class spell_hun_ancient_hysteria_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_ancient_hysteria_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -133,8 +138,8 @@ class spell_hun_ancient_hysteria : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_ancient_hysteria_SpellScript::RemoveInvalidTargets, EFFECT_ALL, TARGET_UNIT_CASTER_AREA_RAID);
-                AfterHit += SpellHitFn(spell_hun_ancient_hysteria_SpellScript::ApplyDebuff);
+                OnObjectAreaTargetSelect.Register(&spell_hun_ancient_hysteria_SpellScript::RemoveInvalidTargets, EFFECT_ALL, TARGET_UNIT_CASTER_AREA_RAID);
+                AfterHit.Register(&spell_hun_ancient_hysteria_SpellScript::ApplyDebuff);
             }
         };
 
@@ -152,8 +157,6 @@ class spell_hun_chimera_shot : public SpellScriptLoader
 
         class spell_hun_chimera_shot_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_chimera_shot_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_CHIMERA_SHOT_HEAL, SPELL_HUNTER_SERPENT_STING });
@@ -174,7 +177,7 @@ class spell_hun_chimera_shot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_chimera_shot_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_hun_chimera_shot_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -192,8 +195,6 @@ class spell_hun_cobra_shot : public SpellScriptLoader
 
         class spell_hun_cobra_shot_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_cobra_shot_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -227,7 +228,7 @@ class spell_hun_cobra_shot : public SpellScriptLoader
                             if (spellTarget->GetHealthPct() <= float(terminationAura->GetSpellInfo()->Effects[EFFECT_1].BasePoints))
                                 amount += terminationAura->GetEffect(EFFECT_0)->GetAmount();
                     }
-                    caster->CastCustomSpell(SPELL_HUNTER_GENERIC_ENERGIZE_FOCUS, SPELLVALUE_BASE_POINT0, amount, caster, true);
+                    caster->CastSpell(caster, SPELL_HUNTER_GENERIC_ENERGIZE_FOCUS, CastSpellExtraArgs(true).AddSpellBP0(amount));
                 }
             }
 
@@ -242,8 +243,8 @@ class spell_hun_cobra_shot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectLaunch += SpellEffectFn(spell_hun_cobra_shot_SpellScript::HandleLaunch, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
-                OnEffectHitTarget += SpellEffectFn(spell_hun_cobra_shot_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectLaunch.Register(&spell_hun_cobra_shot_SpellScript::HandleLaunch, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_hun_cobra_shot_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -261,8 +262,6 @@ class spell_hun_disengage : public SpellScriptLoader
 
         class spell_hun_disengage_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_disengage_SpellScript);
-
             SpellCastResult CheckCast()
             {
                 Unit* caster = GetCaster();
@@ -274,7 +273,7 @@ class spell_hun_disengage : public SpellScriptLoader
 
             void Register() override
             {
-                OnCheckCast += SpellCheckCastFn(spell_hun_disengage_SpellScript::CheckCast);
+                OnCheckCast.Register(&spell_hun_disengage_SpellScript::CheckCast);
             }
         };
 
@@ -292,8 +291,6 @@ class spell_hun_fire : public SpellScriptLoader
 
         class spell_hun_fire_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_fire_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_AIMED_SHOT_INSTANT });
@@ -320,8 +317,8 @@ class spell_hun_fire : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_fire_AuraScript::CheckProc);
-                DoEffectCalcSpellMod += AuraEffectCalcSpellModFn(spell_hun_fire_AuraScript::HandleEffectCalcSpellMod, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_hun_fire_AuraScript::CheckProc);
+                DoEffectCalcSpellMod.Register(&spell_hun_fire_AuraScript::HandleEffectCalcSpellMod, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -339,8 +336,6 @@ class spell_hun_improved_mend_pet : public SpellScriptLoader
 
         class spell_hun_improved_mend_pet_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_improved_mend_pet_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_IMPROVED_MEND_PET });
@@ -354,13 +349,13 @@ class spell_hun_improved_mend_pet : public SpellScriptLoader
             void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
             {
                 PreventDefaultAction();
-                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_IMPROVED_MEND_PET, true, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_IMPROVED_MEND_PET, aurEff);
             }
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_improved_mend_pet_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_hun_improved_mend_pet_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_hun_improved_mend_pet_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_hun_improved_mend_pet_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -373,8 +368,6 @@ class spell_hun_improved_mend_pet : public SpellScriptLoader
 // 53412 - Invigoration
 class spell_hun_invigoration : public SpellScript
 {
-    PrepareSpellScript(spell_hun_invigoration);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_INVIGORATION_TRIGGERED });
@@ -384,12 +377,12 @@ class spell_hun_invigoration : public SpellScript
     {
         Unit* target = GetHitUnit();
         if (AuraEffect* aurEff = target->GetDummyAuraEffect(SPELLFAMILY_HUNTER, HUNTER_ICON_ID_INVIGORATION, EFFECT_0))
-            target->CastCustomSpell(SPELL_HUNTER_INVIGORATION_TRIGGERED, SPELLVALUE_BASE_POINT0, aurEff->GetAmount(), target, true, nullptr, aurEff);
+            target->CastSpell(target, SPELL_HUNTER_INVIGORATION_TRIGGERED, CastSpellExtraArgs(aurEff).AddSpellBP0(aurEff->GetAmount()));
     }
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_hun_invigoration::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+        OnEffectHitTarget.Register(&spell_hun_invigoration::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
 };
 
@@ -401,8 +394,6 @@ class spell_hun_last_stand_pet : public SpellScriptLoader
 
         class spell_hun_last_stand_pet_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_last_stand_pet_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_PET_LAST_STAND_TRIGGERED });
@@ -412,12 +403,12 @@ class spell_hun_last_stand_pet : public SpellScriptLoader
             {
                 Unit* caster = GetCaster();
                 int32 healthModSpellBasePoints0 = int32(caster->CountPctFromMaxHealth(30));
-                caster->CastCustomSpell(caster, SPELL_HUNTER_PET_LAST_STAND_TRIGGERED, &healthModSpellBasePoints0, nullptr, nullptr, true, nullptr);
+                caster->CastSpell(caster, SPELL_HUNTER_PET_LAST_STAND_TRIGGERED, CastSpellExtraArgs(true).AddSpellBP0(healthModSpellBasePoints0));
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_last_stand_pet_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_hun_last_stand_pet_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -435,8 +426,6 @@ class spell_hun_lock_and_load : public SpellScriptLoader
 
         class spell_hun_lock_and_load_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_lock_and_load_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -478,10 +467,10 @@ class spell_hun_lock_and_load : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_lock_and_load_AuraScript::CheckProc);
+                DoCheckProc.Register(&spell_hun_lock_and_load_AuraScript::CheckProc);
 
-                OnEffectProc += AuraEffectProcFn(spell_hun_lock_and_load_AuraScript::HandleProcs<PROC_FLAG_DONE_TRAP_ACTIVATION>, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-                OnEffectProc += AuraEffectProcFn(spell_hun_lock_and_load_AuraScript::HandleProcs<PROC_FLAG_DONE_PERIODIC>, EFFECT_1, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_hun_lock_and_load_AuraScript::HandleProcs<PROC_FLAG_DONE_TRAP_ACTIVATION>, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+                OnEffectProc.Register(&spell_hun_lock_and_load_AuraScript::HandleProcs<PROC_FLAG_DONE_PERIODIC>, EFFECT_1, SPELL_AURA_DUMMY);
             }
         };
 
@@ -499,8 +488,6 @@ class spell_hun_masters_call : public SpellScriptLoader
 
         class spell_hun_masters_call_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_masters_call_SpellScript);
-
             bool Validate(SpellInfo const* spellInfo) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_MASTERS_CALL_TRIGGERED, uint32(spellInfo->Effects[EFFECT_0].CalcValue()) });
@@ -529,8 +516,8 @@ class spell_hun_masters_call : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_masters_call_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
-                OnEffectHitTarget += SpellEffectFn(spell_hun_masters_call_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_hun_masters_call_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_hun_masters_call_SpellScript::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -548,8 +535,6 @@ class spell_hun_misdirection : public SpellScriptLoader
 
         class spell_hun_misdirection_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_misdirection_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_MISDIRECTION_PROC });
@@ -558,25 +543,19 @@ class spell_hun_misdirection : public SpellScriptLoader
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDefault) || !GetTarget()->HasAura(SPELL_HUNTER_MISDIRECTION_PROC))
-                    GetTarget()->ResetRedirectThreat();
-            }
-
-            bool CheckProc(ProcEventInfo& /*eventInfo*/)
-            {
-                return GetTarget()->GetRedirectThreatTarget() != nullptr;
+                    GetTarget()->GetThreatManager().UnregisterRedirectThreat(SPELL_HUNTER_MISDIRECTION);
             }
 
             void HandleProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
             {
                 PreventDefaultAction();
-                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_MISDIRECTION_PROC, true, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_MISDIRECTION_PROC, aurEff);
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_hun_misdirection_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                DoCheckProc += AuraCheckProcFn(spell_hun_misdirection_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_hun_misdirection_AuraScript::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+                AfterEffectRemove.Register(&spell_hun_misdirection_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectProc.Register(&spell_hun_misdirection_AuraScript::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
             }
         };
 
@@ -594,16 +573,14 @@ class spell_hun_misdirection_proc : public SpellScriptLoader
 
         class spell_hun_misdirection_proc_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_misdirection_proc_AuraScript);
-
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                GetTarget()->ResetRedirectThreat();
+                GetTarget()->GetThreatManager().UnregisterRedirectThreat(SPELL_HUNTER_MISDIRECTION);
             }
 
             void Register() override
             {
-                AfterEffectRemove += AuraEffectRemoveFn(spell_hun_misdirection_proc_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_hun_misdirection_proc_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -621,8 +598,6 @@ class spell_hun_pet_carrion_feeder : public SpellScriptLoader
 
         class spell_hun_pet_carrion_feeder_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_pet_carrion_feeder_SpellScript);
-
             bool Load() override
             {
                 if (!GetCaster()->IsPet())
@@ -659,8 +634,8 @@ class spell_hun_pet_carrion_feeder : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_hun_pet_carrion_feeder_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
-                OnCheckCast += SpellCheckCastFn(spell_hun_pet_carrion_feeder_SpellScript::CheckIfCorpseNear);
+                OnEffectHit.Register(&spell_hun_pet_carrion_feeder_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnCheckCast.Register(&spell_hun_pet_carrion_feeder_SpellScript::CheckIfCorpseNear);
             }
         };
 
@@ -678,8 +653,6 @@ class spell_hun_pet_heart_of_the_phoenix : public SpellScriptLoader
 
         class spell_hun_pet_heart_of_the_phoenix_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_pet_heart_of_the_phoenix_SpellScript);
-
             bool Load() override
             {
                 if (!GetCaster()->IsPet())
@@ -698,14 +671,14 @@ class spell_hun_pet_heart_of_the_phoenix : public SpellScriptLoader
                 if (Unit* owner = caster->GetOwner())
                     if (!caster->HasAura(SPELL_HUNTER_PET_HEART_OF_THE_PHOENIX_DEBUFF))
                     {
-                        owner->CastCustomSpell(SPELL_HUNTER_PET_HEART_OF_THE_PHOENIX_TRIGGERED, SPELLVALUE_BASE_POINT0, 100, caster, true);
+                        owner->CastSpell(caster, SPELL_HUNTER_PET_HEART_OF_THE_PHOENIX_TRIGGERED, CastSpellExtraArgs(true).AddSpellBP0(100));
                         caster->CastSpell(caster, SPELL_HUNTER_PET_HEART_OF_THE_PHOENIX_DEBUFF, true);
                     }
             }
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_pet_heart_of_the_phoenix_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_hun_pet_heart_of_the_phoenix_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -723,8 +696,6 @@ class spell_hun_rapid_recuperation : public SpellScriptLoader
 
         class spell_hun_rapid_recuperation_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_rapid_recuperation_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_RAPID_RECUPERATION });
@@ -745,13 +716,13 @@ class spell_hun_rapid_recuperation : public SpellScriptLoader
                     return;
 
                 int32 focus = aurEff->GetAmount();
-                GetTarget()->CastCustomSpell(SPELL_HUNTER_RAPID_RECUPERATION, SPELLVALUE_BASE_POINT0, focus, GetTarget(), true, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_RAPID_RECUPERATION, CastSpellExtraArgs(aurEff).AddSpellBP0(focus));
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_hun_rapid_recuperation_AuraScript::HandleAbilityCast, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
-                OnEffectProc += AuraEffectProcFn(spell_hun_rapid_recuperation_AuraScript::HandleFocusRegen, EFFECT_1, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_hun_rapid_recuperation_AuraScript::HandleAbilityCast, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+                OnEffectProc.Register(&spell_hun_rapid_recuperation_AuraScript::HandleFocusRegen, EFFECT_1, SPELL_AURA_DUMMY);
             }
         };
 
@@ -769,8 +740,6 @@ class spell_hun_readiness : public SpellScriptLoader
 
         class spell_hun_readiness_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_readiness_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_PLAYER;
@@ -796,7 +765,7 @@ class spell_hun_readiness : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_readiness_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_hun_readiness_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -814,8 +783,6 @@ class spell_hun_ready_set_aim : public SpellScriptLoader
 
         class spell_hun_ready_set_aim_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_ready_set_aim_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_FIRE });
@@ -825,14 +792,14 @@ class spell_hun_ready_set_aim : public SpellScriptLoader
             {
                 if (GetStackAmount() == 5)
                 {
-                    GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_FIRE, true, nullptr, aurEff);
+                    GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_FIRE, aurEff);
                     GetTarget()->RemoveAura(GetId());
                 }
             }
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_hun_ready_set_aim_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+                AfterEffectApply.Register(&spell_hun_ready_set_aim_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
             }
         };
 
@@ -850,8 +817,6 @@ class spell_hun_scatter_shot : public SpellScriptLoader
 
         class spell_hun_scatter_shot_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_scatter_shot_SpellScript);
-
             bool Load() override
             {
                 return GetCaster()->GetTypeId() == TYPEID_PLAYER;
@@ -868,7 +833,7 @@ class spell_hun_scatter_shot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_hun_scatter_shot_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_hun_scatter_shot_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 
@@ -886,8 +851,6 @@ class spell_hun_sniper_training : public SpellScriptLoader
 
         class spell_hun_sniper_training_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_sniper_training_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_SNIPER_TRAINING_R1, SPELL_HUNTER_SNIPER_TRAINING_BUFF_R1 });
@@ -901,7 +864,7 @@ class spell_hun_sniper_training : public SpellScriptLoader
                     Unit* target = GetTarget();
                     uint32 spellId = SPELL_HUNTER_SNIPER_TRAINING_BUFF_R1 + GetId() - SPELL_HUNTER_SNIPER_TRAINING_R1;
 
-                    target->CastSpell(target, spellId, true, 0, aurEff);
+                    target->CastSpell(target, spellId, aurEff);
                     if (Player* playerTarget = GetUnitOwner()->ToPlayer())
                     {
                         int32 baseAmount = aurEff->GetBaseAmount();
@@ -925,8 +888,8 @@ class spell_hun_sniper_training : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_sniper_training_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
-                OnEffectUpdatePeriodic += AuraEffectUpdatePeriodicFn(spell_hun_sniper_training_AuraScript::HandleUpdatePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_hun_sniper_training_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectUpdatePeriodic.Register(&spell_hun_sniper_training_AuraScript::HandleUpdatePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 
@@ -944,8 +907,6 @@ class spell_hun_steady_shot : public SpellScriptLoader
 
         class spell_hun_steady_shot_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_steady_shot_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -982,13 +943,13 @@ class spell_hun_steady_shot : public SpellScriptLoader
                                 amount += terminationAura->GetEffect(EFFECT_0)->GetAmount();
                     }
 
-                    caster->CastCustomSpell(SPELL_HUNTER_STEADY_SHOT_FOCUS, SPELLVALUE_BASE_POINT0, amount, caster, true);
+                    caster->CastSpell(caster, SPELL_HUNTER_STEADY_SHOT_FOCUS, CastSpellExtraArgs(true).AddSpellBP0(amount));
                 }
             }
 
             void Register() override
             {
-                OnEffectLaunch += SpellEffectFn(spell_hun_steady_shot_SpellScript::HandleLaunch, EFFECT_0, SPELL_EFFECT_NORMALIZED_WEAPON_DMG);
+                OnEffectLaunch.Register(&spell_hun_steady_shot_SpellScript::HandleLaunch, EFFECT_0, SPELL_EFFECT_NORMALIZED_WEAPON_DMG);
             }
         };
 
@@ -1006,8 +967,6 @@ class spell_hun_improved_steady_shot : public SpellScriptLoader
 
         class spell_hun_improved_steady_shot_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_improved_steady_shot_AuraScript);
-
             bool Load() override
             {
                 _steadyShotCounter = 0;
@@ -1027,7 +986,7 @@ class spell_hun_improved_steady_shot : public SpellScriptLoader
                     _steadyShotCounter++;
                     if (_steadyShotCounter == 2)
                     {
-                        GetCaster()->CastCustomSpell(SPELL_HUNTER_IMPROVED_STEADY_SHOT_TRIGGERED, SPELLVALUE_BASE_POINT0, aurEff->GetAmount(), GetCaster(), true);
+                        GetCaster()->CastSpell(GetCaster(), SPELL_HUNTER_IMPROVED_STEADY_SHOT_TRIGGERED, CastSpellExtraArgs(aurEff).AddSpellBP0(aurEff->GetAmount()));
                         _steadyShotCounter = 0;
                     }
                 }
@@ -1037,7 +996,7 @@ class spell_hun_improved_steady_shot : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_hun_improved_steady_shot_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_hun_improved_steady_shot_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
 
         private:
@@ -1067,8 +1026,6 @@ class spell_hun_tame_beast : public SpellScriptLoader
 
         class spell_hun_tame_beast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_tame_beast_SpellScript);
-
             SpellCastResult SendTameFailResult(PetTameFailureReason reason)
             {
                 Player* player = GetCaster()->ToPlayer();
@@ -1121,7 +1078,7 @@ class spell_hun_tame_beast : public SpellScriptLoader
 
             void Register() override
             {
-                OnCheckCast += SpellCheckCastFn(spell_hun_tame_beast_SpellScript::CheckCast);
+                OnCheckCast.Register(&spell_hun_tame_beast_SpellScript::CheckCast);
             }
         };
 
@@ -1139,8 +1096,6 @@ class spell_hun_target_only_pet_and_owner : public SpellScriptLoader
 
         class spell_hun_target_only_pet_and_owner_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_hun_target_only_pet_and_owner_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 targets.clear();
@@ -1151,8 +1106,8 @@ class spell_hun_target_only_pet_and_owner : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_target_only_pet_and_owner_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_CASTER_AREA_PARTY);
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_hun_target_only_pet_and_owner_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_CASTER_AREA_PARTY);
+                OnObjectAreaTargetSelect.Register(&spell_hun_target_only_pet_and_owner_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_CASTER_AREA_PARTY);
+                OnObjectAreaTargetSelect.Register(&spell_hun_target_only_pet_and_owner_SpellScript::FilterTargets, EFFECT_1, TARGET_UNIT_CASTER_AREA_PARTY);
             }
         };
 
@@ -1170,8 +1125,6 @@ class spell_hun_thrill_of_the_hunt : public SpellScriptLoader
 
         class spell_hun_thrill_of_the_hunt_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_thrill_of_the_hunt_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_THRILL_OF_THE_HUNT });
@@ -1183,12 +1136,12 @@ class spell_hun_thrill_of_the_hunt : public SpellScriptLoader
                 int32 focus = eventInfo.GetDamageInfo()->GetSpellInfo()->CalcPowerCost(GetTarget(), SpellSchoolMask(eventInfo.GetDamageInfo()->GetSchoolMask()));
                 focus = CalculatePct(focus, aurEff->GetAmount());
 
-                GetTarget()->CastCustomSpell(GetTarget(), SPELL_HUNTER_THRILL_OF_THE_HUNT, &focus, nullptr, nullptr, true, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_THRILL_OF_THE_HUNT, CastSpellExtraArgs(aurEff).AddSpellBP0(focus));
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_hun_thrill_of_the_hunt_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_hun_thrill_of_the_hunt_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -1201,8 +1154,6 @@ class spell_hun_thrill_of_the_hunt : public SpellScriptLoader
 // -56333 - T.N.T.
 class spell_hun_tnt : public AuraScript
 {
-    PrepareAuraScript(spell_hun_tnt);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_LOCK_AND_LOAD });
@@ -1216,13 +1167,13 @@ class spell_hun_tnt : public AuraScript
     void HandleEffectProc(AuraEffect const* aurEff, ProcEventInfo& /*eventInfo*/)
     {
         PreventDefaultAction();
-        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_LOCK_AND_LOAD, true, nullptr, aurEff);
+        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_LOCK_AND_LOAD, aurEff);
     }
 
     void Register() override
     {
-        DoCheckProc += AuraCheckProcFn(spell_hun_tnt::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_hun_tnt::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
+        DoCheckProc.Register(&spell_hun_tnt::CheckProc);
+        OnEffectProc.Register(&spell_hun_tnt::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1234,8 +1185,6 @@ class spell_hun_wild_quiver : public SpellScriptLoader
 
         class spell_hun_wild_quiver_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_wild_quiver_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_WILD_QUIVER_DAMAGE });
@@ -1251,13 +1200,13 @@ class spell_hun_wild_quiver : public SpellScriptLoader
                 PreventDefaultAction();
                 if (Unit* caster = GetCaster())
                     if (Unit* target = eventInfo.GetActionTarget())
-                        caster->CastSpell(target, SPELL_HUNTER_WILD_QUIVER_DAMAGE, true, nullptr, aurEff);
+                        caster->CastSpell(target, SPELL_HUNTER_WILD_QUIVER_DAMAGE, aurEff);
             }
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_wild_quiver_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_hun_wild_quiver_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
+                DoCheckProc.Register(&spell_hun_wild_quiver_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_hun_wild_quiver_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 
@@ -1270,8 +1219,6 @@ class spell_hun_wild_quiver : public SpellScriptLoader
 // 1978 - Serpent Sting
 class spell_hun_serpent_sting : public AuraScript
 {
-    PrepareAuraScript(spell_hun_serpent_sting);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_IMPROVED_SERPENT_STING_DAMAGE });
@@ -1286,13 +1233,13 @@ class spell_hun_serpent_sting : public AuraScript
         if (AuraEffect const* improved = caster->GetDummyAuraEffect(SPELLFAMILY_HUNTER, HUNTER_ICON_ID_IMPROVED_SERPPENT_STING, EFFECT_0))
         {
             int32 bp = CalculatePct(aurEff->GetAmount() * aurEff->GetTotalTicks(), improved->GetAmount());
-            caster->CastCustomSpell(SPELL_HUNTER_IMPROVED_SERPENT_STING_DAMAGE, SPELLVALUE_BASE_POINT0, bp, GetTarget(), true, nullptr, improved);
+            caster->CastSpell(GetTarget(), SPELL_HUNTER_IMPROVED_SERPENT_STING_DAMAGE, CastSpellExtraArgs(improved).AddSpellBP0(bp));
         }
     }
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_hun_serpent_sting::HandleImprovedSerpentSting, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+        AfterEffectApply.Register(&spell_hun_serpent_sting::HandleImprovedSerpentSting, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
     }
 };
 
@@ -1304,8 +1251,6 @@ class spell_hun_piercing_shots : public SpellScriptLoader
 
         class spell_hun_piercing_shots_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_piercing_shots_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo(
@@ -1345,14 +1290,14 @@ class spell_hun_piercing_shots : public SpellScriptLoader
                 if (tickNumber)
                 {
                     uint32 damage = CalculatePct(eventInfo.GetDamageInfo()->GetDamage() * aurEff->GetAmount(), 1) / tickNumber;
-                    GetCaster()->CastCustomSpell(SPELL_HUNTER_PIERCING_SHOTS, SPELLVALUE_BASE_POINT0, damage, eventInfo.GetActionTarget(), true);
+                    GetCaster()->CastSpell(eventInfo.GetActionTarget(), SPELL_HUNTER_PIERCING_SHOTS, CastSpellExtraArgs(aurEff).AddSpellBP0(damage));
                 }
             }
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_piercing_shots_AuraScript::CheckProc);
-                OnEffectProc += AuraEffectProcFn(spell_hun_piercing_shots_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
+                DoCheckProc.Register(&spell_hun_piercing_shots_AuraScript::CheckProc);
+                OnEffectProc.Register(&spell_hun_piercing_shots_AuraScript::HandleEffectProc, EFFECT_0, SPELL_AURA_PROC_TRIGGER_SPELL);
             }
         };
 
@@ -1370,8 +1315,6 @@ class spell_hun_master_marksman : public SpellScriptLoader
 
         class spell_hun_master_marksman_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_master_marksman_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_STEADY_SHOT });
@@ -1384,7 +1327,7 @@ class spell_hun_master_marksman : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_master_marksman_AuraScript::CheckProc);
+                DoCheckProc.Register(&spell_hun_master_marksman_AuraScript::CheckProc);
             }
         };
 
@@ -1402,8 +1345,6 @@ class spell_hun_bombardment : public SpellScriptLoader
 
         class spell_hun_bombardment_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_hun_bombardment_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_HUNTER_MULTISHOT });
@@ -1416,7 +1357,7 @@ class spell_hun_bombardment : public SpellScriptLoader
 
             void Register() override
             {
-                DoCheckProc += AuraCheckProcFn(spell_hun_bombardment_AuraScript::CheckProc);
+                DoCheckProc.Register(&spell_hun_bombardment_AuraScript::CheckProc);
             }
         };
 
@@ -1428,8 +1369,6 @@ class spell_hun_bombardment : public SpellScriptLoader
 
 class spell_hun_trap_launcher : public AuraScript
 {
-    PrepareAuraScript(spell_hun_trap_launcher);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_IMPROVED_STEADY_SHOT_TRIGGERED });
@@ -1437,7 +1376,7 @@ class spell_hun_trap_launcher : public AuraScript
 
     void AfterApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_IMPROVED_STEADY_SHOT_TRIGGERED, true, nullptr, aurEff);
+        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_IMPROVED_STEADY_SHOT_TRIGGERED, aurEff);
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -1447,16 +1386,14 @@ class spell_hun_trap_launcher : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_hun_trap_launcher::AfterApply, EFFECT_0, SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_trap_launcher::AfterRemove, EFFECT_0, SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_hun_trap_launcher::AfterApply, EFFECT_0, SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_hun_trap_launcher::AfterRemove, EFFECT_0, SPELL_AURA_OVERRIDE_ACTIONBAR_SPELLS_TRIGGERED, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 // 63067 - Glyph of Kill Shot
 class spell_hun_glyph_of_kill_shot : public AuraScript
 {
-    PrepareAuraScript(spell_hun_glyph_of_kill_shot);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_GLYPH_OF_KILL_SHOT_COOLDOWN });
@@ -1478,22 +1415,20 @@ class spell_hun_glyph_of_kill_shot : public AuraScript
         if (damage->GetDamage() < victim->GetHealth())
         {
             target->GetSpellHistory()->ResetCooldown(spell->Id, true);
-            target->CastSpell(target, SPELL_HUNTER_GLYPH_OF_KILL_SHOT_COOLDOWN, true, nullptr, aurEff);
+            target->CastSpell(target, SPELL_HUNTER_GLYPH_OF_KILL_SHOT_COOLDOWN, aurEff);
         }
     }
 
     void Register() override
     {
-        DoCheckProc += AuraCheckProcFn(spell_hun_glyph_of_kill_shot::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_hun_glyph_of_kill_shot::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+        DoCheckProc.Register(&spell_hun_glyph_of_kill_shot::CheckProc);
+        OnEffectProc.Register(&spell_hun_glyph_of_kill_shot::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
 // 51753 - Camouflage
 class spell_hun_camouflage : public SpellScript
 {
-    PrepareSpellScript(spell_hun_camouflage);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_CAMOUFLAGE_DURATION });
@@ -1513,15 +1448,13 @@ class spell_hun_camouflage : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_hun_camouflage::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_hun_camouflage::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
 // 51755 - Camouflage
 class spell_hun_camouflage_duration : public AuraScript
 {
-    PrepareAuraScript(spell_hun_camouflage_duration);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1533,7 +1466,7 @@ class spell_hun_camouflage_duration : public AuraScript
 
     void AfterApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
-        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_CAMOUFLAGE_PERIODIC, true, nullptr, aurEff);
+        GetTarget()->CastSpell(GetTarget(), SPELL_HUNTER_CAMOUFLAGE_PERIODIC, aurEff);
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -1544,16 +1477,14 @@ class spell_hun_camouflage_duration : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_hun_camouflage_duration::AfterApply, EFFECT_0, SPELL_AURA_INTERFERE_TARGETTING, AURA_EFFECT_HANDLE_REAL);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_camouflage_duration::AfterRemove, EFFECT_0, SPELL_AURA_INTERFERE_TARGETTING, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_hun_camouflage_duration::AfterApply, EFFECT_0, SPELL_AURA_INTERFERE_TARGETTING, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_hun_camouflage_duration::AfterRemove, EFFECT_0, SPELL_AURA_INTERFERE_TARGETTING, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 // 80325 - Camouflage
 class spell_hun_camouflage_triggered : public AuraScript
 {
-    PrepareAuraScript(spell_hun_camouflage_triggered);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1580,15 +1511,13 @@ class spell_hun_camouflage_triggered : public AuraScript
 
     void Register() override
     {
-        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_camouflage_triggered::AfterRemove, EFFECT_0, SPELL_AURA_MOD_STEALTH, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectRemove.Register(&spell_hun_camouflage_triggered::AfterRemove, EFFECT_0, SPELL_AURA_MOD_STEALTH, AURA_EFFECT_HANDLE_REAL);
     }
 };
 
 // -53241 - Marked for Death
 class spell_hun_marked_for_death : public AuraScript
 {
-    PrepareAuraScript(spell_hun_marked_for_death);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_HUNTER_MARKED_FOR_DEATH_TRIGGERED });
@@ -1602,21 +1531,19 @@ class spell_hun_marked_for_death : public AuraScript
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_HUNTER_MARKED_FOR_DEATH_TRIGGERED, true, nullptr, aurEff);
+        GetTarget()->CastSpell(eventInfo.GetProcTarget(), SPELL_HUNTER_MARKED_FOR_DEATH_TRIGGERED, aurEff);
     }
 
     void Register() override
     {
-        DoCheckProc += AuraCheckProcFn(spell_hun_marked_for_death::CheckProc);
-        OnEffectProc += AuraEffectProcFn(spell_hun_marked_for_death::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+        DoCheckProc.Register(&spell_hun_marked_for_death::CheckProc);
+        OnEffectProc.Register(&spell_hun_marked_for_death::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
 // 82692 - Focus Fire
 class spell_hun_focus_fire : public AuraScript
 {
-    PrepareAuraScript(spell_hun_focus_fire);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1650,7 +1577,7 @@ class spell_hun_focus_fire : public AuraScript
             {
                 uint8 stacks = frenzy->GetStackAmount();
                 int32 bp = aurEff->GetAmount() * stacks;
-                player->CastCustomSpell(SPELL_HUNTER_FOCUS_FIRE_ENERGIZE, SPELLVALUE_BASE_POINT0, bp, pet, true, nullptr, aurEff);
+                player->CastSpell(pet, SPELL_HUNTER_FOCUS_FIRE_ENERGIZE, CastSpellExtraArgs(aurEff).AddSpellBP0(bp));
                 frenzy->Remove();
             }
         }
@@ -1658,26 +1585,29 @@ class spell_hun_focus_fire : public AuraScript
 
     void Register() override
     {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_focus_fire::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RANGED_HASTE);
-        AfterEffectApply += AuraEffectApplyFn(spell_hun_focus_fire::AfterApply, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+        DoEffectCalcAmount.Register(&spell_hun_focus_fire::CalculateAmount, EFFECT_0, SPELL_AURA_MOD_RANGED_HASTE);
+        AfterEffectApply.Register(&spell_hun_focus_fire::AfterApply, EFFECT_1, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
     }
 };
 
 // 19615 - Frenzy Effect
 class spell_hun_frenzy_effect : public AuraScript
 {
-    PrepareAuraScript(spell_hun_frenzy_effect);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        return ValidateSpellInfo({ SPELL_HUNTER_FOCUS_FIRE_DUMMY });
+        return ValidateSpellInfo(
+            {
+                SPELL_HUNTER_FOCUS_FIRE_DUMMY,
+                SPELL_HUNTER_FOCUS_FIRE
+            });
     }
 
     void AfterApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
     {
         if (GetStackAmount() == GetSpellInfo()->StackAmount)
             if (Unit* owner = GetTarget()->GetOwner())
-                owner->CastSpell(owner, SPELL_HUNTER_FOCUS_FIRE_DUMMY, true, nullptr, aurEff);
+                if (owner->HasSpell(SPELL_HUNTER_FOCUS_FIRE))
+                    owner->CastSpell(owner, SPELL_HUNTER_FOCUS_FIRE_DUMMY, aurEff);
     }
 
     void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -1688,8 +1618,152 @@ class spell_hun_frenzy_effect : public AuraScript
 
     void Register() override
     {
-        AfterEffectApply += AuraEffectApplyFn(spell_hun_frenzy_effect::AfterApply, EFFECT_0, SPELL_AURA_MOD_MELEE_HASTE_3, AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK);
-        AfterEffectRemove += AuraEffectRemoveFn(spell_hun_frenzy_effect::AfterRemove, EFFECT_0, SPELL_AURA_MOD_MELEE_HASTE_3, AURA_EFFECT_HANDLE_REAL);
+        AfterEffectApply.Register(&spell_hun_frenzy_effect::AfterApply, EFFECT_0, SPELL_AURA_MOD_MELEE_HASTE_3, AURA_EFFECT_HANDLE_REAL_OR_REAPPLY_MASK);
+        AfterEffectRemove.Register(&spell_hun_frenzy_effect::AfterRemove, EFFECT_0, SPELL_AURA_MOD_MELEE_HASTE_3, AURA_EFFECT_HANDLE_REAL);
+    }
+};
+
+// 34026 - Kill Command
+class spell_hun_kill_command: public SpellScript
+{
+    void HandleScriptEffect(SpellEffIndex effIndex)
+    {
+        Unit* caster = GetCaster();
+        if (!caster || !caster->IsPlayer())
+            return;
+
+        Player* player = caster->ToPlayer();
+        if (Pet* pet = player->GetPet())
+            if (Unit* target = pet->GetVictim())
+                pet->CastSpell(target, GetSpellInfo()->Effects[effIndex].BasePoints, false);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget.Register(&spell_hun_kill_command::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
+// 82726 - Fervor
+class spell_hun_fervor : public SpellScript
+{
+    bool Load() override
+    {
+        return GetCaster()->IsPlayer();
+    }
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_HUNTER_FERVOR_PET_ENERGIZE });
+    }
+
+    void HandleScriptEffect(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+
+        Player* player = caster->ToPlayer();
+        if (Pet* pet = player->GetPet())
+            player->CastSpell(pet, SPELL_HUNTER_FERVOR_PET_ENERGIZE, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget.Register(&spell_hun_fervor::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_ENERGIZE);
+    }
+};
+
+std::array<uint32, 2> const KillingStreakTriggerSpells =
+{
+    SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R1,
+    SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R2
+};
+
+// -82748 - Killing Streak
+class spell_hun_killing_streak : public AuraScript
+{
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+            {
+                SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R1,
+                SPELL_HUNTER_KILLING_STREAK_TRIGGERED_R2
+            });
+    }
+
+    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+
+        if (!(eventInfo.GetHitMask() & PROC_HIT_CRITICAL))
+            _firstCrit = false;
+        else
+        {
+            if (_firstCrit)
+            {
+                GetTarget()->CastSpell(GetTarget(), KillingStreakTriggerSpells[GetSpellInfo()->GetRank() - 1], aurEff);
+                _firstCrit = false;
+            }
+            else
+                _firstCrit = true;
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectProc.Register(&spell_hun_killing_streak::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+    }
+
+private:
+    bool _firstCrit = false;
+};
+
+// -82898 - Crouching Tiger, Hidden Chimera
+class spell_hun_crouching_tiger_hidden_chimera : public AuraScript
+{
+    bool Load() override
+    {
+        return GetCaster()->IsPlayer();
+    }
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        return eventInfo.GetDamageInfo();
+    }
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(
+            {
+                SPELL_HUNTER_DISENGAGE,
+                SPELL_HUNTER_DETERRENCE
+            });
+    }
+
+    void HandleDisengageProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        if (eventInfo.GetDamageInfo()->GetAttackType() != BASE_ATTACK && eventInfo.GetDamageInfo()->GetAttackType() != OFF_ATTACK)
+            return;
+
+        GetTarget()->GetSpellHistory()->ModifyCooldown(SPELL_HUNTER_DISENGAGE, -aurEff->GetAmount());
+    }
+
+    void HandleDeterrenceProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+    {
+        PreventDefaultAction();
+        if (eventInfo.GetDamageInfo()->GetAttackType() != RANGED_ATTACK)
+            return;
+
+        GetTarget()->GetSpellHistory()->ModifyCooldown(SPELL_HUNTER_DETERRENCE, -aurEff->GetAmount());
+    }
+
+    void Register() override
+    {
+        DoCheckProc.Register(&spell_hun_crouching_tiger_hidden_chimera::CheckProc);
+        OnEffectProc.Register(&spell_hun_crouching_tiger_hidden_chimera::HandleDisengageProc, EFFECT_0, SPELL_AURA_DUMMY);
+        OnEffectProc.Register(&spell_hun_crouching_tiger_hidden_chimera::HandleDeterrenceProc, EFFECT_1, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1698,20 +1772,24 @@ void AddSC_hunter_spell_scripts()
     new spell_hun_ancient_hysteria();
     new spell_hun_bombardment();
     RegisterSpellScript(spell_hun_camouflage);
-    RegisterAuraScript(spell_hun_camouflage_duration);
-    RegisterAuraScript(spell_hun_camouflage_triggered);
+    RegisterSpellScript(spell_hun_camouflage_duration);
+    RegisterSpellScript(spell_hun_camouflage_triggered);
     new spell_hun_chimera_shot();
     new spell_hun_cobra_shot();
+    RegisterSpellScript(spell_hun_crouching_tiger_hidden_chimera);
     new spell_hun_disengage();
+    RegisterSpellScript(spell_hun_fervor);
     new spell_hun_fire();
-    RegisterAuraScript(spell_hun_focus_fire);
-    RegisterAuraScript(spell_hun_frenzy_effect);
-    RegisterAuraScript(spell_hun_glyph_of_kill_shot);
+    RegisterSpellScript(spell_hun_focus_fire);
+    RegisterSpellScript(spell_hun_frenzy_effect);
+    RegisterSpellScript(spell_hun_glyph_of_kill_shot);
     new spell_hun_improved_mend_pet();
     RegisterSpellScript(spell_hun_invigoration);
+    RegisterSpellScript(spell_hun_killing_streak);
+    RegisterSpellScript(spell_hun_kill_command);
     new spell_hun_last_stand_pet();
     new spell_hun_lock_and_load();
-    RegisterAuraScript(spell_hun_marked_for_death);
+    RegisterSpellScript(spell_hun_marked_for_death);
     new spell_hun_master_marksman();
     new spell_hun_masters_call();
     new spell_hun_misdirection();
@@ -1723,14 +1801,14 @@ void AddSC_hunter_spell_scripts()
     new spell_hun_readiness();
     new spell_hun_ready_set_aim();
     new spell_hun_scatter_shot();
-    RegisterAuraScript(spell_hun_serpent_sting);
+    RegisterSpellScript(spell_hun_serpent_sting);
     new spell_hun_sniper_training();
     new spell_hun_steady_shot();
     new spell_hun_improved_steady_shot();
     new spell_hun_tame_beast();
     new spell_hun_target_only_pet_and_owner();
     new spell_hun_thrill_of_the_hunt();
-    RegisterAuraScript(spell_hun_tnt);
-    RegisterAuraScript(spell_hun_trap_launcher);
+    RegisterSpellScript(spell_hun_tnt);
+    RegisterSpellScript(spell_hun_trap_launcher);
     new spell_hun_wild_quiver();
 }

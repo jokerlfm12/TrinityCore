@@ -61,9 +61,9 @@ class boss_broggok : public CreatureScript
                 DoAction(ACTION_RESET_BROGGOK);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
             }
 
@@ -107,14 +107,16 @@ class boss_broggok : public CreatureScript
                         break;
                     case ACTION_ACTIVATE_BROGGOK:
                         me->SetReactState(REACT_AGGRESSIVE);
-                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_NON_ATTACKABLE);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                        me->SetImmuneToAll(false);
                         events.ScheduleEvent(EVENT_SLIME_SPRAY, 10000);
                         events.ScheduleEvent(EVENT_POISON_BOLT, 7000);
                         events.ScheduleEvent(EVENT_POISON_CLOUD, 5000);
                         break;
                     case ACTION_RESET_BROGGOK:
                         me->SetReactState(REACT_PASSIVE);
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC | UNIT_FLAG_NON_ATTACKABLE);
+                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                        me->SetImmuneToAll(true);
                         break;
                 }
             }
@@ -165,8 +167,6 @@ class spell_broggok_poison_cloud : public SpellScriptLoader
 
         class spell_broggok_poison_cloud_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_broggok_poison_cloud_AuraScript);
-
             bool Validate(SpellInfo const* spellInfo) override
             {
                 return ValidateSpellInfo({ spellInfo->Effects[EFFECT_0].TriggerSpell });
@@ -180,12 +180,12 @@ class spell_broggok_poison_cloud : public SpellScriptLoader
 
                 uint32 triggerSpell = GetSpellInfo()->Effects[aurEff->GetEffIndex()].TriggerSpell;
                 int32 mod = int32(((float(aurEff->GetTickNumber()) / aurEff->GetTotalTicks()) * 0.9f + 0.1f) * 10000 * 2 / 3);
-                GetTarget()->CastCustomSpell(triggerSpell, SPELLVALUE_RADIUS_MOD, mod, (Unit*)nullptr, TRIGGERED_FULL_MASK, nullptr, aurEff);
+                GetTarget()->CastSpell(nullptr, triggerSpell, CastSpellExtraArgs(aurEff).AddSpellMod(SPELLVALUE_RADIUS_MOD, mod));
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_broggok_poison_cloud_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+                OnEffectPeriodic.Register(&spell_broggok_poison_cloud_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
             }
         };
 

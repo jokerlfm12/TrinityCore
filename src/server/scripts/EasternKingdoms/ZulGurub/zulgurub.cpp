@@ -226,8 +226,6 @@ private:
 
 class spell_zulgurub_rolling_boulders : public AuraScript
 {
-    PrepareAuraScript(spell_zulgurub_rolling_boulders);
-
     void HandleTick(AuraEffect const* /*aurEff*/)
     {
         // Serverside spell. We just skip that part and do it directly via script
@@ -239,7 +237,7 @@ class spell_zulgurub_rolling_boulders : public AuraScript
 
     void Register() override
     {
-        OnEffectPeriodic += AuraEffectPeriodicFn(spell_zulgurub_rolling_boulders::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+        OnEffectPeriodic.Register(&spell_zulgurub_rolling_boulders::HandleTick, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
     }
 };
 
@@ -312,7 +310,7 @@ struct npc_zulgurub_venomguard_destroyer : public ScriptedAI
                     me->SetReactState(REACT_AGGRESSIVE);
                     break;
                 case EVENT_POOL_OF_ACRID_TEARS:
-                    if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST, 0, 50.0f, true))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_MAXDISTANCE, 0, 50.0f, true))
                         DoCast(target, SPELL_POOL_OF_ACRID_TEARS);
                     _events.Repeat(13s, 14s);
                     break;
@@ -475,8 +473,6 @@ enum SigilShatter
 
 class spell_zulgurub_sigil_shatter : public SpellScript
 {
-    PrepareSpellScript(spell_zulgurub_sigil_shatter);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -519,9 +515,9 @@ class spell_zulgurub_sigil_shatter : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_zulgurub_sigil_shatter::FilterSigilOfFlameTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_zulgurub_sigil_shatter::FilterSigilOfFrostTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_zulgurub_sigil_shatter::FilterSigilOfDeathTargets, EFFECT_2, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_zulgurub_sigil_shatter::FilterSigilOfFlameTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_zulgurub_sigil_shatter::FilterSigilOfFrostTargets, EFFECT_1, TARGET_UNIT_SRC_AREA_ENEMY);
+        OnObjectAreaTargetSelect.Register(&spell_zulgurub_sigil_shatter::FilterSigilOfDeathTargets, EFFECT_2, TARGET_UNIT_SRC_AREA_ENEMY);
     }
 };
 
@@ -532,8 +528,6 @@ enum AncientGuardian
 
 class spell_zulgurub_ancient_guardian : public AuraScript
 {
-    PrepareAuraScript(spell_zulgurub_ancient_guardian);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_ANCIENT_GUARDIAN_HEAL });
@@ -551,15 +545,15 @@ class spell_zulgurub_ancient_guardian : public AuraScript
         {
             absorbAmount = dmgInfo.GetDamage();
             int32 health = target->CountPctFromMaxHealth(50) - absorbAmount;
-            target->CastCustomSpell(SPELL_ANCIENT_GUARDIAN_HEAL, SPELLVALUE_BASE_POINT0, health, target, true, nullptr, aurEff);
+            target->CastSpell(target, SPELL_ANCIENT_GUARDIAN_HEAL,  CastSpellExtraArgs(aurEff).AddSpellBP0(health));
             Remove();
         }
     }
 
     void Register() override
     {
-        DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_zulgurub_ancient_guardian::CalculateAmount, EFFECT_1, SPELL_AURA_SCHOOL_ABSORB);
-        OnEffectAbsorb += AuraEffectAbsorbFn(spell_zulgurub_ancient_guardian::Absorb, EFFECT_1);
+        DoEffectCalcAmount.Register(&spell_zulgurub_ancient_guardian::CalculateAmount, EFFECT_1, SPELL_AURA_SCHOOL_ABSORB);
+        OnEffectAbsorb.Register(&spell_zulgurub_ancient_guardian::Absorb, EFFECT_1);
     }
 };
 
@@ -599,8 +593,8 @@ struct npc_zulgurub_gurubashi_berserker: public ScriptedAI
 
         if (spellInfo->Id == SPELL_PURSUIT)
         {
-            me->getThreatManager().resetAllAggro();
-            me->AddThreat(victim, spellInfo->Effects[EFFECT_1].BasePoints);
+            me->GetThreatManager().ResetAllThreat();
+            AddThreat(victim, spellInfo->Effects[EFFECT_1].BasePoints);
             Talk(SAY_WHISPER_PURSUIT_PLAYER, victim);
             Talk(SAY_ANNOUNCE_PURSUIT_PLAYER, victim);
         }
@@ -619,7 +613,7 @@ struct npc_zulgurub_gurubashi_berserker: public ScriptedAI
             {
                 case EVENT_PURSUIT:
                     me->SetReactState(REACT_AGGRESSIVE);
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true, 0))
+                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true))
                         DoCast(target, SPELL_PURSUIT);
 
                     _events.ScheduleEvent(EVENT_THUNDERCLAP, 7s);
@@ -650,8 +644,6 @@ enum ToadExplode
 
 class spell_zulgurub_toad_explode : public SpellScript
 {
-    PrepareSpellScript(spell_zulgurub_toad_explode);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_TOAD_EXPLODE });
@@ -664,7 +656,7 @@ class spell_zulgurub_toad_explode : public SpellScript
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_zulgurub_toad_explode::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
+        OnEffectHitTarget.Register(&spell_zulgurub_toad_explode::HandleDummyEffect, EFFECT_0, SPELL_EFFECT_DUMMY);
     }
 };
 
@@ -675,8 +667,8 @@ void AddSC_zulgurub()
     RegisterZulGurubCreatureAI(npc_zulgurub_tiki_lord_mu_loa);
     RegisterZulGurubCreatureAI(npc_zulgurub_tiki_lord_zim_wae);
     RegisterZulGurubCreatureAI(npc_zulgurub_gurubashi_berserker);
-    RegisterAuraScript(spell_zulgurub_rolling_boulders);
+    RegisterSpellScript(spell_zulgurub_rolling_boulders);
     RegisterSpellScript(spell_zulgurub_sigil_shatter);
-    RegisterAuraScript(spell_zulgurub_ancient_guardian);
+    RegisterSpellScript(spell_zulgurub_ancient_guardian);
     RegisterSpellScript(spell_zulgurub_toad_explode);
 }

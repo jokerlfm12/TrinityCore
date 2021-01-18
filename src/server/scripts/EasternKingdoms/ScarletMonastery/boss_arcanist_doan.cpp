@@ -53,9 +53,9 @@ struct boss_arcanist_doan : public BossAI
         _detonationTriggered = false;
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         Talk(SAY_AGGRO);
         events.ScheduleEvent(EVENT_SILENCE, 6s);
         events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, 11s);
@@ -123,5 +123,5 @@ private:
 
 void AddSC_boss_arcanist_doan()
 {
-    RegisterScarletMonastryCreatureAI(boss_arcanist_doan);
+    RegisterScarletMonasteryCreatureAI(boss_arcanist_doan);
 }

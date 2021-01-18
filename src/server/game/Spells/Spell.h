@@ -37,6 +37,7 @@ namespace WorldPackets
 
 class Aura;
 class AuraEffect;
+class BasicEvent;
 class ByteBuffer;
 class Corpse;
 class DynamicObject;
@@ -47,7 +48,6 @@ class PathGenerator;
 class Player;
 class SpellImplicitTargetInfo;
 class SpellInfo;
-class SpellEvent;
 class SpellScript;
 class Unit;
 class WorldObject;
@@ -114,7 +114,7 @@ enum SpellFinishReason : uint8
 {
     SPELL_FINISHED_SUCCESSFUL_CAST      = 0, // spell has sucessfully launched
     SPELL_FINISHED_CANCELED             = 1, // spell has been canceled (interrupts)
-    SPELL_FINISHED_FINISHED             = 2  // spell has been finished (channeling finished)
+    SPELL_FINISHED_CHANNELING_COMPLETE  = 2  // spell channeling has been finished
 };
 
 struct TC_GAME_API SpellDestination
@@ -234,6 +234,7 @@ struct SpellValue
     float     RadiusMod;
     uint8     AuraStackAmount;
     int32     AuraDuration;
+    float     CriticalChance;
 };
 
 enum SpellState
@@ -433,7 +434,7 @@ class TC_GAME_API Spell
 
         GameObject* SearchSpellFocus();
 
-        void prepare(SpellCastTargets const* targets, AuraEffect const* triggeredByAura = nullptr);
+        void prepare(SpellCastTargets const& targets, AuraEffect const* triggeredByAura = nullptr);
         void cancel(Spell* interruptingSpell = nullptr);
         void update(uint32 difftime);
         void cast(bool skipCheck = false);
@@ -512,6 +513,7 @@ class TC_GAME_API Spell
         void HandleHolyPower(Player* caster);
         void HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGoTarget, Corpse* pCorpseTarget, uint32 i, SpellEffectHandleMode mode);
         void HandleThreatSpells();
+        static Spell const* ExtractSpellFromEvent(BasicEvent* event);
 
         SpellInfo const* const m_spellInfo;
         Item* m_CastItem;

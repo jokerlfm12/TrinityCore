@@ -140,7 +140,7 @@ class boss_keleseth : public CreatureScript
 
             void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_START_COMBAT);
 
                 if (!who)
@@ -202,7 +202,7 @@ class boss_keleseth : public CreatureScript
                             events.ScheduleEvent(EVENT_SHADOWBOLT, urand(2, 3) * IN_MILLISECONDS);
                             break;
                         case EVENT_FROST_TOMB:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_FROST_TOMB))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, true, -SPELL_FROST_TOMB))
                             {
                                 Talk(SAY_FROST_TOMB);
                                 Talk(SAY_FROST_TOMB_EMOTE, target);
@@ -294,7 +294,7 @@ class npc_vrykul_skeleton : public CreatureScript
                     switch (eventId)
                     {
                         case EVENT_DECREPIFY:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_DECREPIFY))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_DECREPIFY))
                                 DoCast(target, SPELL_DECREPIFY);
                             events.ScheduleEvent(EVENT_DECREPIFY, urand(1, 5)*IN_MILLISECONDS);
                             break;
@@ -342,8 +342,6 @@ class spell_frost_tomb : public SpellScriptLoader
 
         class spell_frost_tomb_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_frost_tomb_AuraScript);
-
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::ByDeath))
@@ -355,7 +353,7 @@ class spell_frost_tomb : public SpellScriptLoader
 
             void Register() override
             {
-                 AfterEffectRemove += AuraEffectRemoveFn(spell_frost_tomb_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+                 AfterEffectRemove.Register(&spell_frost_tomb_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
             }
         };
 

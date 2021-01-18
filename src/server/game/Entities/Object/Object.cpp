@@ -53,6 +53,7 @@
 #include "Util.h"
 #include "Vehicle.h"
 #include "VMapFactory.h"
+#include "VMapManager2.h"
 #include "WaypointMovementGenerator.h"
 #include "World.h"
 #include "WorldPacket.h"
@@ -263,16 +264,16 @@ void Object::BuildOutOfRangeUpdateBlock(UpdateData* data) const
     data->AddOutOfRangeGUID(GetGUID());
 }
 
-void Object::DestroyForPlayer(Player* target, bool onDeath /*= false*/) const
+void Object::DestroyForPlayer(Player* target, bool isDead /*= false*/) const
 {
     ASSERT(target);
 
-    WorldPacket data(SMSG_DESTROY_OBJECT, 8 + 1);
-    data << uint64(GetGUID());
+    WorldPackets::Misc::DestroyObject packet;
+    packet.Guid = GetGUID();
     //! If the following bool is true, the client will call "void CGUnit_C::OnDeath()" for this object.
     //! OnDeath() does for eg trigger death animation and interrupts certain spells/missiles/auras/sounds...
-    data << uint8(onDeath ? 1 : 0);
-    target->SendDirectMessage(&data);
+    packet.IsDead = isDead;
+    target->SendDirectMessage(packet.Write());
 }
 
 int32 Object::GetInt32Value(uint16 index) const
@@ -1154,7 +1155,7 @@ bool Object::PrintIndexError(uint32 index, bool set) const
 WorldObject::WorldObject(bool isWorldObject) : WorldLocation(), LastUsedScriptID(0),
 m_name(""), m_isActive(false), m_isFarVisible(false), m_isWorldObject(isWorldObject), m_zoneScript(nullptr),
 m_transport(nullptr), m_zoneId(0), m_areaId(0), m_staticFloorZ(VMAP_INVALID_HEIGHT), m_outdoors(true), m_liquidStatus(LIQUID_MAP_NO_WATER),
-m_currMap(nullptr), m_InstanceId(0), _dbPhase(0), m_notifyflags(0), m_executed_notifies(0),
+m_wmoGroupID(0), m_currMap(nullptr), m_InstanceId(0), _dbPhase(0), m_notifyflags(0),
 m_aiAnimKitId(0), m_movementAnimKitId(0), m_meleeAnimKitId(0)
 {
     m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE | GHOST_VISIBILITY_GHOST);
@@ -1260,6 +1261,7 @@ void WorldObject::ProcessPositionDataChanged(PositionFullTerrainStatus const& da
     m_outdoors = data.outdoors;
     m_staticFloorZ = data.floorZ;
     m_liquidStatus = data.liquidStatus;
+    m_wmoGroupID = data.areaInfo.is_initialized() ? data.areaInfo->groupId : 0;
 }
 
 void WorldObject::AddToWorld()
@@ -1291,9 +1293,11 @@ float WorldObject::GetDistanceZ(const WorldObject* obj) const
     return (dist > 0 ? dist : 0);
 }
 
-bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const
+bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, bool incOwnRadius, bool incTargetRadius) const
 {
-    float sizefactor = GetCombatReach() + obj->GetCombatReach();
+    float sizefactor = 0.f;
+    sizefactor += incOwnRadius ? GetCombatReach() : 0.0f;
+    sizefactor += incTargetRadius ? obj->GetCombatReach() : 0.0f;
     float maxdist = dist2compare + sizefactor;
 
     if (GetTransport() && obj->GetTransport() && obj->GetTransport()->GetGUID().GetCounter() == GetTransport()->GetGUID().GetCounter())
@@ -1390,11 +1394,10 @@ bool WorldObject::IsWithinDist(WorldObject const* obj, float dist2compare, bool 
     return obj && _IsWithinDist(obj, dist2compare, is3D);
 }
 
-bool WorldObject::IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D /*= true*/) const
+bool WorldObject::IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D /*= true*/, bool incOwnRadius /*= true*/, bool incTargetRadius /*= true*/) const
 {
-    return obj && IsInMap(obj) && IsInPhase(obj) && _IsWithinDist(obj, dist2compare, is3D);
+    return obj && IsInMap(obj) && IsInPhase(obj) && _IsWithinDist(obj, dist2compare, is3D, incOwnRadius, incTargetRadius);
 }
-
 Position WorldObject::GetHitSpherePointFor(Position const& dest) const
 {
     G3D::Vector3 vThis(GetPositionX(), GetPositionY(), GetPositionZ() + GetCollisionHeight());

@@ -175,9 +175,9 @@ class boss_sapphiron : public CreatureScript
                 damage = me->GetHealth()-1; // don't die during air phase
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
 
                 me->CastSpell(me, SPELL_FROST_AURA, true);
 
@@ -344,7 +344,7 @@ class boss_sapphiron : public CreatureScript
 
                                 _iceboltTargets.clear();
                                 std::list<Unit*> targets;
-                                SelectTargetList(targets, RAID_MODE(2, 3), SELECT_TARGET_RANDOM, 200.0f, true);
+                                SelectTargetList(targets, RAID_MODE(2, 3), SELECT_TARGET_RANDOM, 0, 200.0f, true);
                                 for (Unit* target : targets)
                                     if (target)
                                         _iceboltTargets.push_back(target->GetGUID());
@@ -501,8 +501,6 @@ class spell_sapphiron_change_blizzard_target : public SpellScriptLoader
 
     class spell_sapphiron_change_blizzard_target_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_sapphiron_change_blizzard_target_AuraScript);
-
         void HandlePeriodic(AuraEffect const* /*eff*/)
         {
             TempSummon* me = GetTarget()->ToTempSummon();
@@ -524,7 +522,7 @@ class spell_sapphiron_change_blizzard_target : public SpellScriptLoader
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_sapphiron_change_blizzard_target_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+            OnEffectPeriodic.Register(&spell_sapphiron_change_blizzard_target_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
         }
     };
 
@@ -541,8 +539,6 @@ class spell_sapphiron_icebolt : public SpellScriptLoader
 
     class spell_sapphiron_icebolt_AuraScript : public AuraScript
     {
-        PrepareAuraScript(spell_sapphiron_icebolt_AuraScript);
-
         void HandleApply(AuraEffect const* /*eff*/, AuraEffectHandleModes /*mode*/)
         {
             GetTarget()->ApplySpellImmune(SPELL_ICEBOLT, IMMUNITY_DAMAGE, SPELL_SCHOOL_MASK_FROST, true);
@@ -570,9 +566,9 @@ class spell_sapphiron_icebolt : public SpellScriptLoader
 
         void Register() override
         {
-            AfterEffectApply += AuraEffectApplyFn(spell_sapphiron_icebolt_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
-            AfterEffectRemove += AuraEffectRemoveFn(spell_sapphiron_icebolt_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_sapphiron_icebolt_AuraScript::HandlePeriodic, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
+            AfterEffectApply.Register(&spell_sapphiron_icebolt_AuraScript::HandleApply, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove.Register(&spell_sapphiron_icebolt_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_MOD_STUN, AURA_EFFECT_HANDLE_REAL);
+            OnEffectPeriodic.Register(&spell_sapphiron_icebolt_AuraScript::HandlePeriodic, EFFECT_2, SPELL_AURA_PERIODIC_TRIGGER_SPELL);
         }
 
         ObjectGuid _block;
@@ -591,8 +587,6 @@ class spell_sapphiron_summon_blizzard : public SpellScriptLoader
 
         class spell_sapphiron_summon_blizzard_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_sapphiron_summon_blizzard_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SUMMON_BLIZZARD });
@@ -620,7 +614,7 @@ class spell_sapphiron_summon_blizzard : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_sapphiron_summon_blizzard_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_sapphiron_summon_blizzard_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

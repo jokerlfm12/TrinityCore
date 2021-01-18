@@ -453,14 +453,12 @@ class boss_cthun : public CreatureScript
 public:
     boss_cthun() : CreatureScript("boss_cthun") { }
 
-    struct cthunAI : public ScriptedAI
+    struct cthunAI : public BossAI
     {
-        cthunAI(Creature* creature) : ScriptedAI(creature)
+        cthunAI(Creature* creature) : BossAI(creature, DATA_CTHUN)
         {
             Initialize();
             SetCombatMovement(false);
-
-            instance = creature->GetInstanceScript();
         }
 
         void Initialize()
@@ -484,8 +482,6 @@ public:
             StomachEnterVisTimer = 0;                           //Always 3.5 seconds after Stomach Enter Timer
             StomachEnterTarget.Clear();                         //Target to be teleported to stomach
         }
-
-        InstanceScript* instance;
 
         //Out of combat whisper timer
         uint32 WisperTimer;
@@ -514,6 +510,7 @@ public:
         void Reset() override
         {
             Initialize();
+            _Reset();
 
             //Clear players in stomach and outside
             Stomach_Map.clear();
@@ -524,11 +521,6 @@ public:
             me->SetVisible(false);
 
             instance->SetData(DATA_CTHUN_PHASE, PHASE_NOT_STARTED);
-        }
-
-        void JustEngagedWith(Unit* /*who*/) override
-        {
-            DoZoneInCombat();
         }
 
         void SpawnEyeTentacle(float x, float y)
@@ -643,8 +635,8 @@ public:
                         //Place all units in threat list on outside of stomach
                         Stomach_Map.clear();
 
-                        for (std::list<HostileReference*>::const_iterator i = me->getThreatManager().getThreatList().begin(); i != me->getThreatManager().getThreatList().end(); ++i)
-                            Stomach_Map[(*i)->getUnitGuid()] = false;   //Outside stomach
+                        for (ThreatReference const* ref : me->GetThreatManager().GetUnsortedThreatList())
+                            Stomach_Map[ref->GetVictim()->GetGUID()] = false;   //Outside stomach
 
                         //Spawn 2 flesh tentacles
                         FleshTentaclesKilled = 0;
@@ -751,7 +743,7 @@ public:
                             //Set target in stomach
                             Stomach_Map[target->GetGUID()] = true;
                             target->InterruptNonMeleeSpells(false);
-                            target->CastSpell(target, SPELL_MOUTH_TENTACLE, true, nullptr, nullptr, me->GetGUID());
+                            target->CastSpell(target, SPELL_MOUTH_TENTACLE, me->GetGUID());
                             StomachEnterTarget = target->GetGUID();
                             StomachEnterVisTimer = 3800;
                         }

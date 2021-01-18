@@ -467,7 +467,7 @@ struct npc_brazie_the_bonatist_vehicle : public VehicleAI
                     float x = pos.GetPositionX() + cos(angle) * 3;
                     float y = pos.GetPositionY() + sin(angle) * 3;
 
-                    GetPlayer()->CastSpell(x, y, pos.GetPositionZ() + 50.0f, SPELL_CREATE_RANDOM_SUN_POWER, true);
+                    GetPlayer()->CastSpell({ x, y, pos.GetPositionZ() + 50.0f }, SPELL_CREATE_RANDOM_SUN_POWER, true);
 
                     switch (_currentLevel)
                     {
@@ -508,7 +508,7 @@ struct npc_brazie_the_bonatist_vehicle : public VehicleAI
                     }
 
                     if (Player* player = GetPlayer())
-                        player->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), angle, spellId, true);
+                        player->CastSpell({ pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), angle }, spellId, true);
                     break;
                 }
                 case EVENT_ANNOUNCE_GOOD_JOB:
@@ -592,19 +592,19 @@ private:
         for (uint8 i = 0; i < MAX_TARGET_POSITIONS; i++)
         {
             Position pos = LawnMowerPositions[i];
-            charmer->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), LawnmowerOrientation, SPELL_CREATE_LAWMOWER, true);
+            charmer->CastSpell({ pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), LawnmowerOrientation }, SPELL_CREATE_LAWMOWER, true);
 
             pos = GoalStalkerPositions[i];
-            charmer->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), GoalStalkerOrientation, SPELL_CREATE_GOAL_STALKER, true);
+            charmer->CastSpell({ pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), GoalStalkerOrientation }, SPELL_CREATE_GOAL_STALKER, true);
 
             pos = SpitterTargetPositions[i];
-            charmer->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), SpitterTargetOrientation, SPELL_CREATE_SPITTER_TARGET, true);
+            charmer->CastSpell({ pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), SpitterTargetOrientation }, SPELL_CREATE_SPITTER_TARGET, true);
         }
 
         for (uint8 i = 0; i < MAX_EMPTY_SPOT_POSITIONS; i++)
         {
             Position pos = EmptySpotPositions[i];
-            charmer->CastSpell(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), EmptySpotOrientation, SPELL_CREATE_EMPTY_SPOT, true);
+            charmer->CastSpell({ pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), EmptySpotOrientation }, SPELL_CREATE_EMPTY_SPOT, true);
         }
     }
 
@@ -917,7 +917,7 @@ struct npc_brazie_spot : public ScriptedAI
                         float x = pos.GetPositionX() + cos(angle) * 3;
                         float y = pos.GetPositionY() + sin(angle) * 3;
 
-                        summoner->CastSpell(x, y, pos.GetPositionZ() + 50.0f, SPELL_CREATE_RANDOM_SUN_POWER, true);
+                        summoner->CastSpell({ x, y, pos.GetPositionZ() + 50.0f }, SPELL_CREATE_RANDOM_SUN_POWER, true);
                     }
                 }
                 _events.Repeat(17s);
@@ -1164,8 +1164,6 @@ struct npc_brazie_vehicle_notifier : public ScriptedAI
 
 class spell_brazie_summon_plant : public SpellScript
 {
-    PrepareSpellScript(spell_brazie_summon_plant);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1210,16 +1208,14 @@ class spell_brazie_summon_plant : public SpellScript
 
     void Register() override
     {
-        OnCheckCast += SpellCheckCastFn(spell_brazie_summon_plant::CheckLocation);
-        OnEffectHitTarget += SpellEffectFn(spell_brazie_summon_plant::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
-        OnEffectHit += SpellEffectFn(spell_brazie_summon_plant::PreventEffect, EFFECT_0, SPELL_EFFECT_TRANS_DOOR);
+        OnCheckCast.Register(&spell_brazie_summon_plant::CheckLocation);
+        OnEffectHitTarget.Register(&spell_brazie_summon_plant::HandleDummy, EFFECT_1, SPELL_EFFECT_DUMMY);
+        OnEffectHit.Register(&spell_brazie_summon_plant::PreventEffect, EFFECT_0, SPELL_EFFECT_TRANS_DOOR);
     }
 };
 
 class spell_brazie_highlight : public SpellScript
 {
-    PrepareSpellScript(spell_brazie_highlight);
-
     void SetDest(SpellDestination& dest)
     {
         dest.Relocate(EmptySpotPositions[0]);
@@ -1227,14 +1223,12 @@ class spell_brazie_highlight : public SpellScript
 
     void Register() override
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_brazie_highlight::SetDest, EFFECT_1, TARGET_DEST_NEARBY_ENTRY);
+        OnDestinationTargetSelect.Register(&spell_brazie_highlight::SetDest, EFFECT_1, TARGET_DEST_NEARBY_ENTRY);
     }
 };
 
 class spell_brazie_create_random_seed_sack : public SpellScript
 {
-    PrepareSpellScript(spell_brazie_create_random_seed_sack);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo({ SPELL_CREATE_RANDOM_FREEZYA_SACK });
@@ -1248,14 +1242,12 @@ class spell_brazie_create_random_seed_sack : public SpellScript
 
     void Register() override
     {
-        OnDestinationTargetSelect += SpellDestinationTargetSelectFn(spell_brazie_create_random_seed_sack::SetDest, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
+        OnDestinationTargetSelect.Register(&spell_brazie_create_random_seed_sack::SetDest, EFFECT_0, TARGET_DEST_NEARBY_ENTRY);
     }
 };
 
 class spell_brazie_spit : public SpellScript
 {
-    PrepareSpellScript(spell_brazie_spit);
-
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
@@ -1295,7 +1287,7 @@ class spell_brazie_spit : public SpellScript
 
     void Register() override
     {
-        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_brazie_spit::FilterTargets, EFFECT_ALL, TARGET_UNIT_CONE_ENEMY_104);
+        OnObjectAreaTargetSelect.Register(&spell_brazie_spit::FilterTargets, EFFECT_ALL, TARGET_UNIT_CONE_ENEMY_104);
     }
 };
 

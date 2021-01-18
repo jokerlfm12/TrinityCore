@@ -185,6 +185,7 @@ enum WorldBoolConfigs
     CONFIG_HOTSWAP_PREFIX_CORRECTION_ENABLED,
     CONFIG_CHECK_GOBJECT_LOS,
     CONFIG_RESPAWN_DYNAMIC_ESCORTNPC,
+    CONFIG_CACHE_DATA_QUERIES,
     BOOL_CONFIG_VALUE_COUNT
 };
 
@@ -323,6 +324,7 @@ enum WorldIntConfigs
     CONFIG_BATTLEGROUND_PREMATURE_FINISH_TIMER,
     CONFIG_BATTLEGROUND_PREMADE_GROUP_WAIT_FOR_MATCH,
     CONFIG_BATTLEGROUND_REPORT_AFK,
+    CONFIG_RATED_BATTLEGROUND_REWARD,
     CONFIG_ARENA_MAX_RATING_DIFFERENCE,
     CONFIG_ARENA_RATING_DISCARD_TIMER,
     CONFIG_ARENA_RATED_UPDATE_TIMER,
@@ -415,6 +417,7 @@ enum WorldIntConfigs
     CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE,
     CONFIG_RESPAWN_DYNAMICMINIMUM_GAMEOBJECT,
     CONFIG_RESPAWN_GUIDWARNING_FREQUENCY,
+    CONFIG_RATED_BATTLEGROUND_ENABLE,
     INT_CONFIG_VALUE_COUNT
 };
 
@@ -693,9 +696,9 @@ class TC_GAME_API World
         void SendGlobalText(char const* text, WorldSession* self);
         void SendGMText(uint32 string_id, ...);
         void SendServerMessage(ServerMessageType type, char const* text = "", Player* player = nullptr);
-        void SendGlobalMessage(WorldPacket* packet, WorldSession* self = nullptr, uint32 team = 0);
-        void SendGlobalGMMessage(WorldPacket* packet, WorldSession* self = nullptr, uint32 team = 0);
-        bool SendZoneMessage(uint32 zone, WorldPacket* packet, WorldSession* self = nullptr, uint32 team = 0);
+        void SendGlobalMessage(WorldPacket const* packet, WorldSession* self = nullptr, uint32 team = 0);
+        void SendGlobalGMMessage(WorldPacket const* packet, WorldSession* self = nullptr, uint32 team = 0);
+        bool SendZoneMessage(uint32 zone, WorldPacket const* packet, WorldSession* self = nullptr, uint32 team = 0);
         void SendZoneText(uint32 zone, char const* text, WorldSession* self = nullptr, uint32 team = 0);
 
         /// Are we in the middle of a shutdown?

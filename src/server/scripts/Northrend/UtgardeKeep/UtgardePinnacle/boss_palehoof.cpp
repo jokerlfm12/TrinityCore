@@ -132,7 +132,7 @@ public:
 
     bool Execute(uint64 /*eventTime*/, uint32 /*diff*/) override
     {
-        _owner->CastCustomSpell(SPELL_AWAKEN_SUBBOSS, SPELLVALUE_MAX_TARGETS, 1, _owner);
+        _owner->CastSpell(_owner, SPELL_AWAKEN_SUBBOSS, { SPELLVALUE_MAX_TARGETS, 1 });
         return true;
     }
 
@@ -219,9 +219,9 @@ public:
                 _orb = summon->GetGUID();
         }
 
-        void JustEngagedWith (Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
             events.ScheduleEvent(EVENT_ARCING_SMASH, Seconds(7));
             events.ScheduleEvent(EVENT_IMPALE, Seconds(11));
@@ -287,12 +287,12 @@ public:
                     if (_encountersCount == _dungeonMode)
                         orb->CastSpell(orb, SPELL_AWAKEN_GORTOK, true);
                     else
-                        orb->CastCustomSpell(SPELL_AWAKEN_SUBBOSS, SPELLVALUE_MAX_TARGETS, 1, orb, true);
+                        orb->CastSpell(orb, SPELL_AWAKEN_SUBBOSS, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_MAX_TARGETS, 1));
                     break;
                 }
                 case ACTION_START_FIGHT:
                     me->RemoveAurasDueToSpell(SPELL_FREEZE);
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                    me->SetImmuneToPC(false);
                     DoZoneInCombat();
                     if (Creature* orb = ObjectAccessor::GetCreature(*me, _orb))
                         orb->DespawnOrUnsummon(1000);
@@ -345,7 +345,7 @@ struct PalehoofMinionsBossAI : public BossAI
         if (actionId == ACTION_START_FIGHT)
         {
             me->RemoveAurasDueToSpell(SPELL_FREEZE);
-            me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+            me->SetImmuneToPC(false);
             DoZoneInCombat();
         }
     }
@@ -595,8 +595,6 @@ class spell_palehoof_crazed : public SpellScriptLoader
 
         class spell_palehoof_crazed_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_palehoof_crazed_AuraScript);
-
             void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 GetTarget()->RemoveAurasDueToSpell(SPELL_CRAZED_TAUNT);
@@ -604,7 +602,7 @@ class spell_palehoof_crazed : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectRemove += AuraEffectRemoveFn(spell_palehoof_crazed_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
+                OnEffectRemove.Register(&spell_palehoof_crazed_AuraScript::OnRemove, EFFECT_1, SPELL_AURA_PERIODIC_TRIGGER_SPELL, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -620,8 +618,6 @@ class spell_palehoof_crazed_effect : public SpellScriptLoader
 
         class spell_palehoof_crazed_effect_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_palehoof_crazed_effect_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_CRAZED_TAUNT });
@@ -634,7 +630,7 @@ class spell_palehoof_crazed_effect : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_palehoof_crazed_effect_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_palehoof_crazed_effect_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -652,8 +648,6 @@ class spell_palehoof_awaken_subboss : public SpellScriptLoader
 
         class spell_palehoof_awaken_subboss_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_palehoof_awaken_subboss_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_ORB_CHANNEL });
@@ -669,7 +663,7 @@ class spell_palehoof_awaken_subboss : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_palehoof_awaken_subboss_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
+                OnEffectHitTarget.Register(&spell_palehoof_awaken_subboss_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_APPLY_AURA);
             }
         };
 
@@ -687,8 +681,6 @@ class spell_palehoof_awaken_gortok : public SpellScriptLoader
 
         class spell_palehoof_awaken_gortok_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_palehoof_awaken_gortok_SpellScript);
-
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
                 Unit* target = GetHitUnit();
@@ -698,7 +690,7 @@ class spell_palehoof_awaken_gortok : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_palehoof_awaken_gortok_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+                OnEffectHitTarget.Register(&spell_palehoof_awaken_gortok_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
             }
         };
 

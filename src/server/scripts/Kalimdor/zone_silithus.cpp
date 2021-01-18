@@ -494,7 +494,7 @@ public:
                         DoCast(player, SPELL_ARCANE_CHANNELING, true);//Arcane Channeling
                         break;
                     case 35:
-                        me->CastSpell(-8088, 1520.43f, 2.67f, SPELL_TIME_STOP, true);
+                        me->CastSpell({ -8088, 1520.43f, 2.67f }, SPELL_TIME_STOP, true);
                         break;
                     case 36:
                         DoCast(player, SPELL_CALL_PRISMATIC_BARRIER, true);
@@ -544,7 +544,7 @@ public:
                         break;
                     case 50:
                         Fandral->AI()->Talk(FANDRAL_EMOTE_2);
-                        Fandral->CastSpell(-8127, 1525, 17.5f, SPELL_THROW_HAMMER, true);
+                        Fandral->CastSpell({ -8127, 1525, 17.5f }, SPELL_THROW_HAMMER, true);
                         break;
                     case 51:
                     {
@@ -1367,8 +1367,7 @@ class go_wind_stone : public GameObjectScript
                         break;
                 }
                 summons->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                summons->SendMeleeAttackStart(player);
-                summons->CombatStart(player);
+                summons->EngageWithTarget(player);
             }
         };
 

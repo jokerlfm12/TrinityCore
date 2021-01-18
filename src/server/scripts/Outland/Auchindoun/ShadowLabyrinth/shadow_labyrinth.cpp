@@ -33,8 +33,6 @@ class spell_mark_of_malice : public SpellScriptLoader
 
         class spell_mark_of_malice_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mark_of_malice_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_MARK_OF_MALICE_TRIGGERED });
@@ -47,12 +45,12 @@ class spell_mark_of_malice : public SpellScriptLoader
                 if (aurEff->GetBase()->GetCharges() > 1)
                     return;
 
-                GetTarget()->CastSpell(GetTarget(), SPELL_MARK_OF_MALICE_TRIGGERED, true, nullptr, aurEff);
+                GetTarget()->CastSpell(GetTarget(), SPELL_MARK_OF_MALICE_TRIGGERED, aurEff);
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_mark_of_malice_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_mark_of_malice_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 

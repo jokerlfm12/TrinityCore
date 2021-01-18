@@ -99,7 +99,7 @@ public:
             {
                 Unit* target = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JAINAPROUDMOORE));
                 if (target && target->IsAlive())
-                    me->AddThreat(target, 0.0f);
+                    AddThreat(target, 0.0f);
             }
         }
 
@@ -268,8 +268,6 @@ class spell_anetheron_vampiric_aura : public SpellScriptLoader
 
         class spell_anetheron_vampiric_aura_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_anetheron_vampiric_aura_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_VAMPIRIC_AURA_HEAL });
@@ -283,12 +281,12 @@ class spell_anetheron_vampiric_aura : public SpellScriptLoader
                     return;
 
                 int32 bp = damageInfo->GetDamage() * 3;
-                eventInfo.GetActor()->CastCustomSpell(SPELL_VAMPIRIC_AURA_HEAL, SPELLVALUE_BASE_POINT0, bp, eventInfo.GetActor(), true, nullptr, aurEff);
+                eventInfo.GetActor()->CastSpell(eventInfo.GetActor(), SPELL_VAMPIRIC_AURA_HEAL, CastSpellExtraArgs(aurEff).AddSpellBP0(bp));
             }
 
             void Register() override
             {
-                OnEffectProc += AuraEffectProcFn(spell_anetheron_vampiric_aura_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
+                OnEffectProc.Register(&spell_anetheron_vampiric_aura_AuraScript::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
             }
         };
 

@@ -403,13 +403,13 @@ class player_overlord_brandAI : public PlayerAI
         {
             if (Creature* tyrannus = ObjectAccessor::GetCreature(*me, _tyrannusGUID))
                 if (Unit* victim = tyrannus->GetVictim())
-                    me->CastCustomSpell(SPELL_OVERLORD_BRAND_DAMAGE, SPELLVALUE_BASE_POINT0, damage, victim, true, nullptr, nullptr, tyrannus->GetGUID());
+                    me->CastSpell(victim, SPELL_OVERLORD_BRAND_DAMAGE, CastSpellExtraArgs(tyrannus->GetGUID()).AddSpellBP0(damage));
         }
 
         void HealDone(Unit* /*target*/, uint32& addHealth) override
         {
             if (Creature* tyrannus = ObjectAccessor::GetCreature(*me, _tyrannusGUID))
-                me->CastCustomSpell(SPELL_OVERLORD_BRAND_HEAL, SPELLVALUE_BASE_POINT0, int32(addHealth * 5.5f), tyrannus, true, nullptr, nullptr, tyrannus->GetGUID());
+                me->CastSpell(tyrannus, SPELL_OVERLORD_BRAND_HEAL, CastSpellExtraArgs(tyrannus->GetGUID()).AddSpellBP0(int32(addHealth * 5.5f)));
         }
 
         void UpdateAI(uint32 /*diff*/) override { }
@@ -425,8 +425,6 @@ class spell_tyrannus_overlord_brand : public SpellScriptLoader
 
         class spell_tyrannus_overlord_brand_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_tyrannus_overlord_brand_AuraScript);
-
         public:
             spell_tyrannus_overlord_brand_AuraScript()
             {
@@ -465,8 +463,8 @@ class spell_tyrannus_overlord_brand : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_tyrannus_overlord_brand_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_tyrannus_overlord_brand_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_tyrannus_overlord_brand_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectRemove.Register(&spell_tyrannus_overlord_brand_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
 
             PlayerAI* oldAI;
@@ -486,8 +484,6 @@ class spell_tyrannus_mark_of_rimefang : public SpellScriptLoader
 
         class spell_tyrannus_mark_of_rimefang_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_tyrannus_mark_of_rimefang_AuraScript);
-
             void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 Unit* caster = GetCaster();
@@ -501,7 +497,7 @@ class spell_tyrannus_mark_of_rimefang : public SpellScriptLoader
 
             void Register() override
             {
-                AfterEffectApply += AuraEffectApplyFn(spell_tyrannus_mark_of_rimefang_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                AfterEffectApply.Register(&spell_tyrannus_mark_of_rimefang_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -519,8 +515,6 @@ class spell_tyrannus_rimefang_icy_blast : public SpellScriptLoader
 
         class spell_tyrannus_rimefang_icy_blast_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_tyrannus_rimefang_icy_blast_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_ICY_BLAST_AURA });
@@ -536,7 +530,7 @@ class spell_tyrannus_rimefang_icy_blast : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHit += SpellEffectFn(spell_tyrannus_rimefang_icy_blast_SpellScript::HandleTriggerMissile, EFFECT_1, SPELL_EFFECT_TRIGGER_MISSILE);
+                OnEffectHit.Register(&spell_tyrannus_rimefang_icy_blast_SpellScript::HandleTriggerMissile, EFFECT_1, SPELL_EFFECT_TRIGGER_MISSILE);
             }
         };
 
@@ -551,7 +545,7 @@ class at_tyrannus_event_starter : public AreaTriggerScript
     public:
         at_tyrannus_event_starter() : AreaTriggerScript("at_tyrannus_event_starter") { }
 
-        bool OnTrigger(Player* player, const AreaTriggerEntry * /*at*/) override
+        bool OnTrigger(Player* player, AreaTriggerEntry const* /*at*/) override
         {
             InstanceScript* instance = player->GetInstanceScript();
             if (player->IsGameMaster() || !instance)

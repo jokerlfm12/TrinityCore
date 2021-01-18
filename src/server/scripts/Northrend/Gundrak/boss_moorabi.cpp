@@ -85,9 +85,9 @@ class boss_moorabi : public CreatureScript
                 events.ScheduleEvent(EVENT_PHANTOM, Seconds(21), 0, PHASE_INTRO);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 DoCastSelf(SPELL_MOJO_FRENZY, true);
 
@@ -221,8 +221,6 @@ class spell_moorabi_mojo_frenzy : public SpellScriptLoader
 
         class spell_moorabi_mojo_frenzy_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_moorabi_mojo_frenzy_AuraScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_MOJO_FRENZY_CAST_SPEED });
@@ -234,12 +232,12 @@ class spell_moorabi_mojo_frenzy : public SpellScriptLoader
 
                 Unit* owner = GetUnitOwner();
                 int32 castSpeedBonus = (100.0f - owner->GetHealthPct()) * 4; // between 0% and 400% cast speed bonus
-                owner->CastCustomSpell(SPELL_MOJO_FRENZY_CAST_SPEED, SPELLVALUE_BASE_POINT0, castSpeedBonus, owner, true);
+                owner->CastSpell(owner, SPELL_MOJO_FRENZY_CAST_SPEED, CastSpellExtraArgs(true).AddSpellBP0(castSpeedBonus));
             }
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_moorabi_mojo_frenzy_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_moorabi_mojo_frenzy_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 

@@ -120,7 +120,8 @@ class boss_jaraxxus : public CreatureScript
                 _JustReachedHome();
                 instance->SetBossState(BOSS_JARAXXUS, FAIL);
                 DoCast(me, SPELL_JARAXXUS_CHAINS);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                me->SetImmuneToPC(true);
             }
 
             void KilledUnit(Unit* who) override
@@ -135,9 +136,9 @@ class boss_jaraxxus : public CreatureScript
                 Talk(SAY_DEATH);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
             }
 
@@ -160,12 +161,12 @@ class boss_jaraxxus : public CreatureScript
                             events.ScheduleEvent(EVENT_FEL_FIREBALL, urand(10*IN_MILLISECONDS, 15*IN_MILLISECONDS));
                             return;
                         case EVENT_FEL_LIGHTNING:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, -SPELL_LORD_HITTIN))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true, true, -SPELL_LORD_HITTIN))
                                 DoCast(target, SPELL_FEL_LIGHTING);
                             events.ScheduleEvent(EVENT_FEL_LIGHTNING, urand(10*IN_MILLISECONDS, 15*IN_MILLISECONDS));
                             return;
                         case EVENT_INCINERATE_FLESH:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_LORD_HITTIN))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, -SPELL_LORD_HITTIN))
                             {
                                 Talk(EMOTE_INCINERATE, target);
                                 Talk(SAY_INCINERATE);
@@ -174,11 +175,11 @@ class boss_jaraxxus : public CreatureScript
                             events.ScheduleEvent(EVENT_INCINERATE_FLESH, urand(20*IN_MILLISECONDS, 25*IN_MILLISECONDS));
                             return;
                         case EVENT_NETHER_POWER:
-                            me->CastCustomSpell(SPELL_NETHER_POWER, SPELLVALUE_AURA_STACK, RAID_MODE<uint32>(5, 10, 5, 10), me, true);
+                            me->CastSpell(me, SPELL_NETHER_POWER, CastSpellExtraArgs(true).AddSpellMod(SPELLVALUE_AURA_STACK, RAID_MODE<uint32>(5, 10, 5, 10)));
                             events.ScheduleEvent(EVENT_NETHER_POWER, 40*IN_MILLISECONDS);
                             return;
                         case EVENT_LEGION_FLAME:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_LORD_HITTIN))
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, true, -SPELL_LORD_HITTIN))
                             {
                                 Talk(EMOTE_LEGION_FLAME, target);
                                 DoCast(target, SPELL_LEGION_FLAME);
@@ -492,8 +493,6 @@ class spell_mistress_kiss : public SpellScriptLoader
 
         class spell_mistress_kiss_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_mistress_kiss_AuraScript);
-
             bool Load() override
             {
                 if (GetCaster())
@@ -518,7 +517,7 @@ class spell_mistress_kiss : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_mistress_kiss_AuraScript::HandleDummyTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                OnEffectPeriodic.Register(&spell_mistress_kiss_AuraScript::HandleDummyTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             }
         };
 
@@ -550,8 +549,6 @@ class spell_mistress_kiss_area : public SpellScriptLoader
 
         class spell_mistress_kiss_area_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_mistress_kiss_area_SpellScript);
-
             void FilterTargets(std::list<WorldObject*>& targets)
             {
                 // get a list of players with mana
@@ -571,8 +568,8 @@ class spell_mistress_kiss_area : public SpellScriptLoader
 
             void Register() override
             {
-                OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_mistress_kiss_area_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
-                OnEffectHitTarget += SpellEffectFn(spell_mistress_kiss_area_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnObjectAreaTargetSelect.Register(&spell_mistress_kiss_area_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_SRC_AREA_ENEMY);
+                OnEffectHitTarget.Register(&spell_mistress_kiss_area_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -589,9 +586,7 @@ public:
 
     class spell_fel_streak_visual_SpellScript : public SpellScript
     {
-        PrepareSpellScript(spell_fel_streak_visual_SpellScript);
-
-        bool Validate(SpellInfo const* /*spellInfo*/) override
+             bool Validate(SpellInfo const* /*spellInfo*/) override
         {
             return ValidateSpellInfo({ SPELL_FEL_STREAK });
 }
@@ -603,7 +598,7 @@ public:
 
         void Register() override
         {
-            OnEffectHitTarget += SpellEffectFn(spell_fel_streak_visual_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            OnEffectHitTarget.Register(&spell_fel_streak_visual_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
         }
     };
 

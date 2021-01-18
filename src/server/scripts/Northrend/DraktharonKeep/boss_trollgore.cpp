@@ -92,9 +92,9 @@ class boss_trollgore : public CreatureScript
                 Initialize();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
 
                 events.ScheduleEvent(EVENT_CONSUME, 15000);
@@ -139,7 +139,7 @@ class boss_trollgore : public CreatureScript
                         case EVENT_SPAWN:
                             for (uint8 i = 0; i < 3; ++i)
                                 if (Creature* trigger = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_TROLLGORE_INVADER_SUMMONER_1 + i)))
-                                    trigger->CastSpell(trigger, RAND(SPELL_SUMMON_INVADER_A, SPELL_SUMMON_INVADER_B, SPELL_SUMMON_INVADER_C), true, nullptr, nullptr, me->GetGUID());
+                                    trigger->CastSpell(trigger, RAND(SPELL_SUMMON_INVADER_A, SPELL_SUMMON_INVADER_B, SPELL_SUMMON_INVADER_C), me->GetGUID());
 
                             events.ScheduleEvent(EVENT_SPAWN, urand(30000, 40000));
                             break;
@@ -213,7 +213,7 @@ class npc_drakkari_invader : public CreatureScript
                 if (type == POINT_MOTION_TYPE && pointId == POINT_LANDING)
                 {
                     me->Dismount();
-                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
+                    me->SetImmuneToAll(false);
                     DoCastAOE(SPELL_INVADER_TAUNT);
                 }
             }
@@ -233,8 +233,6 @@ class spell_trollgore_consume : public SpellScriptLoader
 
         class spell_trollgore_consume_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_trollgore_consume_SpellScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_CONSUME_BUFF });
@@ -248,7 +246,7 @@ class spell_trollgore_consume : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_trollgore_consume_SpellScript::HandleConsume, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_trollgore_consume_SpellScript::HandleConsume, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 
@@ -266,8 +264,6 @@ class spell_trollgore_corpse_explode : public SpellScriptLoader
 
         class spell_trollgore_corpse_explode_AuraScript : public AuraScript
         {
-            PrepareAuraScript(spell_trollgore_corpse_explode_AuraScript);
-
             bool Validate(SpellInfo const* /*spellInfo*/) override
             {
                 return ValidateSpellInfo({ SPELL_CORPSE_EXPLODE_DAMAGE });
@@ -277,7 +273,7 @@ class spell_trollgore_corpse_explode : public SpellScriptLoader
             {
                 if (aurEff->GetTickNumber() == 2)
                     if (Unit* caster = GetCaster())
-                        caster->CastSpell(GetTarget(), SPELL_CORPSE_EXPLODE_DAMAGE, true, nullptr, aurEff);
+                        caster->CastSpell(GetTarget(), SPELL_CORPSE_EXPLODE_DAMAGE, aurEff);
             }
 
             void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
@@ -288,8 +284,8 @@ class spell_trollgore_corpse_explode : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectPeriodic += AuraEffectPeriodicFn(spell_trollgore_corpse_explode_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-                AfterEffectRemove += AuraEffectRemoveFn(spell_trollgore_corpse_explode_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
+                OnEffectPeriodic.Register(&spell_trollgore_corpse_explode_AuraScript::PeriodicTick, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+                AfterEffectRemove.Register(&spell_trollgore_corpse_explode_AuraScript::HandleRemove, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY, AURA_EFFECT_HANDLE_REAL);
             }
         };
 
@@ -307,8 +303,6 @@ class spell_trollgore_invader_taunt : public SpellScriptLoader
 
         class spell_trollgore_invader_taunt_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_trollgore_invader_taunt_SpellScript);
-
             bool Validate(SpellInfo const* spellInfo) override
             {
                 return ValidateSpellInfo({ uint32(spellInfo->Effects[EFFECT_0].CalcValue()) });
@@ -322,7 +316,7 @@ class spell_trollgore_invader_taunt : public SpellScriptLoader
 
             void Register() override
             {
-                OnEffectHitTarget += SpellEffectFn(spell_trollgore_invader_taunt_SpellScript::HandleTaunt, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+                OnEffectHitTarget.Register(&spell_trollgore_invader_taunt_SpellScript::HandleTaunt, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
             }
         };
 

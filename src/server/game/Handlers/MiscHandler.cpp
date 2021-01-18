@@ -22,6 +22,7 @@
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "CharacterPackets.h"
 #include "Chat.h"
 #include "CinematicMgr.h"
 #include "Common.h"
@@ -473,14 +474,14 @@ void WorldSession::HandleRequestCemeteryList(WorldPacket& /*recvPacket*/)
         return;
     }
 
-    WorldPacket data(SMSG_REQUEST_CEMETERY_LIST_RESPONSE, 4 + 4 * graveyardIds.size());
-    data.WriteBit(0); // Is MicroDungeon (WorldMapFrame.lua)
+    WorldPackets::Misc::RequestCemeteryListResponse packet;
+    packet.IsGossipTriggered = false;
+    packet.CemeteryID.reserve(graveyardIds.size());
 
-    data.WriteBits(graveyardIds.size(), 24);
     for (uint32 id : graveyardIds)
-        data << id;
+        packet.CemeteryID.push_back(id);
 
-    SendPacket(&data);
+    SendPacket(packet.Write());
 }
 
 void WorldSession::HandleSetSelectionOpcode(WorldPacket& recvData)
@@ -717,11 +718,8 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
                     break;
                 case Map::CANNOT_ENTER_NOT_IN_RAID:
                 {
-                    WorldPacket data(SMSG_RAID_GROUP_ONLY, 4 + 4);
-                    data << uint32(0);
-                    data << uint32(2); // You must be in a raid group to enter this instance.
-                    player->SendDirectMessage(&data);
                     TC_LOG_DEBUG("maps", "MAP: Player '%s' must be in a raid group to enter instance map %d", player->GetName().c_str(), at->target_mapId);
+                    player->SendRaidGroupOnlyMessage(RAID_GROUP_ERR_ONLY, 0);
                     reviveAtTrigger = true;
                     break;
                 }
@@ -987,14 +985,14 @@ void WorldSession::HandleSetActionBarToggles(WorldPacket& recvData)
 
 void WorldSession::HandlePlayedTime(WorldPacket& recvData)
 {
-    uint8 unk1;
-    recvData >> unk1;                                      // 0 or 1 expected
+    uint8 TriggerScriptEvent;
+    recvData >> TriggerScriptEvent; // 0 or 1 expected
 
-    WorldPacket data(SMSG_PLAYED_TIME, 4 + 4 + 1);
-    data << uint32(_player->GetTotalPlayedTime());
-    data << uint32(_player->GetLevelPlayedTime());
-    data << uint8(unk1);                                    // 0 - will not show in chat frame
-    SendPacket(&data);
+    WorldPackets::Character::PlayedTime packet;
+    packet.TotalTime = _player->GetTotalPlayedTime();
+    packet.LevelTime = _player->GetLevelPlayedTime();
+    packet.TriggerEvent = bool(TriggerScriptEvent); // 0 - will not show in chat frame
+    SendPacket(packet.Write());
 }
 
 void WorldSession::HandleInspectOpcode(WorldPacket& recvData)
@@ -1576,7 +1574,7 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recvData*/)
     }
 
     AreaTableEntry const* atEntry = sAreaTableStore.LookupEntry(_player->GetAreaId());
-    if (!atEntry || !(atEntry->Flags & AREA_FLAG_WINTERGRASP_2))
+    if (!atEntry || !(atEntry->Flags & AREA_FLAG_CAN_HEARTH_AND_RESURRECT))
         return;
 
     _player->BuildPlayerRepop();
@@ -1763,61 +1761,12 @@ void WorldSession::SendLoadCUFProfiles()
 {
     Player* player = GetPlayer();
 
-    uint8 count = player->GetCUFProfilesCount();
+    WorldPackets::Misc::LoadCUFProfiles loadCUFProfiles;
 
-    ByteBuffer byteBuffer(25 * count);
-    WorldPacket data(SMSG_LOAD_CUF_PROFILES, 5 * count + 25 * count);
-
-    data.WriteBits(count, 20);
-    for (uint8 i = 0; i < MAX_CUF_PROFILES; ++i)
-    {
-        CUFProfile const* profile = player->GetCUFProfile(i);
-        if (!profile)
-            continue;
-
-        data.WriteBit(profile->BoolOptions[CUF_UNK_157]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_10_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_5_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_25_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_HEAL_PREDICTION]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_PVE]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_HORIZONTAL_GROUPS]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_40_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_3_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_AGGRO_HIGHLIGHT]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_BORDER]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_2_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_NON_BOSS_DEBUFFS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_MAIN_TANK_AND_ASSIST]);
-        data.WriteBit(profile->BoolOptions[CUF_UNK_156]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_SPEC_2]);
-        data.WriteBit(profile->BoolOptions[CUF_USE_CLASS_COLORS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_POWER_BAR]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_SPEC_1]);
-        data.WriteBits(profile->ProfileName.size(), 8);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_ONLY_DISPELLABLE_DEBUFFS]);
-        data.WriteBit(profile->BoolOptions[CUF_KEEP_GROUPS_TOGETHER]);
-        data.WriteBit(profile->BoolOptions[CUF_UNK_145]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_15_PLAYERS]);
-        data.WriteBit(profile->BoolOptions[CUF_DISPLAY_PETS]);
-        data.WriteBit(profile->BoolOptions[CUF_AUTO_ACTIVATE_PVP]);
-
-        byteBuffer << uint16(profile->LeftOffset);
-        byteBuffer << uint16(profile->FrameHeight);
-        byteBuffer << uint16(profile->BottomOffset);
-        byteBuffer << uint8(profile->BottomPoint);
-        byteBuffer << uint16(profile->TopOffset);
-        byteBuffer << uint8(profile->TopPoint);
-        byteBuffer << uint8(profile->HealthText);
-        byteBuffer << uint8(profile->SortBy);
-        byteBuffer << uint16(profile->FrameWidth);
-        byteBuffer << uint8(profile->LeftPoint);
-        byteBuffer.WriteString(profile->ProfileName);
-    }
-
-    data.FlushBits();
-    data.append(byteBuffer);
-    SendPacket(&data);
+    for (uint8 i = 0; i < MAX_CUF_PROFILES; i++)
+        if (CUFProfile* cufProfile = player->GetCUFProfile(i))
+            loadCUFProfiles.CUFProfiles.push_back(cufProfile);
+    SendPacket(loadCUFProfiles.Write());
 }
 
 void WorldSession::HandleChangePlayerDifficulty(WorldPacket& recvData)

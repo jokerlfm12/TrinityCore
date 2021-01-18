@@ -107,10 +107,10 @@ class boss_baltharus_the_warborn : public CreatureScript
                 }
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 me->InterruptNonMeleeSpells(false);
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.Reset();
                 events.SetPhase(PHASE_COMBAT);
                 events.ScheduleEvent(EVENT_CLEAVE, Seconds(13), 0, PHASE_COMBAT);
@@ -333,8 +333,6 @@ class spell_baltharus_enervating_brand_trigger : public SpellScriptLoader
 
         class spell_baltharus_enervating_brand_trigger_SpellScript : public SpellScript
         {
-            PrepareSpellScript(spell_baltharus_enervating_brand_trigger_SpellScript);
-
             bool Validate(SpellInfo const* /*spell*/) override
             {
                 return ValidateSpellInfo({ SPELL_SIPHONED_MIGHT });
@@ -350,7 +348,7 @@ class spell_baltharus_enervating_brand_trigger : public SpellScriptLoader
 
             void Register() override
             {
-                OnHit += SpellHitFn(spell_baltharus_enervating_brand_trigger_SpellScript::HandleSiphonedMight);
+                OnHit.Register(&spell_baltharus_enervating_brand_trigger_SpellScript::HandleSiphonedMight);
             }
         };
 

@@ -207,8 +207,14 @@ public:
     }
 
     //Teleport group to given game_tele.entry
-    static bool HandleTeleGroupCommand(ChatHandler* handler, GameTele const* tele)
+    static bool HandleTeleGroupCommand(ChatHandler* handler, char const* args)
     {
+        if (!*args)
+            return false;
+
+        // id, or string, or [name] Shift-click form |color|Htele:id|h[name]|h|r
+        GameTele const* tele = handler->extractGameTeleFromLink((char*)args);
+
         if (!tele)
         {
             handler->SendSysMessage(LANG_COMMAND_TELE_NOTFOUND);
@@ -285,8 +291,15 @@ public:
         return true;
     }
 
-    static bool HandleTeleCommand(ChatHandler* handler, GameTele const* tele)
+    static bool HandleTeleCommand(ChatHandler* handler, char const* args)
     {
+        if (!*args)
+            return false;
+
+        Player* me = handler->GetSession()->GetPlayer();
+
+        // id, or string, or [name] Shift-click form |color|Htele:id|h[name]|h|r
+        GameTele const* tele = handler->extractGameTeleFromLink((char*)args);
         if (!tele)
         {
             handler->SendSysMessage(LANG_COMMAND_TELE_NOTFOUND);
@@ -294,8 +307,7 @@ public:
             return false;
         }
 
-        Player* me = handler->GetSession()->GetPlayer();
-        if (me->IsInCombat())
+        if (me->IsInCombat() && !handler->GetSession()->HasPermission(rbac::RBAC_PERM_COMMAND_TELE_NAME))
         {
             handler->SendSysMessage(LANG_YOU_IN_COMBAT);
             handler->SetSentErrorMessage(true);

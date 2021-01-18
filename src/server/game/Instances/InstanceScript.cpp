@@ -242,49 +242,35 @@ void InstanceScript::UpdateSpawnGroups()
 {
     if (!_instanceSpawnGroups)
         return;
-    enum states : uint8
-    {
-        BLOCK           = 0x0,
-        SPAWN           = 0x1,
-        FORCEBLOCK      = 0x2,
-        FORCEDESPAWN    = 0x4
-    };
-
-    std::unordered_map<uint32, uint8> newStates;
+    enum states { BLOCK, SPAWN, FORCEBLOCK };
+    std::unordered_map<uint32, states> newStates;
     for (auto it = _instanceSpawnGroups->begin(), end = _instanceSpawnGroups->end(); it != end; ++it)
     {
         InstanceSpawnGroupInfo const& info = *it;
-        uint8& curValue = newStates[info.SpawnGroupId]; // makes sure there's a BLOCK value in the map
+        states& curValue = newStates[info.SpawnGroupId]; // makes sure there's a BLOCK value in the map
         if (curValue == FORCEBLOCK) // nothing will change this
             continue;
         if (!((1 << GetBossState(info.BossStateId)) & info.BossStates))
             continue;
+        if (((instance->GetTeamIdInInstance() == TEAM_ALLIANCE) && (info.Flags & InstanceSpawnGroupInfo::FLAG_HORDE_ONLY))
+            || ((instance->GetTeamIdInInstance() == TEAM_HORDE) && (info.Flags & InstanceSpawnGroupInfo::FLAG_ALLIANCE_ONLY)))
+            continue;
         if (info.Flags & InstanceSpawnGroupInfo::FLAG_BLOCK_SPAWN)
-            curValue |= FORCEBLOCK;
-        if (info.Flags & InstanceSpawnGroupInfo::FLAG_ACTIVATE_SPAWN)
-            curValue |= SPAWN;
-        if (info.Flags & InstanceSpawnGroupInfo::FLAG_FORCE_DESPAWN)
-            curValue |= FORCEDESPAWN;
+            curValue = FORCEBLOCK;
+        else if (info.Flags & InstanceSpawnGroupInfo::FLAG_ACTIVATE_SPAWN)
+            curValue = SPAWN;
     }
     for (auto const& pair : newStates)
     {
         uint32 const groupId = pair.first;
-        uint8 state = pair.second;
-        // Spawn group is already active, skip
-        if (instance->IsSpawnGroupActive(groupId) == (state & SPAWN))
-            continue;
-
-        // Spawn group shall be spawned, spawn it
-        if (state & SPAWN)
+        bool const doSpawn = (pair.second == SPAWN);
+        if (instance->IsSpawnGroupActive(groupId) == doSpawn)
+            continue; // nothing to do here
+        // if we should spawn group, then spawn it...
+        if (doSpawn)
             instance->SpawnGroupSpawn(groupId);
-
-        // Spawn group shall be disabled, disable it
-        if (state & FORCEBLOCK)
+        else // otherwise, set it as inactive so it no longer respawns (but don't despawn it)
             instance->SetSpawnGroupInactive(groupId);
-
-        // Spawn group shall be despawned, despawn it
-        if (state & FORCEDESPAWN)
-            instance->SpawnGroupDespawn(groupId);
     }
 }
 
@@ -362,7 +348,7 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
         if (bossInfo->state == TO_BE_DECIDED) // loading
         {
             bossInfo->state = state;
-            TC_LOG_DEBUG("scripts", "InstanceScript: Initialize boss %u state as %s (map %u, %u).", id, GetBossStateName(state).c_str(), instance->GetId(), instance->GetInstanceId());
+            TC_LOG_DEBUG("scripts", "InstanceScript: Initialize boss %u state as %s (map %u, %u).", id, GetBossStateName(state), instance->GetId(), instance->GetInstanceId());
             return false;
         }
 
@@ -373,7 +359,7 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
 
             if (bossInfo->state == DONE)
             {
-                TC_LOG_ERROR("map", "InstanceScript: Tried to set instance state from %s back to %s for map %u, instance id %u. Blocked!", GetBossStateName(bossInfo->state).c_str(), GetBossStateName(state).c_str(), instance->GetId(), instance->GetInstanceId());
+                TC_LOG_ERROR("map", "InstanceScript: Tried to set instance boss %u state from %s back to %s for map %u, instance id %u. Blocked!", id, GetBossStateName(bossInfo->state), GetBossStateName(state), instance->GetId(), instance->GetInstanceId());
                 return false;
             }
 
@@ -409,7 +395,8 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
                 if (GameObject* door = instance->GetGameObject(*i))
                     UpdateDoorState(door);
 
-        for (GuidSet::iterator i = bossInfo->minion.begin(); i != bossInfo->minion.end(); ++i)
+        GuidSet minions = bossInfo->minion; // Copy to prevent iterator invalidation (minion might be unsummoned in UpdateMinionState)
+        for (GuidSet::iterator i = minions.begin(); i != minions.end(); ++i)
             if (Creature* minion = instance->GetCreature(*i))
                 UpdateMinionState(minion, state);
 
@@ -826,7 +813,7 @@ void InstanceScript::UpdateEncounterStateForSpellCast(uint32 spellId, Unit* sour
     UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, spellId, source);
 }
 
-/*static*/ std::string InstanceScript::GetBossStateName(uint8 state)
+/*static*/ char const* InstanceScript::GetBossStateName(uint8 state)
 {
     // See enum EncounterState in InstanceScript.h
     switch (state)

@@ -223,13 +223,13 @@ QueryCallback DatabaseWorkerPool<T>::AsyncQuery(PreparedStatement<T>* stmt)
 }
 
 template <class T>
-QueryResultHolderFuture DatabaseWorkerPool<T>::DelayQueryHolder(SQLQueryHolder<T>* holder)
+SQLQueryHolderCallback DatabaseWorkerPool<T>::DelayQueryHolder(std::shared_ptr<SQLQueryHolder<T>> holder)
 {
     SQLQueryHolderTask* task = new SQLQueryHolderTask(holder);
     // Store future result before enqueueing - task might get already processed and deleted before returning from this method
     QueryResultHolderFuture result = task->GetFuture();
     Enqueue(task);
-    return result;
+    return { std::move(holder), std::move(result) };
 }
 
 template <class T>
@@ -272,7 +272,7 @@ TransactionCallback DatabaseWorkerPool<T>::AsyncCommitTransaction(SQLTransaction
     {
         case 0:
             TC_LOG_DEBUG("sql.driver", "Transaction contains 0 queries. Not executing.");
-            return;
+            break;
         case 1:
             TC_LOG_DEBUG("sql.driver", "Warning: Transaction only holds 1 query, consider removing Transaction context in code.");
             break;
