@@ -509,56 +509,6 @@ private:
     EventMap _events;
 };
 
-struct npc_matt : public ScriptedAI
-{
-    npc_matt(Creature* creature) : ScriptedAI(creature) { }
-
-    void Reset() override
-    {
-        _events.Reset();
-        _events.ScheduleEvent(1, 6000, 12000);        
-        _events.ScheduleEvent(2, 8000, 10000);
-    }
-
-    void UpdateAI(uint32 diff) override
-    {
-        _events.Update(diff);
-        while (uint32 eventId = _events.ExecuteEvent())
-        {
-            switch (eventId)
-            {
-            case 1:
-            {
-                uint32 talkIndex = urand(0, 1);
-                Talk(talkIndex);
-                me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_TALK);
-                _events.Repeat(60000, 120000);
-                break;
-            }
-            case 2:
-            {
-                std::list<Creature*> LeeBrowns;
-                me->GetCreatureListWithEntryInGrid(LeeBrowns, 1651, 10.0f);
-                for (Creature* LeeBrown : LeeBrowns)
-                {
-                    LeeBrown->SetUInt32Value(UNIT_NPC_EMOTESTATE, Emote::EMOTE_STATE_FISHING);
-                    break;
-                }
-                _events.Repeat(80000, 100000);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-            }
-        }
-    }
-
-private:
-    EventMap _events;
-};
-
 void AddSC_elwynn_forest()
 {
     RegisterCreatureAI(npc_stormwind_infantry);
@@ -566,5 +516,4 @@ void AddSC_elwynn_forest()
     RegisterCreatureAI(npc_injured_stormwind_infantry_dummy);
     RegisterCreatureAI(npc_hogger);
     RegisterCreatureAI(npc_elwynn_stormwind_charger);
-    RegisterCreatureAI(npc_matt);
 }

@@ -81,9 +81,6 @@
 #include "WorldSession.h"
 #include <cmath>
 
- // EJ joker
-#include "JokerConfig.h"
-
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
     2.5f,                  // MOVE_WALK
@@ -6620,18 +6617,6 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
     // Pet damage?
     if (GetTypeId() == TYPEID_UNIT && !IsPet())
         DoneTotalMod *= ToCreature()->GetSpellDamageMod(ToCreature()->GetCreatureTemplate()->rank);
-
-    // EJ joker mod
-    if (sJokerConfig->Enable)
-    {
-        if (const Creature* meC = ToCreature())
-        {
-            if (const CreatureTemplate* meCT = meC->GetCreatureTemplate())
-            {
-                DoneTotalMod *= meCT->ModSpell;
-            }
-        }
-    }
 
     float maxModDamagePercentSchool = 0.0f;
     if (GetTypeId() == TYPEID_PLAYER)

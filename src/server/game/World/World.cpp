@@ -93,9 +93,6 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/algorithm/string.hpp>
 
-// ej joker
-#include "JokerConfig.h"
-
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -1637,9 +1634,6 @@ void World::SetInitialWorldSettings()
 
     ///- Initialize config settings
     LoadConfigSettings();
-
-    // EJ joker
-    sJokerConfig->StartJokerSystem();
 
     ///- Initialize Allowed Security Level
     LoadDBAllowedSecurityLevel();

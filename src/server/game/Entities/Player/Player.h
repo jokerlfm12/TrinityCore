@@ -1023,9 +1023,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(i_AI); }
 
-        // EJ auto fish
-        bool fishing;
-
         void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
         void AddToWorld() override;
@@ -1424,10 +1421,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void ItemRemovedQuestCheck(uint32 entry, uint32 count);
         void KilledMonster(CreatureTemplate const* cInfo, ObjectGuid guid);
         void KilledMonsterCredit(uint32 entry, ObjectGuid guid = ObjectGuid::Empty);
-
-        // EJ learn spell credit
-        void LearnSpellCredit(uint32 pmSpellID, bool pmUpdate = true);
-
         void KilledPlayerCredit(uint16 count = 1);
         void KilledPlayerCreditForQuest(uint16 count, Quest const* quest);
         void KillCreditGO(uint32 entry, ObjectGuid guid = ObjectGuid::Empty);

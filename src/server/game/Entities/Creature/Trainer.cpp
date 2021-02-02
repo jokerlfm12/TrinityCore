@@ -119,9 +119,6 @@ namespace Trainer
         else
             player->LearnSpell(trainerSpell->SpellId, false);
 
-        // EJ learn spell credit
-        player->LearnSpellCredit(trainerSpell->SpellId);
-
         SendTeachSucceeded(npc, player, spellId);
     }
 

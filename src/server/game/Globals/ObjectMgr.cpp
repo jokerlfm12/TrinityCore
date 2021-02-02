@@ -62,10 +62,6 @@
 #include "World.h"
 #include <G3D/g3dmath.h>
 
-// EJ joker mod
-#include "JokerConfig.h"
-#include "JokerManager.h"
-
 ScriptMapMap sSpellScripts;
 ScriptMapMap sEventScripts;
 ScriptMapMap sWaypointScripts;
@@ -561,20 +557,6 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.SpellSchoolImmuneMask = fields[79].GetUInt32();
     creatureTemplate.flags_extra           = fields[80].GetUInt32();
     creatureTemplate.ScriptID              = GetScriptId(fields[81].GetCString());
-
-    // EJ creature template mod spell init
-    creatureTemplate.ModSpell = 1.0f;
-
-    // EJ creature fix
-    if (creatureTemplate.Entry == 4444 || creatureTemplate.Entry == 4787 || creatureTemplate.Entry == 4510)
-    {
-        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_NPC;
-        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
-    }
-    if (creatureTemplate.IconName == "LootAll")
-    {
-        creatureTemplate.npcflag |= NPCFlags::UNIT_NPC_FLAG_SPELLCLICK;
-    }
 }
 
 void ObjectMgr::LoadCreatureTemplateAddons()
@@ -2042,19 +2024,6 @@ void ObjectMgr::LoadCreatures()
         data.terrainSwapMap = fields[24].GetInt32();
         data.scriptId = GetScriptId(fields[25].GetString());
         data.spawnGroupData = GetDefaultSpawnGroup();
-
-        // EJ all move random
-        if (sJokerConfig->Enable)
-        {
-            if (sJokerConfig->RandomMoveCreatureEntrySet.find(data.id) != sJokerConfig->RandomMoveCreatureEntrySet.end())
-            {
-                if (data.movementType == 0)
-                {
-                    data.movementType = 1;
-                    data.spawndist = 10.0f;
-                }
-            }
-        }
 
         MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapId);
         if (!mapEntry)
@@ -3877,26 +3846,6 @@ void ObjectMgr::LoadPlayerInfo()
                 continue;
             }
             //PlayerXPperLevel
-            // EJ joker mod level up exp rate
-            if (sJokerConfig->Enable)
-            {
-                if (current_level < 60)
-                {
-                    current_xp = current_xp * sJokerConfig->LevelUpEXPRate_Expansion_0;
-                }
-                else if (current_level < 70)
-                {
-                    current_xp = current_xp * sJokerConfig->LevelUpEXPRate_Expansion_1;
-                }
-                else if (current_level < 80)
-                {
-                    current_xp = current_xp * sJokerConfig->LevelUpEXPRate_Expansion_2;
-                }
-                else
-                {
-                    current_xp = current_xp * sJokerConfig->LevelUpEXPRate_Expansion_3;
-                }
-            }
             _playerXPperLevel[current_level] = current_xp;
             ++count;
         }
@@ -7875,12 +7824,6 @@ void ObjectMgr::LoadQuestPOI()
         POI.Priority = Priority;
         POI.Flags = Flags;
 
-        // EJ only end points
-        if (objIndex != -1)
-        {
-            continue;
-        }
-
         if (questId < POIs.size() && id < POIs[questId].size())
         {
             POI.QuestPOIBlobPointStats = POIs[questId][id];
@@ -9579,24 +9522,6 @@ void ObjectMgr::LoadCreatureClassLevelStats()
 
         stats.AttackPower = fields[8].GetUInt16();
         stats.RangedAttackPower = fields[9].GetUInt16();
-
-        // EJ joker stats mod            
-        if (sJokerConfig->Enable)
-        {
-            float checkMeleeAP = stats.AttackPower;
-            if (checkMeleeAP < 30)
-            {
-                checkMeleeAP = 30;
-            }
-            checkMeleeAP = checkMeleeAP * 1.0f;
-            float checkRangeAP = checkMeleeAP / 4;
-            if (checkRangeAP < stats.RangedAttackPower)
-            {
-                checkRangeAP = stats.RangedAttackPower;
-            }
-            stats.AttackPower = checkMeleeAP;
-            stats.RangedAttackPower = checkRangeAP;
-        }
 
         _creatureBaseStatsStore[MAKE_PAIR16(Level, Class)] = stats;
 

@@ -188,10 +188,6 @@ struct TC_GAME_API CreatureTemplate
     float   ModManaExtra;                                   // Added in 4.x, this value is usually 2 for a small group of creatures with double mana
     float   ModArmor;
     float   ModDamage;
-
-    // EJ mod spell in template
-    float ModSpell;
-
     float   ModExperience;
     bool    RacialLeader;
     uint32  movementId;
