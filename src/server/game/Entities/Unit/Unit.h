@@ -21,7 +21,6 @@
 #include "Object.h"
 #include "EventProcessor.h"
 #include "CombatManager.h"
-#include "OptionalFwd.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
 #include "ThreatManager.h"
@@ -276,7 +275,7 @@ enum UnitMoveType
     MOVE_PITCH_RATE     = 8
 };
 
-#define MAX_MOVE_TYPE     9
+#define MAX_MOVE_TYPE 9
 
 TC_GAME_API extern float baseMoveSpeed[MAX_MOVE_TYPE];
 TC_GAME_API extern float playerBaseMoveSpeed[MAX_MOVE_TYPE];
@@ -994,7 +993,7 @@ class TC_GAME_API Unit : public WorldObject
         float MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, uint32 spellId) const;
         SpellMissInfo MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo);
         SpellMissInfo MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo);
-        SpellMissInfo SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect = false, Optional<uint8> effectMask = nullptr);
+        SpellMissInfo SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect = false, Optional<uint8> effectMask = {});
 
         float GetUnitDodgeChance(WeaponAttackType attType, Unit const* victim) const;
         float GetUnitParryChance(WeaponAttackType attType, Unit const* victim) const;
@@ -1521,12 +1520,12 @@ class TC_GAME_API Unit : public WorldObject
         Unit* GetMagicHitRedirectTarget(Unit* victim, SpellInfo const* spellInfo);
         Unit* GetMeleeHitRedirectTarget(Unit* victim, SpellInfo const* spellInfo = nullptr);
 
-        int32  SpellBaseDamageBonusDone(SpellSchoolMask schoolMask) const;
+        int32  SpellBaseDamageBonusDone(SpellSchoolMask schoolMask, bool withSpellPowerPctMod = false) const;
         int32  SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask) const;
         uint32 SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 pdamage, DamageEffectType damagetype, uint8 effIndex, uint32 stack = 1) const;
         float  SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, DamageEffectType damagetype) const;
         uint32 SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, uint32 pdamage, DamageEffectType damagetype) const;
-        int32  SpellBaseHealingBonusDone(SpellSchoolMask schoolMask) const;
+        int32  SpellBaseHealingBonusDone(SpellSchoolMask schoolMask, bool withSpellPowerPctMod = false) const;
         int32  SpellBaseHealingBonusTaken(SpellSchoolMask schoolMask) const;
         uint32 SpellHealingBonusDone(Unit* victim, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, uint8 effIndex, uint32 stack = 1) const;
         float SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const;
@@ -1540,7 +1539,7 @@ class TC_GAME_API Unit : public WorldObject
         float SpellCritChanceDone(SpellInfo const* spellInfo, SpellSchoolMask schoolMask, WeaponAttackType attackType = BASE_ATTACK) const;
         float SpellCritChanceTaken(Unit const* caster, SpellInfo const* spellInfo, SpellSchoolMask schoolMask, float doneChance, WeaponAttackType attackType = BASE_ATTACK) const;
         static uint32 SpellCriticalDamageBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage);
-        static uint32 SpellCriticalHealingBonus(Unit const* caster, SpellInfo const* spellProto, uint32 damage);
+        static uint32 SpellCriticalHealingBonus(Unit const* caster, uint32 damage);
 
         uint32 GetCastingTimeForBonus(SpellInfo const* spellProto, DamageEffectType damagetype, uint32 CastingTime) const;
         float CalculateDefaultCoefficient(SpellInfo const* spellInfo, DamageEffectType damagetype) const;
@@ -1548,7 +1547,7 @@ class TC_GAME_API Unit : public WorldObject
         uint32 GetRemainingPeriodicAmount(ObjectGuid caster, uint32 spellId, AuraType auraType, uint8 effectIndex = 0) const;
 
         void ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply);
-        virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask = nullptr) const; // redefined in Creature
+        virtual bool IsImmunedToSpell(SpellInfo const* spellInfo, Unit* caster, Optional<uint8> effectMask = {}) const; // redefined in Creature
         uint32 GetSchoolImmunityMask() const;
         uint32 GetMechanicImmunityMask() const;
 

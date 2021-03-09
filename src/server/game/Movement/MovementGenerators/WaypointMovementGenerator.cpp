@@ -152,7 +152,8 @@ void WaypointMovementGenerator<Creature>::HandleMovementInformationHooks(Creatur
     creature->UpdateCurrentWaypointInfo(waypoint.Id, _path->Id);
 
     // All hooks called and infos updated. Time to increment the waypoint node id
-    _currentNode = (_currentNode + 1) % _path->Nodes.size();
+    if (_path && !_path->Nodes.empty()) // ensure that the path has not been changed in one of the hooks.
+        _currentNode = (_currentNode + 1) % _path->Nodes.size();
 
     _waypointReached = true;
 }
@@ -214,9 +215,8 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* creature, bool rel
             init.MoveTo(waypoint.X, waypoint.Y, waypoint.Z);
     }
 
-    //! Accepts angles such as 0.00001 and -0.00001, 0 must be ignored, default value in waypoint table
-    if (waypoint.Orientation && waypoint.Delay > 0)
-        init.SetFacing(waypoint.Orientation);
+    if (waypoint.Orientation.has_value() && waypoint.Delay > 0)
+        init.SetFacing(*waypoint.Orientation);
 
     switch (waypoint.MoveType)
     {

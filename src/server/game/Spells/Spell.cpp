@@ -189,7 +189,7 @@ void SpellCastTargets::Write(WorldPackets::Spells::SpellTargetData& data)
 
     if (m_targetMask & TARGET_FLAG_SOURCE_LOCATION)
     {
-        data.SrcLocation = boost::in_place();
+        data.SrcLocation.emplace();
         data.SrcLocation->Transport = m_src._transportGUID; // relative position guid here - transport for example
         if (!m_src._transportGUID.IsEmpty())
             data.SrcLocation->Location = m_src._transportOffset;
@@ -199,7 +199,7 @@ void SpellCastTargets::Write(WorldPackets::Spells::SpellTargetData& data)
 
     if (m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
-        data.DstLocation = boost::in_place();
+        data.DstLocation.emplace();
         data.DstLocation->Transport = m_dst._transportGUID; // relative position guid here - transport for example
         if (!m_dst._transportGUID.IsEmpty())
             data.DstLocation->Location = m_dst._transportOffset;
@@ -2218,6 +2218,7 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         targetInfo.damage     = 0;
         targetInfo.crit       = false;
         targetInfo.scaleAura  = false;
+        targetInfo.missCondition = SPELL_MISS_NONE;
     }
 
     bool hasReflectData = targetInfo.missCondition == SPELL_MISS_REFLECT;
@@ -2616,7 +2617,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         if (crit)
         {
             hitMask |= PROC_HIT_CRITICAL;
-            addhealth = Unit::SpellCriticalHealingBonus(caster, m_spellInfo, addhealth);
+            addhealth = Unit::SpellCriticalHealingBonus(caster, addhealth);
         }
         else
             hitMask |= PROC_HIT_NORMAL;
@@ -4278,8 +4279,9 @@ void Spell::SendSpellStart()
     //TC_LOG_DEBUG("spells", "Sending SMSG_SPELL_START id=%u", m_spellInfo->Id);
 
     uint32 castFlags = CAST_FLAG_HAS_TRAJECTORY;
-    uint32 schoolImmunityMask = m_caster->GetSchoolImmunityMask();
-    uint32 mechanicImmunityMask = m_caster->GetMechanicImmunityMask();
+    uint32 schoolImmunityMask = m_casttime != 0 ? m_caster->GetSchoolImmunityMask() : 0;
+    uint32 mechanicImmunityMask = m_casttime != 0 ? m_spellInfo->GetMechanicImmunityMask(m_caster, false) : 0;
+
     if (schoolImmunityMask || mechanicImmunityMask)
         castFlags |= CAST_FLAG_IMMUNITY;
 
@@ -4297,8 +4299,7 @@ void Spell::SendSpellStart()
     if (m_spellInfo->RuneCostID && m_spellInfo->PowerType == POWER_RUNE)
         castFlags |= CAST_FLAG_NO_GCD; // not needed, but Blizzard sends it
 
-    if ((m_casttime && m_spellInfo->HasEffect(SPELL_EFFECT_HEAL)) || m_spellInfo->HasEffect(SPELL_EFFECT_HEAL_PCT) ||
-        m_spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL))
+    if ((m_casttime && m_spellInfo->HasEffect(SPELL_EFFECT_HEAL)) || m_spellInfo->HasAura(SPELL_AURA_PERIODIC_HEAL))
         castFlags |= CAST_FLAG_HEAL_PREDICTION;
 
     WorldPackets::Spells::SpellStart packet;
@@ -4316,8 +4317,6 @@ void Spell::SendSpellStart()
     castData.CastFlagsEx = m_castFlagsEx;
     castData.CastTime = m_casttime;
 
-    //data << uint32(m_timer);                                // delay?
-
     m_targets.Write(castData.Target);
 
     if (castFlags & CAST_FLAG_POWER_LEFT_SELF)
@@ -4325,7 +4324,7 @@ void Spell::SendSpellStart()
 
     if (castFlags & CAST_FLAG_RUNE_LIST)                   // rune cooldowns list
     {
-        castData.RemainingRunes = boost::in_place();
+        castData.RemainingRunes.emplace();
 
         //TODO: There is a crash caused by a spell with CAST_FLAG_RUNE_LIST casted by a creature
         //The creature is the mover of a player, so HandleCastSpellOpcode uses it as the caster
@@ -4352,13 +4351,13 @@ void Spell::SendSpellStart()
 
     if (castFlags & CAST_FLAG_PROJECTILE)
     {
-        castData.Ammo = boost::in_place();
+        castData.Ammo.emplace();
         UpdateSpellCastDataAmmo(*castData.Ammo);
     }
 
     if (castFlags & CAST_FLAG_IMMUNITY)
     {
-        castData.Immunities = boost::in_place();
+        castData.Immunities.emplace();
         castData.Immunities->School = schoolImmunityMask;
         castData.Immunities->Value = mechanicImmunityMask;
     }
@@ -4378,7 +4377,7 @@ void Spell::SendSpellStart()
             }
         }
 
-        castData.Predict = boost::in_place();
+        castData.Predict.emplace();
         castData.Predict->Points = amount;
         castData.Predict->Type = predictionType;
         castData.Predict->BeaconGUID = m_caster->GetGUID();
@@ -4443,13 +4442,13 @@ void Spell::SendSpellGo()
     castData.CastFlagsEx = m_castFlagsEx;
     castData.CastTime = GameTime::GetGameTimeMS();
 
-    castData.HitInfo = boost::in_place();
+    castData.HitInfo.emplace();
     UpdateSpellCastDataTargets(*castData.HitInfo);
     m_targets.Write(castData.Target);
 
     if (castFlags & CAST_FLAG_PROJECTILE)
     {
-        castData.Ammo = boost::in_place();
+        castData.Ammo.emplace();
         UpdateSpellCastDataAmmo(*castData.Ammo);
     }
 
@@ -4458,7 +4457,7 @@ void Spell::SendSpellGo()
 
     if (castFlags & CAST_FLAG_RUNE_LIST)                   // rune cooldowns list
     {
-        castData.RemainingRunes = boost::in_place();
+        castData.RemainingRunes.emplace();
 
         /// @todo There is a crash caused by a spell with CAST_FLAG_RUNE_LIST cast by a creature
         //The creature is the mover of a player, so HandleCastSpellOpcode uses it as the caster
@@ -4484,14 +4483,14 @@ void Spell::SendSpellGo()
 
     if (castFlags & CAST_FLAG_ADJUST_MISSILE)
     {
-        castData.MissileTrajectory = boost::in_place();
+        castData.MissileTrajectory.emplace();
         castData.MissileTrajectory->TravelTime = m_delayMoment;
         castData.MissileTrajectory->Pitch = m_targets.GetElevation();
     }
 
     if (castFlags & CAST_FLAG_VISUAL_CHAIN)
     {
-        castData.ProjectileVisuals = boost::in_place();
+        castData.ProjectileVisuals.emplace();
         /*
         castData.ProjectileVisuals->Id[0] = 0;
         castData.ProjectileVisuals->Id[1] = 0;
@@ -4805,7 +4804,7 @@ void Spell::SendChannelStart(uint32 duration)
 
     uint32 castFlags = CAST_FLAG_HAS_TRAJECTORY;
     uint32 schoolImmunityMask = m_caster->GetSchoolImmunityMask();
-    uint32 mechanicImmunityMask = m_caster->GetMechanicImmunityMask();
+    uint32 mechanicImmunityMask = m_spellInfo->GetMechanicImmunityMask(m_caster, true);
 
     if (schoolImmunityMask || mechanicImmunityMask)
         castFlags |= CAST_FLAG_IMMUNITY;
@@ -4823,7 +4822,7 @@ void Spell::SendChannelStart(uint32 duration)
 
         for (uint8 j = 0; j < MAX_SPELL_EFFECTS; j++)
         {
-            if (spell->Effects[j].Effect == SPELL_EFFECT_HEAL || spell->Effects[j].Effect == SPELL_EFFECT_HEAL_PCT)
+            if (spell->Effects[j].Effect == SPELL_EFFECT_HEAL)
             {
                 Unit* target = m_targets.GetUnitTarget() ? m_targets.GetUnitTarget() : m_caster;
                 int32 heal = spell->Effects[j].CalcValue(m_caster);
@@ -4845,7 +4844,7 @@ void Spell::SendChannelStart(uint32 duration)
 
     if (castFlags & CAST_FLAG_IMMUNITY)
     {
-        packet.InterruptImmunities = boost::in_place();
+        packet.InterruptImmunities.emplace();
         packet.InterruptImmunities->SchoolImmunities = schoolImmunityMask; // CastSchoolImmunities
         packet.InterruptImmunities->SchoolImmunities = mechanicImmunityMask; // CastImmunities
     }
@@ -7369,7 +7368,7 @@ bool Spell::CheckEffectTarget(Unit const* target, uint32 eff, Position const* lo
         case SPELL_AURA_MOD_POSSESS:
         case SPELL_AURA_MOD_CHARM:
         case SPELL_AURA_AOE_CHARM:
-            if (target->GetTypeId() == TYPEID_UNIT && target->IsVehicle())
+            if (target->GetVehicleKit() && target->GetVehicleKit()->IsControllableVehicle())
                 return false;
             if (target->IsMounted())
                 return false;

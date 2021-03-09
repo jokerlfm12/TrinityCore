@@ -1261,7 +1261,7 @@ void WorldObject::ProcessPositionDataChanged(PositionFullTerrainStatus const& da
     m_outdoors = data.outdoors;
     m_staticFloorZ = data.floorZ;
     m_liquidStatus = data.liquidStatus;
-    m_wmoGroupID = data.areaInfo.is_initialized() ? data.areaInfo->groupId : 0;
+    m_wmoGroupID = data.areaInfo.has_value() ? data.areaInfo->groupId : 0;
 }
 
 void WorldObject::AddToWorld()
@@ -1770,10 +1770,13 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
             viewpoint = player->GetViewpoint();
 
             if (Creature const* creature = obj->ToCreature())
-                if (TempSummon const* tempSummon = creature->ToTempSummon())
-                    if (tempSummon->IsVisibleBySummonerOnly() && GetGUID() != tempSummon->GetSummonerGUID())
-                        return false;
+                if (TempSummon::IsPersonalSummonOfAnotherPlayer(creature, GetGUID()))
+                    return false;
         }
+
+        if (GameObject const* go = obj->ToGameObject())
+            if (go->IsVisibleByUnitOnly() && GetGUID() != go->GetVisibleByUnitOnly())
+                return false;
 
         if (!viewpoint)
             viewpoint = this;
@@ -2781,7 +2784,7 @@ float WorldObject::GetFloorZ() const
 {
     if (!IsInWorld())
         return m_staticFloorZ;
-    return std::max<float>(m_staticFloorZ, GetMap()->GetGameObjectFloor(GetPhaseShift(), GetPositionX(), GetPositionY(), GetPositionZ() + GetCollisionHeight()));
+    return std::max<float>(m_staticFloorZ, GetMap()->GetGameObjectFloor(GetPhaseShift(), GetPositionX(), GetPositionY(), GetPositionZ() + Z_OFFSET_FIND_HEIGHT));
 }
 
 float WorldObject::GetMapWaterOrGroundLevel(float x, float y, float z, float* ground/* = nullptr*/) const
@@ -2794,7 +2797,7 @@ float WorldObject::GetMapWaterOrGroundLevel(float x, float y, float z, float* gr
 float WorldObject::GetMapHeight(float x, float y, float z, bool vmap/* = true*/, float distanceToSearch/* = DEFAULT_HEIGHT_SEARCH*/) const
 {
     if (z != MAX_HEIGHT)
-        z += GetCollisionHeight();
+        z += Z_OFFSET_FIND_HEIGHT;
 
     return GetMap()->GetHeight(GetPhaseShift(), x, y, z, vmap, distanceToSearch);
 }

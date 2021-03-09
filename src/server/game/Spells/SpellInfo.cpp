@@ -861,7 +861,7 @@ SpellEffectInfo::StaticData SpellEffectInfo::_data[TOTAL_SPELL_EFFECTS] =
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 168 SPELL_EFFECT_168
     {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_ITEM}, // 169 SPELL_EFFECT_DESTROY_ITEM
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 170 SPELL_EFFECT_170
-    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_DEST}, // 171 SPELL_EFFECT_171
+    {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_DEST}, // 171 SPELL_EFFECT_SUMMON_PERSONAL_GAMEOBJECT
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_CORPSE_ALLY}, // 172 SPELL_EFFECT_RESURRECT_WITH_AURA
     {EFFECT_IMPLICIT_TARGET_NONE,     TARGET_OBJECT_TYPE_NONE}, // 173 SPELL_EFFECT_UNLOCK_GUILD_VAULT_TAB
     {EFFECT_IMPLICIT_TARGET_EXPLICIT, TARGET_OBJECT_TYPE_UNIT}, // 174 SPELL_EFFECT_APPLY_AURA_2
@@ -3253,6 +3253,25 @@ uint32 SpellInfo::GetAllowedMechanicMask() const
     return _allowedMechanicMask;
 }
 
+uint32 SpellInfo::GetMechanicImmunityMask(Unit* caster, bool channeled) const
+{
+    uint32 casterMechanicImmunityMask = caster->GetMechanicImmunityMask();
+    uint32 mechanicImmunityMask = 0;
+    uint32 flags = channeled ? ChannelInterruptFlags : InterruptFlags;
+
+    // @todo: research other interrupt flags
+    if (flags & SPELL_INTERRUPT_FLAG_INTERRUPT)
+    {
+        if (casterMechanicImmunityMask & (1 << MECHANIC_SILENCE))
+            mechanicImmunityMask |= (1 << MECHANIC_SILENCE);
+
+        if (casterMechanicImmunityMask & (1 << MECHANIC_INTERRUPT))
+            mechanicImmunityMask |= (1 << MECHANIC_INTERRUPT);
+    }
+
+    return mechanicImmunityMask;
+}
+
 float SpellInfo::GetMinRange(bool positive) const
 {
     if (!RangeEntry)
@@ -3355,8 +3374,15 @@ int32 SpellInfo::CalcDuration(Unit* caster, Spell* spell) const
                     return int32(duration * hasteValue);
 
                 int32 effectPeriod = Effects[periodicEffectIndex].CalcPeriod(caster, spell);
+                float preciseTicks = (float)duration / float(effectPeriod);
+                int32 ticks = duration / effectPeriod;
+
+                // additional ticks are being added by rounding up, resulting in increased duration.
+                if (preciseTicks - ticks >= 0.5f)
+                    ticks = int32(std::ceil(preciseTicks));
+
                 if (effectPeriod > 0)
-                    duration = std::floor(float(duration) / float(effectPeriod)) * effectPeriod;
+                    duration = std::max(ticks * effectPeriod, duration);
             }
         }
     }

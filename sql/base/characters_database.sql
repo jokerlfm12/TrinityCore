@@ -309,7 +309,7 @@ CREATE TABLE `battleground_deserters` (
   `guid` int(10) unsigned NOT NULL COMMENT 'characters.guid',
   `type` tinyint(3) unsigned NOT NULL COMMENT 'type of the desertion',
   `datetime` datetime NOT NULL COMMENT 'datetime of the desertion'
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -569,7 +569,7 @@ CREATE TABLE `character_archaeology_projects` (
   `branch` tinyint(3) unsigned NOT NULL,
   `project` mediumint(8) unsigned NOT NULL,
   PRIMARY KEY (`guid`,`branch`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1513,6 +1513,7 @@ CREATE TABLE `character_void_storage` (
   `itemEntry` mediumint(8) unsigned NOT NULL,
   `slot` tinyint(3) unsigned NOT NULL,
   `creatorGuid` int(10) unsigned NOT NULL DEFAULT '0',
+  `randomPropertyType` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `randomProperty` int(10) unsigned NOT NULL DEFAULT '0',
   `suffixFactor` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`itemId`),
@@ -2169,7 +2170,7 @@ CREATE TABLE `guild_finder_applicant` (
   `comment` varchar(255) DEFAULT NULL,
   `submitTime` int(10) unsigned DEFAULT NULL,
   UNIQUE KEY `guildId` (`guildId`,`playerGuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2197,7 +2198,7 @@ CREATE TABLE `guild_finder_guild_settings` (
   `listed` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `comment` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`guildId`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2315,7 +2316,7 @@ CREATE TABLE `guild_old_member` (
   `weekReputation` int(10) unsigned NOT NULL,
   `leaveDate` int(10) unsigned NOT NULL,
   PRIMARY KEY (`guid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2427,7 +2428,8 @@ CREATE TABLE `item_instance` (
   `charges` tinytext,
   `flags` int(10) unsigned NOT NULL DEFAULT '0',
   `enchantments` text NOT NULL,
-  `randomPropertyId` smallint(5) NOT NULL DEFAULT '0',
+  `randomPropertyType` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `randomPropertyId` int(10) unsigned NOT NULL DEFAULT '0',
   `durability` smallint(5) unsigned NOT NULL DEFAULT '0',
   `creationTime` int(10) unsigned NOT NULL DEFAULT '0',
   `text` text,
@@ -2462,9 +2464,10 @@ CREATE TABLE `item_loot_items` (
   `counted` tinyint(1) NOT NULL DEFAULT '0',
   `under_threshold` tinyint(1) NOT NULL DEFAULT '0',
   `needs_quest` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'quest drop',
-  `rnd_prop` int(10) NOT NULL DEFAULT '0' COMMENT 'random enchantment added when originally rolled',
+  `rnd_type` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT 'random enchantment type',
+  `rnd_prop` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'random enchantment added when originally rolled',
   `rnd_suffix` int(10) NOT NULL DEFAULT '0' COMMENT 'random suffix added when originally rolled'
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2487,7 +2490,7 @@ CREATE TABLE `item_loot_money` (
   `container_id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'guid of container (item_instance.guid)',
   `money` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'money loot (in copper)',
   PRIMARY KEY (`container_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2840,7 +2843,7 @@ CREATE TABLE `pvpstats_battlegrounds` (
   `type` tinyint(3) unsigned NOT NULL,
   `date` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2875,7 +2878,7 @@ CREATE TABLE `pvpstats_players` (
   `attr_4` mediumint(8) unsigned NOT NULL DEFAULT '0',
   `attr_5` mediumint(8) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`battleground_id`,`character_guid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2903,7 +2906,7 @@ CREATE TABLE `quest_tracker` (
   `completed_by_gm` tinyint(1) NOT NULL DEFAULT '0',
   `core_hash` varchar(120) NOT NULL DEFAULT '0',
   `core_revision` varchar(120) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

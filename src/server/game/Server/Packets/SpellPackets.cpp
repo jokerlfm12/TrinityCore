@@ -21,7 +21,7 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::SpellHealPredicti
 {
     data << int32(predict.Points);
     data << uint8(predict.Type);
-    if (predict.BeaconGUID.is_initialized())
+    if (predict.BeaconGUID.has_value())
         data << predict.BeaconGUID->WriteAsPacked();
     return data;
 }
@@ -75,10 +75,10 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::SpellTargetData c
 {
     data << uint32(spellTargetData.Flags);
 
-    if (spellTargetData.Unit.is_initialized())
+    if (spellTargetData.Unit.has_value())
         data << spellTargetData.Unit->WriteAsPacked();
 
-    if (spellTargetData.Item.is_initialized())
+    if (spellTargetData.Item.has_value())
         data << spellTargetData.Item->WriteAsPacked();
 
     if (spellTargetData.SrcLocation)
@@ -87,7 +87,7 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::SpellTargetData c
     if (spellTargetData.DstLocation)
         data << *spellTargetData.DstLocation;
 
-    if (spellTargetData.Name.is_initialized())
+    if (spellTargetData.Name.has_value())
         data << *spellTargetData.Name;
 
     return data;
@@ -121,11 +121,25 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::SpellCastData con
     data << uint32(spellCastData.CastTime);
 
     if (spellCastData.HitInfo)
+    {
+        // Hit and miss target counts are both uint8, that limits us to 255 targets for each
+        // sending more than 255 targets crashes the client (since count sent would be wrong)
+        // Spells like 40647 (with a huge radius) can easily reach this limit (spell might need
+        // target conditions but we still need to limit the number of targets sent and keeping
+        // correct count for both hit and miss).
+        static std::size_t const PACKET_TARGET_LIMIT = std::numeric_limits<uint8>::max();
+        if (spellCastData.HitInfo->HitTargets.size() > PACKET_TARGET_LIMIT)
+            spellCastData.HitInfo->HitTargets.resize(PACKET_TARGET_LIMIT);
+
+        if (spellCastData.HitInfo->MissStatus.size() > PACKET_TARGET_LIMIT)
+            spellCastData.HitInfo->MissStatus.resize(PACKET_TARGET_LIMIT);
+
         data << *spellCastData.HitInfo;
+    }
 
     data << spellCastData.Target;
 
-    if (spellCastData.RemainingPower.is_initialized())
+    if (spellCastData.RemainingPower.has_value())
         data << uint32(*spellCastData.RemainingPower);
 
     if (spellCastData.RemainingRunes)
@@ -140,7 +154,7 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::SpellCastData con
     if (spellCastData.ProjectileVisuals)
         data << *spellCastData.ProjectileVisuals;
 
-    if (spellCastData.DestLocSpellCastIndex.is_initialized())
+    if (spellCastData.DestLocSpellCastIndex.has_value())
         data << uint8(*spellCastData.DestLocSpellCastIndex);
 
     // Todo: TARGET_FLAG_EXTRA_TARGETS (unused as it seems though)
@@ -188,11 +202,11 @@ WorldPacket const* WorldPackets::Spells::ChannelStart::Write()
     _worldPacket << uint32(SpellID);
     _worldPacket << int32(ChannelDuration);
 
-    _worldPacket << uint8(InterruptImmunities.is_initialized());
+    _worldPacket << uint8(InterruptImmunities.has_value());
     if (InterruptImmunities)
         _worldPacket << *InterruptImmunities;
 
-    _worldPacket << uint8(HealPrediction.is_initialized());
+    _worldPacket << uint8(HealPrediction.has_value());
     if (HealPrediction)
         _worldPacket << *HealPrediction;
 
@@ -217,7 +231,7 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::AuraDataInfo cons
     data << uint8(auraData.Applications);
 
     if (auraData.CastUnit)
-        data << auraData.CastUnit.get().WriteAsPacked();
+        data << auraData.CastUnit.value().WriteAsPacked();
 
     if (auraData.Duration)
         data << int32(*auraData.Duration);
@@ -226,7 +240,7 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Spells::AuraDataInfo cons
         data << int32(*auraData.Remaining);
 
     for (uint8 i = 0; i < 3 /*MAX_SPELL_EFFECTS*/; ++i)
-        if (auraData.Points[i].is_initialized())
+        if (auraData.Points[i].has_value())
             data << int32(*auraData.Points[i]);
 
     return data;

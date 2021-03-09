@@ -22,6 +22,7 @@
 #include "DetourNavMesh.h"
 
 float const GROUND_HEIGHT_TOLERANCE = 0.05f; // Extra tolerance to z position to check if it is in air or on ground.
+constexpr float Z_OFFSET_FIND_HEIGHT = 0.5f;
 
 enum SpellEffIndex : uint8
 {
@@ -1071,7 +1072,7 @@ enum SpellEffects
     SPELL_EFFECT_ALLOW_CONTROL_PET                  = 168,
     SPELL_EFFECT_DESTROY_ITEM                       = 169,
     SPELL_EFFECT_UPDATE_ZONE_AURAS_AND_PHASES       = 170,
-    SPELL_EFFECT_171                                = 171, // Summons gamebject
+    SPELL_EFFECT_SUMMON_PERSONAL_GAMEOBJECT         = 171, // Summons gamebject
     SPELL_EFFECT_RESURRECT_WITH_AURA                = 172,
     SPELL_EFFECT_UNLOCK_GUILD_VAULT_TAB             = 173, // Guild tab unlocked (guild perk)
     SPELL_EFFECT_APPLY_AURA_2                       = 174,

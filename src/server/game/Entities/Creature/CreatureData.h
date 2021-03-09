@@ -104,14 +104,14 @@ enum class CreatureRandomMovementType : uint8
 
 struct TC_GAME_API CreatureMovementData
 {
-    CreatureMovementData() : Ground(CreatureGroundMovementType::Run), Flight(CreatureFlightMovementType::None),
-        Swim(true), Rooted(false), Random(CreatureRandomMovementType::Walk) { }
+    CreatureMovementData();
 
     CreatureGroundMovementType Ground;
     CreatureFlightMovementType Flight;
     bool Swim;
     bool Rooted;
     CreatureRandomMovementType Random;
+    uint32 InteractionPauseTimer;
 
     bool IsGroundAllowed() const { return Ground != CreatureGroundMovementType::None; }
     bool IsSwimAllowed() const { return Swim; }
@@ -119,6 +119,8 @@ struct TC_GAME_API CreatureMovementData
     bool IsRooted() const { return Rooted; }
 
     CreatureRandomMovementType GetRandom() const { return Random; }
+
+    uint32 GetInteractionPauseTimer() const { return InteractionPauseTimer; }
 
     std::string ToString() const;
 };
@@ -381,5 +383,15 @@ struct VendorItemData
 };
 
 typedef std::unordered_map<uint32, float /*SparringHealthLimit*/> CreatureSparringTemplateMap;
+
+struct CreatureMovementInfo
+{
+    float WalkSpeed = 0.f;
+    float RunSpeed = 0.f;
+
+    bool HasRunSpeedOverriden = false;
+    bool HasWalkSpeedOverriden = false;
+};
+
 
 #endif // CreatureData_h__

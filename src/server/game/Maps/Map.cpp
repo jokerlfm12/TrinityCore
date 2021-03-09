@@ -2543,7 +2543,7 @@ float Map::GetWaterOrGroundLevel(PhaseShift const& phaseShift, float x, float y,
     if (GetGrid(PhasingHandler::GetTerrainMapId(phaseShift, this, x, y), x, y))
     {
         // we need ground level (including grid height version) for proper return water level in point
-        float ground_z = GetHeight(phaseShift, x, y, z + collisionHeight);
+        float ground_z = GetHeight(phaseShift, x, y, z + Z_OFFSET_FIND_HEIGHT);
         if (ground)
             *ground = ground_z;
 
@@ -2806,7 +2806,7 @@ void Map::GetFullTerrainStatusForPosition(PhaseShift const& phaseShift, float x,
     {
         if (vmapData.areaInfo)
         {
-            data.areaInfo = boost::in_place(vmapData.areaInfo->adtId, vmapData.areaInfo->rootId, vmapData.areaInfo->groupId, vmapData.areaInfo->mogpFlags);
+            data.areaInfo.emplace(vmapData.areaInfo->adtId, vmapData.areaInfo->rootId, vmapData.areaInfo->groupId, vmapData.areaInfo->mogpFlags);
             // wmo found
             WMOAreaTableEntry const* wmoEntry = sDBCManager.GetWMOAreaTableEntryByTripple(vmapData.areaInfo->rootId, vmapData.areaInfo->adtId, vmapData.areaInfo->groupId);
             data.outdoors = (vmapData.areaInfo->mogpFlags & 0x8) != 0;
@@ -2867,7 +2867,7 @@ void Map::GetFullTerrainStatusForPosition(PhaseShift const& phaseShift, float x,
             }
         }
 
-        data.liquidInfo = boost::in_place();
+        data.liquidInfo.emplace();
         data.liquidInfo->level = vmapData.liquidInfo->level;
         data.liquidInfo->depth_level = vmapData.floorZ;
         data.liquidInfo->entry = liquidType;

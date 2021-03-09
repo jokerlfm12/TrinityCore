@@ -232,6 +232,8 @@ class TC_GAME_API AuraEffect
         //   heal and energize
         void HandleModPowerRegen(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModPowerRegenPCT(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModHealingPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModHealingDonePercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModManaRegen(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModIncreaseHealth(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModIncreaseMaxHealth(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -266,7 +268,7 @@ class TC_GAME_API AuraEffect
         void HandleAuraModAttackPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModRangedAttackPowerPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModAttackPowerOfArmor(AuraApplication const* aurApp, uint8 mode, bool apply) const;
-        void HandleOverrideSpellPowerByApPct(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleOverrideSpellPowerByAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //   damage bonus
         void HandleModDamageDone(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModDamagePercentDone(AuraApplication const* aurApp, uint8 mode, bool apply) const;

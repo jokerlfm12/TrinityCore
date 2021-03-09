@@ -183,7 +183,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //115 SPELL_AURA_MOD_HEALING                 implemented in Unit::SpellBaseHealingBonusForVictim
     &AuraEffect::HandleNoImmediateEffect,                         //116 SPELL_AURA_MOD_REGEN_DURING_COMBAT
     &AuraEffect::HandleNoImmediateEffect,                         //117 SPELL_AURA_MOD_MECHANIC_RESISTANCE     implemented in Unit::MagicSpellHitResult
-    &AuraEffect::HandleNoImmediateEffect,                         //118 SPELL_AURA_MOD_HEALING_PCT             implemented in Unit::SpellHealingBonus
+    &AuraEffect::HandleModHealingPercent,                         //118 SPELL_AURA_MOD_HEALING_PCT
     &AuraEffect::HandleUnused,                                    //119 unused (4.3.4) old SPELL_AURA_SHARE_PET_TRACKING
     &AuraEffect::HandleAuraUntrackable,                           //120 SPELL_AURA_UNTRACKABLE
     &AuraEffect::HandleAuraEmpathy,                               //121 SPELL_AURA_EMPATHY
@@ -201,7 +201,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModIncreaseHealthPercent,              //133 SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT
     &AuraEffect::HandleAuraModRegenInterrupt,                     //134 SPELL_AURA_MOD_MANA_REGEN_INTERRUPT
     &AuraEffect::HandleModHealingDone,                            //135 SPELL_AURA_MOD_HEALING_DONE
-    &AuraEffect::HandleNoImmediateEffect,                         //136 SPELL_AURA_MOD_HEALING_DONE_PERCENT   implemented in Unit::SpellHealingBonus
+    &AuraEffect::HandleModHealingDonePercent,                     //136 SPELL_AURA_MOD_HEALING_DONE_PERCENT 
     &AuraEffect::HandleModTotalPercentStat,                       //137 SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE
     &AuraEffect::HandleModMeleeSpeedPct,                          //138 SPELL_AURA_MOD_MELEE_HASTE
     &AuraEffect::HandleForceReaction,                             //139 SPELL_AURA_FORCE_REACTION
@@ -431,7 +431,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNULL,                                      //363 SPELL_AURA_MOD_NEXT_SPELL
     &AuraEffect::HandleUnused,                                    //364 unused (4.3.4)
     &AuraEffect::HandleNULL,                                      //365 SPELL_AURA_MAX_FAR_CLIP_PLANE
-    &AuraEffect::HandleOverrideSpellPowerByApPct,                 //366 SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT
+    &AuraEffect::HandleOverrideSpellPowerByAttackPower,           //366 SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT
     &AuraEffect::HandleNULL,                                      //367 SPELL_AURA_OVERRIDE_AUTOATTACK_WITH_RANGED_SPELL
     &AuraEffect::HandleUnused,                                    //368 unused (4.3.4)
     &AuraEffect::HandleNULL,                                      //369 SPELL_AURA_ENABLE_POWER_BAR_TIMER
@@ -3713,6 +3713,30 @@ void AuraEffect::HandleModPowerRegenPCT(AuraApplication const* aurApp, uint8 mod
     HandleModPowerRegen(aurApp, mode, apply);
 }
 
+void AuraEffect::HandleModHealingPercent(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Player* target = aurApp->GetTarget()->ToPlayer();
+    if (!target)
+        return;
+
+    target->UpdateSpellHealingPercentTaken();
+}
+
+void AuraEffect::HandleModHealingDonePercent(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+{
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
+        return;
+
+    Player* target = aurApp->GetTarget()->ToPlayer();
+    if (!target)
+        return;
+
+    target->UpdateSpellHealingPercentDone();
+}
+
 void AuraEffect::HandleModManaRegen(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
 {
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
@@ -4245,16 +4269,17 @@ void AuraEffect::HandleAuraModAttackPowerOfArmor(AuraApplication const* aurApp, 
         target->ToPlayer()->UpdateAttackPowerAndDamage(false);
 }
 
-void AuraEffect::HandleOverrideSpellPowerByApPct(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
+void AuraEffect::HandleOverrideSpellPowerByAttackPower(AuraApplication const* aurApp, uint8 mode, bool apply) const
 {
-    if (!(mode & (AURA_EFFECT_HANDLE_REAL)))
+    if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
         return;
 
-    Unit* target = aurApp->GetTarget();
+    Player* target = aurApp->GetTarget()->ToPlayer();
+    if (!target)
+        return;
 
-    // Recalculate bonus
-    if (target->GetTypeId() == TYPEID_PLAYER)
-        target->ToPlayer()->UpdateSpellDamageAndHealingBonus();
+    target->ApplyModSignedFloatValue(PLAYER_FIELD_OVERRIDE_SPELL_POWER_BY_AP_PCT, float(m_amount), apply);
+    target->UpdateSpellDamageAndHealingBonus();
 }
 
 /********************************/
@@ -5183,10 +5208,12 @@ void AuraEffect::HandleAuraModSpellPowerPct(AuraApplication const* aurApp, uint8
     if (!(mode & (AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK | AURA_EFFECT_HANDLE_STAT)))
         return;
 
-    Unit* target = aurApp->GetTarget();
+    Player* target = aurApp->GetTarget()->ToPlayer();
+    if (!target)
+        return;
 
-    if (Player* player = target->ToPlayer())
-        player->UpdateSpellDamageAndHealingBonus();
+    // Calculations done in Unit::SpellBaseHealingBonusDone and Unit::SpellBaseDamageBonusDone
+    target->SetFloatValue(PLAYER_FIELD_MOD_SPELL_POWER_PCT, target->GetTotalAuraMultiplier(SPELL_AURA_MOD_SPELL_POWER_PCT));
 }
 
 void AuraEffect::HandleMastery(AuraApplication const* aurApp, uint8 mode, bool /*apply*/) const
@@ -5966,7 +5993,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
     bool crit = roll_chance_f(GetCritChanceFor(caster, target));
     if (crit)
-        damage = Unit::SpellCriticalHealingBonus(caster, m_spellInfo, damage);
+        damage = Unit::SpellCriticalHealingBonus(caster, damage);
 
     TC_LOG_DEBUG("spells.periodic", "PeriodicTick: %s heal of %s for %u health inflicted by %u",
         GetCasterGUID().ToString().c_str(), target->GetGUID().ToString().c_str(), damage, GetId());
@@ -6218,7 +6245,7 @@ void AuraEffect::HandleProcTriggerSpellAuraProc(AuraApplication* aurApp, ProcEve
         TC_LOG_DEBUG("spells", "AuraEffect::HandleProcTriggerSpellAuraProc: Triggering spell %u from aura %u proc", triggeredSpellInfo->Id, GetId());
         triggerCaster->CastSpell(triggerTarget, triggeredSpellInfo->Id, this);
     }
-    else
+    else if (triggerSpellId && GetAuraType() != SPELL_AURA_DUMMY)
         TC_LOG_ERROR("spells","AuraEffect::HandleProcTriggerSpellAuraProc: Could not trigger spell %u from aura %u proc, because the spell does not have an entry in Spell.dbc.", triggerSpellId, GetId());
 }
 

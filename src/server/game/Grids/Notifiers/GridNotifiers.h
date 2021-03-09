@@ -27,6 +27,7 @@
 #include "Player.h"
 #include "Spell.h"
 #include "SpellInfo.h"
+#include "TemporarySummon.h"
 #include "UnitAI.h"
 #include "UpdateData.h"
 
@@ -793,10 +794,11 @@ namespace Trinity
 
     // Unit checks
 
-    class MostHPMissingInRange
+    class FriendlyMostHPMissingInRange
     {
         public:
-            MostHPMissingInRange(Unit const* obj, float range, uint32 hp) : i_obj(obj), i_range(range), i_hp(hp) { }
+            FriendlyMostHPMissingInRange(Unit const* obj, float range, uint32 hp) : i_obj(obj), i_range(range), i_hp(hp) { }
+
             bool operator()(Unit* u)
             {
                 if (u->IsAlive() && u->IsInCombat() && !i_obj->IsHostileTo(u) && i_obj->IsWithinDistInMap(u, i_range) && u->GetMaxHealth() - u->GetHealth() > i_hp)
@@ -810,6 +812,27 @@ namespace Trinity
             Unit const* i_obj;
             float i_range;
             uint32 i_hp;
+    };
+
+    class FriendlyMostHPPctMissingInRange
+    {
+    public:
+        FriendlyMostHPPctMissingInRange(Unit const* obj, float range, uint8 hpPctMin, uint8 hpPctMax) : i_obj(obj), i_range(range), i_hpPctMin(hpPctMin), i_hpPctMax(hpPctMax) { }
+
+        bool operator()(Unit* u)
+        {
+            if (u->IsAlive() && u->IsInCombat() && !i_obj->IsHostileTo(u) && i_obj->IsWithinDistInMap(u, i_range) && u->GetHealthPct() > i_hpPctMin && u->GetHealthPct() < i_hpPctMax)
+            {
+                i_hpPctMax = u->GetHealthPct();
+                return true;
+            }
+            return false;
+        }
+    private:
+        Unit const* i_obj;
+        float i_range;
+        uint8 i_hpPctMin;
+        uint8 i_hpPctMax;
     };
 
     class FriendlyBelowHpPctEntryInRange
@@ -1255,7 +1278,7 @@ namespace Trinity
 
             bool operator()(Creature* u)
             {
-                if (u->getDeathState() != DEAD && u->GetEntry() == i_entry && u->IsAlive() == i_alive && u->GetGUID() != i_obj.GetGUID() && i_obj.IsWithinDistInMap(u, i_range))
+                if (u->getDeathState() != DEAD && u->GetEntry() == i_entry && u->IsAlive() == i_alive && u->GetGUID() != i_obj.GetGUID() && i_obj.IsWithinDistInMap(u, i_range) && !TempSummon::IsPersonalSummonOfAnotherPlayer(u, i_obj.GetGUID()))
                 {
                     i_range = i_obj.GetDistance(u);         // use found unit range as new range limit for next check
                     return true;

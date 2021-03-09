@@ -3042,8 +3042,6 @@ void SpellMgr::LoadSpellInfoCorrections()
         41376, // Spite
         45248, // Shadow Blades
         46771, // Flame Sear
-        54171, // Divine Storm
-        54172, // Divine Storm (heal)
         66588 // Flaming Spear
     }, [](SpellInfo* spellInfo)
     {
@@ -4382,6 +4380,12 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 85799 }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 1;
+    });
+
+    // Hungering Shadows
+    ApplySpellFix({ 84856 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->MaxAffectedTargets = 3;
     });
 
     // ENDOF BASTION OF TWILIGHT

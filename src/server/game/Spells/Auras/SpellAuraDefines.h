@@ -429,7 +429,7 @@ enum AuraType : uint32
     SPELL_AURA_351                                          = 351,
     SPELL_AURA_352                                          = 352,
     SPELL_AURA_MOD_CAMOUFLAGE                               = 353,  // NYI
-    SPELL_AURA_MOD_HEALING_FROM_TARGET_HEALTH               = 354,  // Restoration Shaman mastery - mod healing based on target's health (less = more healing)
+    SPELL_AURA_MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH    = 354,  // Restoration Shaman mastery - mod healing based on target's health (less = more healing)
     SPELL_AURA_355                                          = 355,
     SPELL_AURA_MOD_DAMAGE_FROM_MANA                         = 356,  // Arcane Mage mastery - mod damage based on current mana
     SPELL_AURA_ENABLE_BOSS1_UNIT_FRAME                      = 357,
@@ -441,7 +441,7 @@ enum AuraType : uint32
     SPELL_AURA_MOD_NEXT_SPELL                               = 363,  // Used by 101601 Throw Totem - causes the client to initialize spell cast with specified spell
     SPELL_AURA_364                                          = 364,  // Not used in 4.3.4
     SPELL_AURA_MAX_FAR_CLIP_PLANE                           = 365,  // Overrides client's View Distance setting to max("Fair", current_setting) and turns off terrain display
-    SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT               = 366,  // NYI - Sets spellpower equal to % of attack power, discarding all other bonuses (from gear and buffs)
+    SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT               = 366,  // Sets spellpower equal to % of attack power, discarding all other bonuses (from gear and buffs)
     SPELL_AURA_OVERRIDE_AUTOATTACK_WITH_RANGED_SPELL        = 367,  // NYI
     SPELL_AURA_368                                          = 368,  // Not used in 4.3.4
     SPELL_AURA_ENABLE_POWER_BAR_TIMER                       = 369,
