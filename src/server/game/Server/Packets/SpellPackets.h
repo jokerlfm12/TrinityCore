@@ -188,7 +188,7 @@ namespace WorldPackets
             Optional<ObjectGuid> CastUnit;
             Optional<int32> Duration;
             Optional<int32> Remaining;
-            std::array<Optional<int32>, 3 /*MAX_SPELL_EFFECTS*/> Points;
+            std::array<Optional<int32>, 3 /*MAX_SPELL_EFFECTS*/> Points = {};
         };
 
         struct AuraInfo
@@ -261,6 +261,23 @@ namespace WorldPackets
             int32 KitRecID = 0;
             int32 KitType = 0;
             uint32 Duration = 0;
+        };
+
+        class PlaySpellVisual final : public ServerPacket
+        {
+        public:
+            PlaySpellVisual() : ServerPacket(SMSG_PLAY_SPELL_VISUAL, 33) { }
+
+            WorldPacket const* Write() override;
+
+            Position TargetPosition;
+            ObjectGuid Source;
+            ObjectGuid Target;
+            int32 SpellVisualID = 0;
+            float TravelSpeed = 0.0f;
+            uint16 MissReason = 0;
+            uint16 ReflectStatus = 0;
+            bool SpeedAsTime = false;
         };
 
         struct SpellHistoryEntry
@@ -394,8 +411,8 @@ namespace WorldPackets
 
             WorldPacket const* Write() override;
 
-            int32 SpellID;
-            int32 Superceded;
+            int32 SpellID = 0;
+            int32 Superceded = 0;
         };
 
         class AuraPointsDepleted final : public ServerPacket

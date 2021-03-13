@@ -1254,7 +1254,7 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
     damageInfo->resist           = 0;
     damageInfo->blocked_amount   = 0;
 
-    damageInfo->TargetState      = 0;
+    damageInfo->TargetState      = VICTIMSTATE_INTACT;
     damageInfo->HitInfo          = 0;
     damageInfo->procAttacker     = PROC_FLAG_NONE;
     damageInfo->procVictim       = PROC_FLAG_NONE;
@@ -1287,9 +1287,6 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
     {
        damageInfo->HitInfo       |= HITINFO_NORMALSWING;
        damageInfo->TargetState    = VICTIMSTATE_IS_IMMUNE;
-
-       damageInfo->damage         = 0;
-       damageInfo->cleanDamage    = 0;
        return;
     }
 
@@ -1322,7 +1319,6 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
             return;
         case MELEE_HIT_MISS:
             damageInfo->HitInfo        |= HITINFO_MISS;
-            damageInfo->TargetState     = VICTIMSTATE_INTACT;
             damageInfo->damage          = 0;
             damageInfo->cleanDamage     = 0;
             break;
@@ -11902,11 +11898,13 @@ bool Unit::SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const* au
     // Pets already have a properly initialized CharmInfo, don't overwrite it.
     if (type != CHARM_TYPE_VEHICLE && !GetCharmInfo())
     {
-        InitCharmInfo();
-        if (type == CHARM_TYPE_POSSESS)
-            GetCharmInfo()->InitPossessCreateSpells();
-        else
-            GetCharmInfo()->InitCharmCreateSpells();
+        if (CharmInfo* charmInfo = InitCharmInfo())
+        {
+            if (type == CHARM_TYPE_POSSESS)
+                charmInfo->InitPossessCreateSpells();
+            else
+                charmInfo->InitCharmCreateSpells();
+        }
     }
 
     if (playerCharmer)
@@ -12310,6 +12308,28 @@ void Unit::SendPlaySpellVisualKit(uint32 id, uint32 type, uint32 duration) const
     packet.KitType = type;
     packet.Duration = duration;
     SendMessageToSet(packet.Write(), IsPlayer());
+}
+
+void Unit::SendPlaySpellVisual(uint32 spellVisualId, Unit const* target /*= nullptr*/, Optional<Position> targetPosition /*= {}*/, float travelSpeed /*= 0.f*/, uint16 missReason /*= 0*/, uint16 reflectStatus /*= 0*/, bool speedAsTime /*= false*/) const
+{
+    if (!sSpellVisualStore.LookupEntry(spellVisualId))
+        return;
+
+    WorldPackets::Spells::PlaySpellVisual packet;
+    packet.SpellVisualID = spellVisualId;
+    packet.Source = GetGUID();
+    if (target)
+        packet.Target = target->GetGUID();
+
+    if (targetPosition)
+        packet.TargetPosition = *targetPosition;
+
+    packet.TravelSpeed = travelSpeed;
+    packet.MissReason = missReason;
+    packet.ReflectStatus = reflectStatus;
+    packet.SpeedAsTime = speedAsTime;
+
+    SendMessageToSet(packet.Write(), true);
 }
 
 void Unit::CancelSpellMissiles(uint32 spellId, bool reverseMissile /*= false*/)
