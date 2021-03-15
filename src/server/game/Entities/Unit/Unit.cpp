@@ -8272,6 +8272,36 @@ bool Unit::_IsValidAttackTarget(Unit const* target, SpellInfo const* bySpell, Wo
     if (this == target)
         return false;
 
+    // lfm npc player immune checking
+    if (GetTypeId() == TypeID::TYPEID_UNIT)
+    {
+        if (target->IsImmuneToNPC())
+        {
+            return false;
+        }
+    }
+    else if (GetTypeId() == TypeID::TYPEID_PLAYER)
+    {
+        if (target->IsImmuneToPC())
+        {
+            return false;
+        }
+    }
+    if (target->GetTypeId() == TypeID::TYPEID_UNIT)
+    {
+        if (IsImmuneToNPC())
+        {
+            return false;
+        }
+    }
+    else if (target->GetTypeId() == TypeID::TYPEID_PLAYER)
+    {
+        if (IsImmuneToPC())
+        {
+            return false;
+        }
+    }
+
     // can't attack unattackable units or GMs
     if (target->HasUnitState(UNIT_STATE_UNATTACKABLE)
         || (target->GetTypeId() == TYPEID_PLAYER && target->ToPlayer()->IsGameMaster()))

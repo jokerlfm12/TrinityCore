@@ -177,6 +177,108 @@ void CreatureTextMgr::LoadCreatureTexts()
     }
     while (result->NextRow());
 
+    // lfm creature_text wlk implementation
+    QueryResult qrWLKCTResult = WorldDatabase.Query("SELECT CreatureID, GroupID, ID, Text, Type, Language, Probability, Emote, Duration, Sound, 0, BroadcastTextId, TextRange FROM creature_text_wlk");
+    if (qrWLKCTResult)
+    {
+        do
+        {
+            Field* fields = qrWLKCTResult->Fetch();
+            CreatureTextEntry temp;
+
+            temp.creatureId = fields[0].GetUInt32();
+            temp.groupId = fields[1].GetUInt8();
+            temp.id = fields[2].GetUInt8();
+            temp.text = fields[3].GetString();
+            temp.type = ChatMsg(fields[4].GetUInt8());
+            temp.lang = Language(fields[5].GetUInt8());
+            temp.probability = fields[6].GetFloat();
+            temp.emote = Emote(fields[7].GetUInt32());
+            temp.duration = fields[8].GetUInt32();
+            temp.sound = fields[9].GetUInt32();
+            temp.soundType = CreatureTextSoundType(fields[10].GetUInt32());
+            temp.BroadcastTextId = fields[11].GetUInt32();
+            temp.TextRange = CreatureTextRange(fields[12].GetUInt8());
+
+            bool exists = false;
+            if (mTextMap.find(temp.creatureId) != mTextMap.end())
+            {
+                std::unordered_map<uint8, std::vector<CreatureTextEntry>> eachCreatureTextMap = mTextMap[temp.creatureId];
+                if (eachCreatureTextMap.find(temp.groupId) != eachCreatureTextMap.end())
+                {
+                    std::vector<CreatureTextEntry> eachCreatureTextGroup = eachCreatureTextMap[temp.groupId];
+                    for (std::vector<CreatureTextEntry>::iterator ctIT = eachCreatureTextGroup.begin(); ctIT != eachCreatureTextGroup.end(); ctIT++)
+                    {
+                        CreatureTextEntry eachCT = *ctIT;
+                        if (eachCT.id == temp.id)
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!exists)
+            {
+                if (temp.sound)
+                {
+                    if (!sSoundEntriesStore.LookupEntry(temp.sound))
+                    {
+                        TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Sound %u but sound does not exist.", temp.creatureId, temp.groupId, temp.sound);
+                        temp.sound = 0;
+                    }
+                }
+
+                if (!GetLanguageDescByID(temp.lang))
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` using Language %u but Language does not exist.", temp.creatureId, temp.groupId, uint32(temp.lang));
+                    temp.lang = LANG_UNIVERSAL;
+                }
+
+                if (temp.type >= MAX_CHAT_MSG_TYPE)
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Type %u but this Chat Type does not exist.", temp.creatureId, temp.groupId, uint32(temp.type));
+                    temp.type = CHAT_MSG_SAY;
+                }
+
+                if (temp.emote)
+                {
+                    if (!sEmotesStore.LookupEntry(temp.emote))
+                    {
+                        TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u in table `creature_text` has Emote %u but emote does not exist.", temp.creatureId, temp.groupId, uint32(temp.emote));
+                        temp.emote = EMOTE_ONESHOT_NONE;
+                    }
+                }
+
+                if (temp.BroadcastTextId)
+                {
+                    if (!sObjectMgr->GetBroadcastText(temp.BroadcastTextId))
+                    {
+                        TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u, Id %u in table `creature_text` has non-existing or incompatible BroadcastTextId %u.", temp.creatureId, temp.groupId, temp.id, temp.BroadcastTextId);
+                        temp.BroadcastTextId = 0;
+                    }
+                }
+
+                if (temp.TextRange > TEXT_RANGE_WORLD)
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u, Id %u in table `creature_text` has incorrect TextRange %u.", temp.creatureId, temp.groupId, temp.id, temp.TextRange);
+                    temp.TextRange = TEXT_RANGE_NORMAL;
+                }
+
+                if (temp.soundType > CreatureTextSoundType::Music)
+                {
+                    TC_LOG_ERROR("sql.sql", "CreatureTextMgr: Entry %u, Group %u, Id %u in table `creature_text` has incorrect SoundType %u.", temp.creatureId, temp.groupId, temp.id, AsUnderlyingType(temp.TextRange));
+                    temp.soundType = CreatureTextSoundType::DirectSound;
+                }
+
+                // add the text into our entry's group
+                mTextMap[temp.creatureId][temp.groupId].push_back(temp);
+
+                ++textCount;
+            }
+        } while (qrWLKCTResult->NextRow());
+    }
+
     TC_LOG_INFO("server.loading", ">> Loaded %u creature texts for " SZFMTD " creatures in %u ms", textCount, mTextMap.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 

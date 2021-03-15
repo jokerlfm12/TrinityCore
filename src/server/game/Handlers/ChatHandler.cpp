@@ -314,6 +314,36 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             }
 
             sender->Say(msg, Language(lang));
+
+            // lfm say debug
+            if (msg == "attacking")
+            {
+                if (Unit* myTarget = sender->GetSelectedUnit())
+                {
+                    if (sender->IsValidAttackTarget(myTarget))
+                    {
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "valid", sender);
+                    }
+                    else
+                    {
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "invalid", sender);
+                    }
+                }
+            }
+            else if (msg == "attacked")
+            {
+                if (Unit* myTarget = sender->GetSelectedUnit())
+                {
+                    if (myTarget->IsValidAttackTarget(sender))
+                    {
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "valid", sender);
+                    }
+                    else
+                    {
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "invalid", sender);
+                    }
+                }
+            }
             break;
         }
         case CHAT_MSG_EMOTE:

@@ -45,7 +45,8 @@ void GruntRealmList::Initialize(Trinity::Asio::IoContext& ioContext, uint32 upda
 {
     _updateInterval = updateInterval;
     _updateTimer = Trinity::make_unique<Trinity::Asio::DeadlineTimer>(ioContext);
-    _resolver = Trinity::make_unique<boost::asio::ip::tcp_resolver>(ioContext);
+    _resolver = std::make_unique<Trinity::Asio::Resolver>(ioContext);
+    //_resolver = Trinity::make_unique<boost::asio::ip::tcp::resolver>(ioContext);
 
     // Get the content of the realmlist table in the database
     UpdateRealms(boost::system::error_code());
@@ -114,21 +115,21 @@ void GruntRealmList::UpdateRealms(boost::system::error_code const& error)
                 std::string localAddressString = fields[3].GetString();
                 std::string localSubmaskString = fields[4].GetString();
 
-                Optional<boost::asio::ip::tcp::endpoint> externalAddress = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), externalAddressString, "");
+                Optional<boost::asio::ip::tcp::endpoint> externalAddress =_resolver->Resolve(boost::asio::ip::tcp::v4(), externalAddressString, "");
                 if (!externalAddress)
                 {
                     TC_LOG_ERROR("realmlist", "Could not resolve address %s", externalAddressString.c_str());
                     continue;
                 }
 
-                Optional<boost::asio::ip::tcp::endpoint> localAddress = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), localAddressString, "");
+                Optional<boost::asio::ip::tcp::endpoint> localAddress = _resolver->Resolve(boost::asio::ip::tcp::v4(), localAddressString, "");
                 if (!localAddress)
                 {
                     TC_LOG_ERROR("realmlist", "Could not resolve address %s", localAddressString.c_str());
                     continue;
                 }
 
-                Optional<boost::asio::ip::tcp::endpoint> localSubmask = Trinity::Net::Resolve(*_resolver, boost::asio::ip::tcp::v4(), localSubmaskString, "");
+                Optional<boost::asio::ip::tcp::endpoint> localSubmask = _resolver->Resolve(boost::asio::ip::tcp::v4(), localSubmaskString, "");
                 if (!localSubmask)
                 {
                     TC_LOG_ERROR("realmlist", "Could not resolve address %s", localSubmaskString.c_str());

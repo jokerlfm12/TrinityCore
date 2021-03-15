@@ -1662,6 +1662,9 @@ class TC_GAME_API SmartAIMgr
         //event stores
         SmartAIEventMap mEventMap[SMART_SCRIPT_TYPE_MAX];
 
+        // lfm smart_scripts from wlk
+        std::unordered_set<int> eogWLKSet;
+
         static bool EventHasInvoker(SMART_EVENT event);
 
         bool IsEventValid(SmartScriptHolder& e);

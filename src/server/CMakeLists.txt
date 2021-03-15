@@ -27,6 +27,7 @@ if(WIN32)
   )
 endif(WIN32)
 
+add_subdirectory(authserver)
 add_subdirectory(database)
 add_subdirectory(shared)
 add_subdirectory(ipc)

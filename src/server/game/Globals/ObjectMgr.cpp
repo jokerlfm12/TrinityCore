@@ -425,6 +425,159 @@ void ObjectMgr::LoadCreatureTemplates()
 {
     uint32 oldMSTime = getMSTime();
 
+    creatureEntrySetTBC.clear();
+    QueryResult qrCTEntryTBCResult = WorldDatabase.Query("SELECT entry FROM creature_entry_tbc");
+    if (qrCTEntryTBCResult)
+    {
+        do
+        {
+            Field* fields = qrCTEntryTBCResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            creatureEntrySetTBC.insert(entry);
+        } while (qrCTEntryTBCResult->NextRow());
+    }
+
+    creatureEntrySetWLK.clear();
+    QueryResult qrCTEntryWLKResult = WorldDatabase.Query("SELECT entry FROM creature_entry_wlk");
+    if (qrCTEntryWLKResult)
+    {
+        do
+        {
+            Field* fields = qrCTEntryWLKResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            creatureEntrySetWLK.insert(entry);
+        } while (qrCTEntryWLKResult->NextRow());
+    }
+
+    //                                               0      1                   2                   3                   4            5            6         7         8
+    QueryResult qrCTWLKResult = WorldDatabase.Query("SELECT entry, difficulty_entry_1, difficulty_entry_2, difficulty_entry_3, KillCredit1, KillCredit2, modelid1, modelid2, modelid3, "
+        //                                        9         10    11          12       13        14              15        16        17   18       19       20       21          22
+        "modelid4, name, name, subname, IconName, gossip_menu_id, minlevel, maxlevel, exp, 0, faction, npcflag, speed_walk, speed_run, "
+        //                                        23      24     25         26              27               28            29             30          31          32
+        "scale, `rank`, dmgschool, BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, "
+        //                                        33            34      35             36    37          38           39      40              41        42           43           44           45           46           47
+        "dynamicflags, family, 0, type, type_flags, 0, lootid, pickpocketloot, skinloot, 0, 0, 0, 0, 0, 0, "
+        //                                        48      49      50      51      52      53      54      55      56              57         58       59       60      61
+        "0, 0, 0, 0, 0, 0, 0, 0, PetSpellDataId, VehicleId, mingold, maxgold, AIName, MovementType, "
+        //                                        62          63        64          65          66          67                          68           69              70                   71            72
+        "ctm.Ground, ctm.Swim, ctm.Flight, ctm.Rooted, ctm.Random, ctm.InteractionPauseTimer,  HoverHeight, HealthModifier, 1, ManaModifier, 1, "
+        //                                        73             74              75                  76            77           78          79                    80
+        "ArmorModifier, DamageModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, mechanic_immune_mask, spell_school_immune_mask, "
+        //                                        81           82
+        "flags_extra, ScriptName FROM creature_template_wlk ct LEFT JOIN creature_template_movement ctm ON ct.entry = ctm.CreatureId");
+    if (qrCTWLKResult)
+    {
+        ctMapWLK.rehash(qrCTWLKResult->GetRowCount());
+        do
+        {
+            Field* fields = qrCTWLKResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            CreatureTemplate& creatureTemplate = ctMapWLK[entry];
+            creatureTemplate.Entry = entry;
+            for (uint8 i = 0; i < MAX_DIFFICULTY - 1; ++i)
+            {
+                creatureTemplate.DifficultyEntry[i] = fields[1 + i].GetUInt32();
+            }
+            for (uint8 i = 0; i < MAX_KILL_CREDIT; ++i)
+            {
+                creatureTemplate.KillCredit[i] = fields[4 + i].GetUInt32();
+            }
+            creatureTemplate.Modelid1 = fields[6].GetUInt32();
+            creatureTemplate.Modelid2 = fields[7].GetUInt32();
+            creatureTemplate.Modelid3 = fields[8].GetUInt32();
+            creatureTemplate.Modelid4 = fields[9].GetUInt32();
+            creatureTemplate.Name = fields[10].GetString();
+            creatureTemplate.FemaleName = fields[11].GetString();
+            creatureTemplate.Title = fields[12].GetString();
+            creatureTemplate.IconName = fields[13].GetString();
+            creatureTemplate.GossipMenuId = fields[14].GetUInt32();
+            creatureTemplate.minlevel = fields[15].GetUInt8();
+            creatureTemplate.maxlevel = fields[16].GetUInt8();
+            creatureTemplate.expansion = uint32(fields[17].GetInt16());
+            creatureTemplate.expansionUnknown = uint32(fields[18].GetUInt16());
+            creatureTemplate.faction = uint32(fields[19].GetUInt16());
+            creatureTemplate.npcflag = fields[20].GetUInt32();
+            creatureTemplate.speed_walk = fields[21].GetFloat();
+            creatureTemplate.speed_run = fields[22].GetFloat();
+            creatureTemplate.scale = fields[23].GetFloat();
+            creatureTemplate.rank = uint32(fields[24].GetUInt8());
+            creatureTemplate.dmgschool = uint32(fields[25].GetInt8());
+            creatureTemplate.BaseAttackTime = fields[26].GetUInt32();
+            creatureTemplate.RangeAttackTime = fields[27].GetUInt32();
+            creatureTemplate.BaseVariance = fields[28].GetFloat();
+            creatureTemplate.RangeVariance = fields[29].GetFloat();
+            creatureTemplate.unit_class = uint32(fields[30].GetUInt8());
+            creatureTemplate.unit_flags = fields[31].GetUInt32();
+            creatureTemplate.unit_flags2 = fields[32].GetUInt32();
+            creatureTemplate.dynamicflags = fields[33].GetUInt32();
+            creatureTemplate.family = CreatureFamily(uint32(fields[34].GetUInt8()));
+            creatureTemplate.trainer_class = fields[35].GetUInt32();
+            creatureTemplate.type = uint32(fields[36].GetUInt8());
+            creatureTemplate.type_flags = fields[37].GetUInt32();
+            creatureTemplate.type_flags2 = fields[38].GetUInt32();
+            creatureTemplate.lootid = fields[39].GetUInt32();
+            creatureTemplate.pickpocketLootId = fields[40].GetUInt32();
+            creatureTemplate.SkinLootId = fields[41].GetUInt32();
+            for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
+            {
+                creatureTemplate.resistance[i] = fields[42 + i - 1].GetInt16();
+            }
+            for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
+            {
+                creatureTemplate.spells[i] = fields[48 + i].GetUInt32();
+            }
+            creatureTemplate.PetSpellDataId = fields[56].GetUInt32();
+            creatureTemplate.VehicleId = fields[57].GetUInt32();
+            creatureTemplate.mingold = fields[58].GetUInt32();
+            creatureTemplate.maxgold = fields[59].GetUInt32();
+            creatureTemplate.AIName = fields[60].GetString();
+            creatureTemplate.MovementType = uint32(fields[61].GetUInt8());
+            if (!fields[62].IsNull())
+            {
+                creatureTemplate.Movement.Ground = static_cast<CreatureGroundMovementType>(fields[62].GetUInt8());
+            }
+            if (!fields[63].IsNull())
+            {
+                creatureTemplate.Movement.Swim = fields[63].GetBool();
+            }
+            if (!fields[64].IsNull())
+            {
+                creatureTemplate.Movement.Flight = static_cast<CreatureFlightMovementType>(fields[64].GetUInt8());
+            }
+            if (!fields[65].IsNull())
+            {
+                creatureTemplate.Movement.Rooted = fields[65].GetBool();
+            }
+            if (!fields[66].IsNull())
+            {
+                creatureTemplate.Movement.Random = static_cast<CreatureRandomMovementType>(fields[66].GetUInt8());
+            }
+            if (!fields[67].IsNull())
+            {
+                creatureTemplate.Movement.InteractionPauseTimer = fields[67].GetUInt32();
+            }
+            creatureTemplate.HoverHeight = fields[68].GetFloat();
+            creatureTemplate.ModHealth = fields[69].GetFloat();
+            creatureTemplate.ModHealthExtra = fields[70].GetFloat();
+            creatureTemplate.ModMana = fields[71].GetFloat();
+            creatureTemplate.ModManaExtra = fields[72].GetFloat();
+            creatureTemplate.ModArmor = fields[73].GetFloat();
+            creatureTemplate.ModDamage = fields[74].GetFloat();
+            creatureTemplate.ModExperience = fields[75].GetFloat();
+            creatureTemplate.RacialLeader = fields[76].GetBool();
+            creatureTemplate.movementId = fields[77].GetUInt32();
+            creatureTemplate.RegenHealth = fields[78].GetBool();
+            creatureTemplate.MechanicImmuneMask = fields[79].GetUInt32();
+            creatureTemplate.SpellSchoolImmuneMask = fields[80].GetUInt32();
+            creatureTemplate.flags_extra = fields[81].GetUInt32();
+            creatureTemplate.ScriptID = GetScriptId(fields[82].GetCString());
+        } while (qrCTWLKResult->NextRow());
+        //for (CreatureTemplateContainer::const_iterator itr = ctMapWLK.begin(); itr != ctMapWLK.end(); ++itr)
+        //{
+        //    CheckCreatureTemplate(&itr->second);
+        //}
+    }
+
     //                                               0      1                   2                   3                   4            5            6         7         8
     QueryResult result = WorldDatabase.Query("SELECT entry, difficulty_entry_1, difficulty_entry_2, difficulty_entry_3, KillCredit1, KillCredit2, modelid1, modelid2, modelid3, "
     //                                        9         10    11          12       13        14              15        16        17   18       19       20       21          22
@@ -525,6 +678,24 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.mingold        = fields[58].GetUInt32();
     creatureTemplate.maxgold        = fields[59].GetUInt32();
     creatureTemplate.AIName         = fields[60].GetString();
+    // lfm wlk ai name
+    if (creatureEntrySetTBC.find(creatureTemplate.Entry) != creatureEntrySetTBC.end())
+    {
+        if (ctMapWLK.find(creatureTemplate.Entry) != ctMapWLK.end())
+        {
+            CreatureTemplate ctWLK = ctMapWLK[creatureTemplate.Entry];
+            creatureTemplate.AIName = ctWLK.AIName;
+        }
+    }
+    else if (creatureEntrySetWLK.find(creatureTemplate.Entry) != creatureEntrySetWLK.end())
+    {
+        if (ctMapWLK.find(creatureTemplate.Entry) != ctMapWLK.end())
+        {
+            CreatureTemplate ctWLK = ctMapWLK[creatureTemplate.Entry];
+            creatureTemplate.AIName = ctWLK.AIName;
+        }
+    }
+
     creatureTemplate.MovementType   = uint32(fields[61].GetUInt8());
     if (!fields[62].IsNull())
         creatureTemplate.Movement.Ground = static_cast<CreatureGroundMovementType>(fields[62].GetUInt8());
@@ -9399,7 +9570,83 @@ void ObjectMgr::LoadBroadcastTexts()
         return;
     }
 
+    int totalCount = result->GetRowCount();
+
+    // lfm wlk implementation
+    QueryResult qrWLKBTResult = WorldDatabase.Query("SELECT ID, LanguageID, `Text`, Text1, EmoteID1, EmoteID2, EmoteID3, EmoteDelay1, EmoteDelay2, EmoteDelay3, SoundEntriesID, EmotesID, Flags FROM broadcast_text_wlk");
+    if (qrWLKBTResult)
+    {
+        totalCount = totalCount + qrWLKBTResult->GetRowCount();
+    }
     _broadcastTextStore.rehash(result->GetRowCount());
+
+    if (qrWLKBTResult)
+    {
+        do
+        {
+            Field* fields = qrWLKBTResult->Fetch();
+
+            BroadcastText bct;
+
+            bct.Id = fields[0].GetUInt32();
+            bct.LanguageID = fields[1].GetUInt32();
+            bct.Text[DEFAULT_LOCALE] = fields[2].GetString();
+            bct.Text1[DEFAULT_LOCALE] = fields[3].GetString();
+            bct.EmoteId1 = fields[4].GetUInt32();
+            bct.EmoteId2 = fields[5].GetUInt32();
+            bct.EmoteId3 = fields[6].GetUInt32();
+            bct.EmoteDelay1 = fields[7].GetUInt32();
+            bct.EmoteDelay2 = fields[8].GetUInt32();
+            bct.EmoteDelay3 = fields[9].GetUInt32();
+            bct.SoundEntriesID = fields[10].GetUInt32();
+            bct.EmotesID = fields[11].GetUInt32();
+            bct.Flags = fields[12].GetUInt32();
+
+            if (bct.SoundEntriesID)
+            {
+                if (!sSoundEntriesStore.LookupEntry(bct.SoundEntriesID))
+                {
+                    TC_LOG_DEBUG("broadcasttext", "BroadcastText (Id: %u) in table `broadcast_text` has SoundEntriesID %u but sound does not exist.", bct.Id, bct.SoundEntriesID);
+                    bct.SoundEntriesID = 0;
+                }
+            }
+
+            if (!GetLanguageDescByID(bct.LanguageID))
+            {
+                TC_LOG_DEBUG("broadcasttext", "BroadcastText (Id: %u) in table `broadcast_text` using LanguageID %u but Language does not exist.", bct.Id, bct.LanguageID);
+                bct.LanguageID = LANG_UNIVERSAL;
+            }
+
+            if (bct.EmoteId1)
+            {
+                if (!sEmotesStore.LookupEntry(bct.EmoteId1))
+                {
+                    TC_LOG_DEBUG("broadcasttext", "BroadcastText (Id: %u) in table `broadcast_text` has EmoteId1 %u but emote does not exist.", bct.Id, bct.EmoteId1);
+                    bct.EmoteId1 = 0;
+                }
+            }
+
+            if (bct.EmoteId2)
+            {
+                if (!sEmotesStore.LookupEntry(bct.EmoteId2))
+                {
+                    TC_LOG_DEBUG("broadcasttext", "BroadcastText (Id: %u) in table `broadcast_text` has EmoteId2 %u but emote does not exist.", bct.Id, bct.EmoteId2);
+                    bct.EmoteId2 = 0;
+                }
+            }
+
+            if (bct.EmoteId3)
+            {
+                if (!sEmotesStore.LookupEntry(bct.EmoteId3))
+                {
+                    TC_LOG_DEBUG("broadcasttext", "BroadcastText (Id: %u) in table `broadcast_text` has EmoteId3 %u but emote does not exist.", bct.Id, bct.EmoteId3);
+                    bct.EmoteId3 = 0;
+                }
+            }
+
+            _broadcastTextStore[bct.Id] = bct;
+        } while (qrWLKBTResult->NextRow());
+    }
 
     do
     {
