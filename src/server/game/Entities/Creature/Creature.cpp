@@ -3311,14 +3311,6 @@ bool Creature::IsEngaged() const
     return false;
 }
 
-void Creature::AtEnterCombat()
-{
-    Unit::AtEnterCombat();
-
-    if (GetAI() && !IsControlledByPlayer())
-        SendAIReaction(AI_REACTION_HOSTILE);
-}
-
 void Creature::AtEngage(Unit* target)
 {
     Unit::AtEngage(target);
@@ -3329,13 +3321,16 @@ void Creature::AtEngage(Unit* target)
     RefreshSwimmingFlag();
 
     MovementGeneratorType const movetype = GetMotionMaster()->GetCurrentMovementGeneratorType();
-    if (movetype == WAYPOINT_MOTION_TYPE || movetype == POINT_MOTION_TYPE || (IsAIEnabled && AI()->IsEscorted()))
+    if (movetype == WAYPOINT_MOTION_TYPE || movetype == CYCLIC_SPLINE_MOTION_TYPE || movetype == POINT_MOTION_TYPE || (IsAIEnabled && AI()->IsEscorted()))
         SetHomePosition(GetPosition());
 
     if (CreatureAI* ai = AI())
         ai->JustEngagedWith(target);
     if (CreatureGroup* formation = GetFormation())
         formation->MemberEngagingTarget(this, target);
+
+    if (GetAI() && !IsControlledByPlayer())
+        SendAIReaction(AI_REACTION_HOSTILE);
 }
 
 void Creature::AtDisengage()
