@@ -33,11 +33,12 @@ enum mograine
 {
     ENCOUNTER_DK_NUMBER = 5,  // how many player queue to start the quest, or -
     ENCOUNTER_DK_TIMER = 10, // *every 5 minutes. These have to be done in instance data
-    ENCOUNTER_DEFENDER_NUMBER = 20, // how many of defender    
-    ENCOUNTER_ABOMINATION_NUMBER = 2,  // how many of abomination
-    ENCOUNTER_BEHEMOTH_NUMBER = 1,  // how many of behemoth
-    ENCOUNTER_GHOUL_NUMBER = 20, // how many of ghoul
-    ENCOUNTER_WARRIOR_NUMBER = 4,  // how many of warrior
+    ENCOUNTER_DEFENDER_NUMBER = 4, // how many of defender    
+    ENCOUNTER_ARGENT_PROTECTOR = 20, // how many of argent protector    
+    ENCOUNTER_ABOMINATION_NUMBER = 6,  // how many of abomination
+    ENCOUNTER_BEHEMOTH_NUMBER = 2,  // how many of behemoth
+    ENCOUNTER_GHOUL_NUMBER = 30, // how many of ghoul
+    ENCOUNTER_WARRIOR_NUMBER = 8,  // how many of warrior
 
     ENCOUNTER_TOTAL_DAWN = 300,  // Total number
     ENCOUNTER_TOTAL_SCOURGE = 10000,
@@ -166,7 +167,7 @@ enum mograine
     SPELL_THUNDERCLAP = 36706,
     SPELL_HERO_AGGRO_AURA = 53627,
 
-    NPC_ACHERUS_GHOUL = 29219, // just ghoul....
+    NPC_ACHERUS_GHOUL = 29185, // just ghoul....
     SPELL_GHOULPLOSION = 53632,
 
     NPC_WARRIOR_OF_THE_FROZEN_WASTES = 29206, // use SPELL_CLEAVE 53631
@@ -201,6 +202,7 @@ enum mograine
     SPELL_TRANQUILITY = 25817,
     SPELL_WRATH = 21807,
 
+    NPC_ARGENT_PROTECTOR = 19320,
     NPC_DEFENDER_OF_THE_LIGHT = 29174, // also does SPELL_HEROIC_LEAP 53625
     SPELL_HOLY_LIGHT1 = 29427,
     SPELL_HOLY_STRIKE = 53643,
@@ -277,8 +279,8 @@ public:
         bool bIsBattle;
         int combatDelay;
         int generalCheckDelay;
-        int shackleTimes;
         int dawnLineDelay;
+        int prisonChecks;
 
         uint32 uiStep;
         uint32 uiPhase_timer;
@@ -312,16 +314,19 @@ public:
         ObjectGuid uiLichKingGUID;
         std::unordered_map<uint32, std::unordered_map<uint32, ObjectGuid>> scurgeSpawnsGUIDMap;
         std::unordered_map<uint32, std::unordered_map<uint32, ObjectGuid>> dawnSpawnsGUIDMap;
+        std::unordered_map<uint32, uint32> scurgeSpawnsAmountLimitMap;
+        std::unordered_map<uint32, uint32> dawnSpawnsAmountLimitMap;
 
         void Initialize()
         {
             bIsBattle = false;
             uiStep = 0;
             uiPhase_timer = 3000;
-            combatDelay = 300000; // 5 minutes
+            //combatDelay = 300000; // 5 minutes
+            combatDelay = 10000;
             generalCheckDelay = 2000;
-            shackleTimes = 36;
             dawnLineDelay = 5000;
+            prisonChecks = 10;
             uiTotal_dawn = ENCOUNTER_TOTAL_DAWN;
             uiTotal_scourge = ENCOUNTER_TOTAL_SCOURGE;
 
@@ -332,7 +337,7 @@ public:
             uiUnholy_blight = urand(5000, 10000);
 
             uiFight_speech = 15000;
-            uiSpawncheck = 10000;
+            uiSpawncheck = 5000;
             uiNPCcheck = 5000;
 
             uiTirionGUID.Clear();
@@ -350,6 +355,15 @@ public:
 
             scurgeSpawnsGUIDMap.clear();
             dawnSpawnsGUIDMap.clear();
+            scurgeSpawnsAmountLimitMap.clear();
+
+            scurgeSpawnsAmountLimitMap[NPC_ACHERUS_GHOUL] = ENCOUNTER_GHOUL_NUMBER;
+            scurgeSpawnsAmountLimitMap[NPC_RAMPAGING_ABOMINATION] = ENCOUNTER_ABOMINATION_NUMBER;
+            scurgeSpawnsAmountLimitMap[NPC_WARRIOR_OF_THE_FROZEN_WASTES] = ENCOUNTER_WARRIOR_NUMBER;
+            scurgeSpawnsAmountLimitMap[NPC_FLESH_BEHEMOTH] = ENCOUNTER_BEHEMOTH_NUMBER;
+
+            dawnSpawnsAmountLimitMap[NPC_ARGENT_PROTECTOR] = ENCOUNTER_ARGENT_PROTECTOR;
+            dawnSpawnsAmountLimitMap[NPC_DEFENDER_OF_THE_LIGHT] = ENCOUNTER_DEFENDER_NUMBER;
 
             UpdateWorldState(me->GetMap(), WORLD_STATE_REMAINS, 0);
             //UpdateWorldState(me->GetMap(), WORLD_STATE_COUNTDOWN, 0);
@@ -381,61 +395,60 @@ public:
                         me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 
                         // spawn dawns
-                        for (uint8 i = 0; i < ENCOUNTER_DEFENDER_NUMBER; ++i)
+                        while (true)
                         {
-                            ObjectGuid eachSpawnOG = SummonCombatUnit(NPC_DEFENDER_OF_THE_LIGHT, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
-                            if (!eachSpawnOG.IsEmpty())
+                            uint32 summonEntry = 0;
+                            for (std::unordered_map<uint32, uint32>::iterator saIT = dawnSpawnsAmountLimitMap.begin(); saIT != dawnSpawnsAmountLimitMap.end(); saIT++)
                             {
-                                dawnSpawnsGUIDMap[NPC_DEFENDER_OF_THE_LIGHT][dawnSpawnsGUIDMap[NPC_DEFENDER_OF_THE_LIGHT].size()] = eachSpawnOG;
+                                uint32 eachEntry = saIT->first;
+                                uint32 eachAmount = saIT->second;
+                                if (dawnSpawnsGUIDMap.find(eachEntry) == dawnSpawnsGUIDMap.end())
+                                {
+                                    summonEntry = eachEntry;
+                                    break;
+                                }
+                                else if (dawnSpawnsGUIDMap[eachEntry].size() < eachAmount)
+                                {
+                                    summonEntry = eachEntry;
+                                    break;
+                                }
+                            }
+                            if (summonEntry > 0)
+                            {
+                                ObjectGuid ogNewSummon = SummonCombatUnit(summonEntry, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
+                                if (!ogNewSummon.IsEmpty())
+                                {
+                                    dawnSpawnsGUIDMap[summonEntry][dawnSpawnsGUIDMap[summonEntry].size()] = ogNewSummon;
+                                }
+                            }
+                            else
+                            {
+                                break;
                             }
                         }
 
-                        uiKorfaxGUID = SummonCombatUnit(NPC_KORFAX_CHAMPION_OF_THE_LIGHT, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);                        
-                        uiMaxwellGUID = SummonCombatUnit(NPC_LORD_MAXWELL_TYROSUS, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);                        
-                        uiEligorGUID = SummonCombatUnit(NPC_COMMANDER_ELIGOR_DAWNBRINGER, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);                        
-                        uiRayneGUID = SummonCombatUnit(NPC_RAYNE, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);                        
+                        uiKorfaxGUID = SummonCombatUnit(NPC_KORFAX_CHAMPION_OF_THE_LIGHT, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
+                        uiMaxwellGUID = SummonCombatUnit(NPC_LORD_MAXWELL_TYROSUS, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
+                        uiEligorGUID = SummonCombatUnit(NPC_COMMANDER_ELIGOR_DAWNBRINGER, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
+                        uiRayneGUID = SummonCombatUnit(NPC_RAYNE, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
                         uiRimblatGUID = SummonCombatUnit(NPC_RIMBLAT_EARTHSHATTER, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.6f, FACTION_SCARLET_CRUSADE);
-                        
+
                         JumpToNextStep(3000);
                         break;
 
                     case 2:
                         Talk(SAY_LIGHT_OF_DAWN04);
                         if (Creature* temp = GetClosestCreatureWithEntry(me, NPC_KOLTIRA_DEATHWEAVER, 50.0f))
-                        {                            
+                        {
                             uiKoltiraGUID = temp->GetGUID();
-                        }                            
+                        }
                         if (Creature* temp = GetClosestCreatureWithEntry(me, NPC_ORBAZ_BLOODBANE, 50.0f))
-                        {                            
+                        {
                             uiOrbazGUID = temp->GetGUID();
-                        }                            
+                        }
                         if (Creature* temp = GetClosestCreatureWithEntry(me, NPC_THASSARIAN, 50.0f))
-                        {                            
+                        {
                             uiThassarianGUID = temp->GetGUID();
-                        }
-                        for (uint32 summonCount = 0; summonCount < ENCOUNTER_GHOUL_NUMBER; summonCount++)
-                        {
-                            ObjectGuid eachSpawnOG = SummonCombatUnit(NPC_ACHERUS_GHOUL, LightofDawnLoc[31].GetPositionX(), LightofDawnLoc[31].GetPositionY(), LightofDawnLoc[31].GetPositionZ(), 2.6f, FACTION_UNDEAD_SCOURGE_3);
-                            if (!eachSpawnOG.IsEmpty())
-                            {
-                                scurgeSpawnsGUIDMap[NPC_ACHERUS_GHOUL][scurgeSpawnsGUIDMap[NPC_ACHERUS_GHOUL].size()] = eachSpawnOG;
-                            }
-                        }
-                        for (uint32 summonCount = 0; summonCount < ENCOUNTER_ABOMINATION_NUMBER; summonCount++)
-                        {
-                            ObjectGuid eachSpawnOG = SummonCombatUnit(NPC_RAMPAGING_ABOMINATION, LightofDawnLoc[31].GetPositionX(), LightofDawnLoc[31].GetPositionY(), LightofDawnLoc[31].GetPositionZ(), 2.6f, FACTION_UNDEAD_SCOURGE_3);
-                            if (!eachSpawnOG.IsEmpty())
-                            {
-                                scurgeSpawnsGUIDMap[NPC_RAMPAGING_ABOMINATION][scurgeSpawnsGUIDMap[NPC_RAMPAGING_ABOMINATION].size()] = eachSpawnOG;
-                            }
-                        }
-                        for (uint32 summonCount = 0; summonCount < ENCOUNTER_WARRIOR_NUMBER; summonCount++)
-                        {
-                            ObjectGuid eachSpawnOG = SummonCombatUnit(NPC_WARRIOR_OF_THE_FROZEN_WASTES, LightofDawnLoc[31].GetPositionX(), LightofDawnLoc[31].GetPositionY(), LightofDawnLoc[31].GetPositionZ(), 2.6f, FACTION_UNDEAD_SCOURGE_3);
-                            if (!eachSpawnOG.IsEmpty())
-                            {
-                                scurgeSpawnsGUIDMap[NPC_WARRIOR_OF_THE_FROZEN_WASTES][scurgeSpawnsGUIDMap[NPC_WARRIOR_OF_THE_FROZEN_WASTES].size()] = eachSpawnOG;
-                            }
                         }
                         JumpToNextStep(10000);
                         break;
@@ -443,44 +456,47 @@ public:
                     case 3: // rise
                     {
                         Talk(SAY_LIGHT_OF_DAWN05);
+                        me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
                         JumpToNextStep(2000);
                         break;
                     }
                     case 4:
                     {
-                        for (std::unordered_map<uint32, std::unordered_map<uint32, ObjectGuid>>::iterator sMapIT = scurgeSpawnsGUIDMap.begin(); sMapIT != scurgeSpawnsGUIDMap.end(); sMapIT++)
+                        uint32 summonEntry = 0;
+                        for (std::unordered_map<uint32, uint32>::iterator saIT = scurgeSpawnsAmountLimitMap.begin(); saIT != scurgeSpawnsAmountLimitMap.end(); saIT++)
                         {
-                            std::unordered_map<uint32, ObjectGuid> eachGUIDMap = sMapIT->second;
-                            for (std::unordered_map<uint32, ObjectGuid>::iterator git = eachGUIDMap.begin(); git != eachGUIDMap.end(); git++)
+                            uint32 eachEntry = saIT->first;
+                            uint32 eachAmount = saIT->second;
+                            if (scurgeSpawnsGUIDMap.find(eachEntry) == scurgeSpawnsGUIDMap.end())
                             {
-                                if (ObjectGuid eachOG = git->second)
-                                {
-                                    if (Creature* temp = ObjectAccessor::GetCreature(*me, eachOG))
-                                    {
-                                        float destX = frand(me->GetPositionX() - 20.0f, me->GetPositionX() + 20.0f);
-                                        float destY = frand(me->GetPositionY() - 20.0f, me->GetPositionY() + 20.0f);
-                                        float destZ = me->GetPositionZ();
-                                        temp->GetMotionMaster()->MovePoint(0, destX, destY, destZ);
-                                    }
-                                }
+                                summonEntry = eachEntry;
+                                break;
+                            }
+                            else if (scurgeSpawnsGUIDMap[eachEntry].size() < eachAmount)
+                            {
+                                summonEntry = eachEntry;
+                                break;
                             }
                         }
-                        JumpToNextStep(500);
+                        if (summonEntry > 0)
+                        {
+                            uiPhase_timer = 500;
+                            DoCast(me, 33271); // shack effect
+                            ObjectGuid ogNewSummon = SummonCombatUnit(summonEntry, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), FACTION_UNDEAD_SCOURGE_3);
+                            if (!ogNewSummon.IsEmpty())
+                            {
+                                scurgeSpawnsGUIDMap[summonEntry][scurgeSpawnsGUIDMap[summonEntry].size()] = ogNewSummon;
+                            }
+                        }
+                        else
+                        {
+                            JumpToNextStep(500);
+                        }
                         break;
                     }
                     case 5:
                     {
-                        if (shackleTimes > 0)
-                        {
-                            shackleTimes--;
-                            DoCast(me, 33271); // shack effect
-                            uiPhase_timer = 1000;
-                        }
-                        else
-                        {
-                            shackleTimes = 36;
-                            JumpToNextStep(500);
-                        }                        
+                        JumpToNextStep(500);
                         break;
                     }
                     case 6: // summon announce
@@ -526,6 +542,10 @@ public:
                                 {
                                     if (Creature* temp = ObjectAccessor::GetCreature(*me, eachOG))
                                     {
+                                        if (temp->GetEntry() == NPC_FLESH_BEHEMOTH)
+                                        {
+                                            temp->SetSpeedRate(MOVE_RUN, 1.0f);
+                                        }
                                         float destX = frand(LightofDawnLoc[0].GetPositionX() - 5.0f, LightofDawnLoc[0].GetPositionX() + 5.0f);
                                         float destY = frand(LightofDawnLoc[0].GetPositionY() - 5.0f, LightofDawnLoc[0].GetPositionY() + 5.0f);
                                         float destZ = LightofDawnLoc[0].GetPositionZ();
@@ -581,15 +601,6 @@ public:
                                 temp->Dismount();
                                 temp->mounting = false;
                                 TargetCheck(uiOrbazGUID);
-                            }
-                            for (uint32 summonCount = 0; summonCount < ENCOUNTER_BEHEMOTH_NUMBER; summonCount++)
-                            {
-                                ObjectGuid eachSpawnOG = SummonCombatUnit(NPC_FLESH_BEHEMOTH, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 2.6f, FACTION_UNDEAD_SCOURGE_3);
-                                if (!eachSpawnOG.IsEmpty())
-                                {
-                                    scurgeSpawnsGUIDMap[NPC_FLESH_BEHEMOTH][scurgeSpawnsGUIDMap[NPC_FLESH_BEHEMOTH].size()] = eachSpawnOG;
-                                    TargetCheck(eachSpawnOG);
-                                }
                             }
                             if (Creature* temp = ObjectAccessor::GetCreature(*me, uiKorfaxGUID))
                             {
@@ -727,7 +738,7 @@ public:
                                 }
                             }
                         }
-                        JumpToNextStep(100000);
+                        JumpToNextStep(1000);
                         break;
                     }
                     case 11:
@@ -791,7 +802,7 @@ public:
                             temp->ClearInCombat();
                             temp->SetReactState(ReactStates::REACT_PASSIVE);
                         }
-                        JumpToNextStep(100000);
+                        JumpToNextStep(1000);
                         break;
                     }
                     case 12:
@@ -799,11 +810,11 @@ public:
                         me->CastSpell(me, SPELL_THE_LIGHT_OF_DAWN, false);
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiKoltiraGUID))
                         {
-                            temp->CastSpell(temp, SPELL_THE_LIGHT_OF_DAWN, false);                         
+                            temp->CastSpell(temp, SPELL_THE_LIGHT_OF_DAWN, false);
                         }
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiThassarianGUID))
                         {
-                            temp->CastSpell(temp, SPELL_THE_LIGHT_OF_DAWN, false);                    
+                            temp->CastSpell(temp, SPELL_THE_LIGHT_OF_DAWN, false);
                         }
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiOrbazGUID))
                         {
@@ -815,15 +826,6 @@ public:
                             temp->AI()->Talk(EMOTE_LIGHT_OF_DAWN04);
                             temp->GetMotionMaster()->MovePoint(0, spawnX, spawnY, spawnZ);
                         }
-                        if (Creature* temp = ObjectAccessor::GetCreature(*me, uiTirionGUID))
-                        {
-                            temp->AI()->Talk(SAY_LIGHT_OF_DAWN26);
-                        }
-                        JumpToNextStep(10000);
-                        break;
-                    }
-                    case 13:
-                    {
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiKorfaxGUID))
                         {
                             temp->SetHomePosition(LightofDawnLoc[9]);
@@ -855,26 +857,52 @@ public:
                             temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[5]);
                         }
 
+                        if (Creature* temp = ObjectAccessor::GetCreature(*me, uiTirionGUID))
+                        {
+                            temp->AI()->Talk(SAY_LIGHT_OF_DAWN26);
+                        }
+                        JumpToNextStep(1000);
+                        break;
+                    }
+                    case 13:
+                    {
                         Talk(EMOTE_LIGHT_OF_DAWN05);
-                        me->SetHomePosition(LightofDawnLoc[24]);
-                        me->SetWalk(false);
-                        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
-                        me->GetMotionMaster()->MovePoint(0, LightofDawnLoc[24]);
-                        if (Creature* temp = ObjectAccessor::GetCreature(*me, uiKoltiraGUID))
+                        if (prisonChecks >= 0)
                         {
-                            temp->SetHomePosition(LightofDawnLoc[18]);
-                            temp->SetWalk(false);
-                            temp->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
-                            temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[18]);
+                            prisonChecks--;
+                            if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_KNEEL)
+                            {
+                                me->SetHomePosition(LightofDawnLoc[24]);
+                                me->SetWalk(false);
+                                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
+                                me->GetMotionMaster()->MovePoint(0, LightofDawnLoc[24]);
+                            }
+                            if (Creature* temp = ObjectAccessor::GetCreature(*me, uiKoltiraGUID))
+                            {
+                                if (temp->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_KNEEL)
+                                {
+                                    temp->SetHomePosition(LightofDawnLoc[18]);
+                                    temp->SetWalk(false);
+                                    temp->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
+                                    temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[18]);
+                                }
+                            }
+                            if (Creature* temp = ObjectAccessor::GetCreature(*me, uiThassarianGUID))
+                            {
+                                if (temp->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_KNEEL)
+                                {
+                                    temp->SetHomePosition(LightofDawnLoc[18]);
+                                    temp->SetWalk(false);
+                                    temp->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
+                                    temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[18]);
+                                }
+                            }
                         }
-                        if (Creature* temp = ObjectAccessor::GetCreature(*me, uiThassarianGUID))
+                        else
                         {
-                            temp->SetHomePosition(LightofDawnLoc[20]);
-                            temp->SetWalk(false);
-                            temp->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
-                            temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[20]);
+                            prisonChecks = 10;
+                            JumpToNextStep(1000);
                         }
-                        JumpToNextStep(20000);
                         break;
                     }
                     case 14:
@@ -1674,7 +1702,7 @@ public:
                 if (uiSpawncheck <= diff)
                 {
                     SpawnNPC();
-                    uiSpawncheck = 10000;
+                    uiSpawncheck = 5000;
                 }
                 else
                 {
@@ -1726,7 +1754,7 @@ public:
                     TargetCheck(uiRayneGUID);
                     TargetCheck(uiRimblatGUID);
 
-                    uiNPCcheck = 10000;
+                    uiNPCcheck = 5000;
                 }
                 else
                 {
@@ -1802,7 +1830,7 @@ public:
             if (Creature* temp = ObjectAccessor::GetCreature(*me, pmOGGeneralCreature))
             {
                 if (temp->IsAlive())
-                {                    
+                {
                     temp->SetHomePosition(temp->GetPosition());
                     if (temp->GetReactState() != ReactStates::REACT_PASSIVE)
                     {
@@ -1835,6 +1863,10 @@ public:
                     temp->SetHomePosition(temp->GetPosition());
                     if (temp->GetReactState() == ReactStates::REACT_AGGRESSIVE)
                     {
+                        if (temp->IsNonMeleeSpellCast(false))
+                        {
+                            return;
+                        }
                         std::unordered_map<uint32, ObjectGuid> inRangeEnemyGUIDMap;
                         inRangeEnemyGUIDMap.clear();
                         if (temp->IsHostileTo(me))
@@ -1853,8 +1885,9 @@ public:
                                                 if (temp->IsValidAttackTarget(checkTarget))
                                                 {
                                                     float checkDistance = temp->GetDistance(checkTarget);
-                                                    if (checkDistance < INTERACTION_DISTANCE)
+                                                    if (checkDistance < VISIBILITY_DISTANCE_TINY)
                                                     {
+                                                        temp->GetThreatManager().AddThreat(checkTarget, 1000.0f);
                                                         inRangeEnemyGUIDMap[inRangeEnemyGUIDMap.size()] = checkTarget->GetGUID();
                                                     }
                                                 }
@@ -1880,8 +1913,9 @@ public:
                                                 if (temp->IsValidAttackTarget(checkTarget))
                                                 {
                                                     float checkDistance = temp->GetDistance(checkTarget);
-                                                    if (checkDistance < INTERACTION_DISTANCE)
+                                                    if (checkDistance < VISIBILITY_DISTANCE_TINY)
                                                     {
+                                                        temp->GetThreatManager().AddThreat(checkTarget, 1000.0f);
                                                         inRangeEnemyGUIDMap[inRangeEnemyGUIDMap.size()] = checkTarget->GetGUID();
                                                     }
                                                 }
@@ -1900,27 +1934,27 @@ public:
                                 newTarget = randomTarget;
                             }
                         }
-                        if (!newTarget)
-                        {
-                            if (Unit* nearestEnemy = temp->SelectNearestHostileUnitInAggroRange(true))
-                            {
-                                newTarget = nearestEnemy;
-                            }
-                        }
-                        if (!newTarget)
-                        {
-                            if (Unit* myEnemy = me->GetVictim())
-                            {
-                                if (temp->IsValidAttackTarget(myEnemy))
-                                {
-                                    newTarget = myEnemy;
-                                }
-                                else
-                                {
-                                    newTarget = me;
-                                }
-                            }
-                        }
+                        //if (!newTarget)
+                        //{
+                        //    if (Unit* nearestEnemy = temp->SelectNearestHostileUnitInAggroRange(true))
+                        //    {
+                        //        newTarget = nearestEnemy;
+                        //    }
+                        //}
+                        //if (!newTarget)
+                        //{
+                        //    if (Unit* myEnemy = me->GetVictim())
+                        //    {
+                        //        if (temp->IsValidAttackTarget(myEnemy))
+                        //        {
+                        //            newTarget = myEnemy;
+                        //        }
+                        //        else
+                        //        {
+                        //            newTarget = me;
+                        //        }
+                        //    }
+                        //}
                         if (newTarget)
                         {
                             if (Unit* currentTarget = temp->GetVictim())
@@ -1950,27 +1984,27 @@ public:
             for (std::unordered_map<uint32, std::unordered_map<uint32, ObjectGuid>>::iterator sMapIT = scurgeSpawnsGUIDMap.begin(); sMapIT != scurgeSpawnsGUIDMap.end(); sMapIT++)
             {
                 uint32 eachSpawnCreatureEntry = sMapIT->first;
-                // only revive ghouls 
-                if (eachSpawnCreatureEntry == NPC_ACHERUS_GHOUL)
+                std::unordered_map<uint32, ObjectGuid> eachGUIDMap = sMapIT->second;
+                for (uint32 checkSpawnIndex = 0; checkSpawnIndex < eachGUIDMap.size(); checkSpawnIndex++)
                 {
-                    std::unordered_map<uint32, ObjectGuid> eachGUIDMap = sMapIT->second;
-                    for (uint32 checkSpawnIndex = 0; checkSpawnIndex < eachGUIDMap.size(); checkSpawnIndex++)
+                    if (ObjectGuid eachOG = eachGUIDMap[checkSpawnIndex])
                     {
-                        if (ObjectGuid eachOG = eachGUIDMap[checkSpawnIndex])
+                        Creature* temp = ObjectAccessor::GetCreature(*me, eachOG);
+                        if (!temp)
                         {
-                            Creature* temp = ObjectAccessor::GetCreature(*me, eachOG);
-                            if (!temp)
+                            ObjectGuid eachSpawnOG = SummonCombatUnit(eachSpawnCreatureEntry, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.0f, FACTION_UNDEAD_SCOURGE_3);
+                            if (!eachSpawnOG.IsEmpty())
                             {
-                                ObjectGuid eachSpawnOG = SummonCombatUnit(eachSpawnCreatureEntry, LightofDawnLoc[0].GetPositionX(), LightofDawnLoc[0].GetPositionY(), LightofDawnLoc[0].GetPositionZ(), 0.0f, FACTION_UNDEAD_SCOURGE_3);
-                                if (!eachSpawnOG.IsEmpty())
-                                {
-                                    scurgeSpawnsGUIDMap[eachSpawnCreatureEntry][checkSpawnIndex] = eachSpawnOG;
-                                    TargetCheck(eachSpawnOG);
-                                }
+                                scurgeSpawnsGUIDMap[eachSpawnCreatureEntry][checkSpawnIndex] = eachSpawnOG;
+                                TargetCheck(eachSpawnOG);
                             }
                         }
                     }
                 }
+                // only revive ghouls 
+                //if (eachSpawnCreatureEntry == NPC_ACHERUS_GHOUL)
+                //{
+                //}
             }
 
             // Dawn
@@ -2001,12 +2035,15 @@ public:
         {
             float destX = frand(pmBaseDestX - 20.0f, pmBaseDestX + 20.0f);
             float destY = frand(pmBaseDestY - 20.0f, pmBaseDestY + 20.0f);
-            float destZ = pmBaseDestZ + 2.0f;
+            float destZ = pmBaseDestZ;
+            me->UpdateGroundPositionZ(destX, destY, destZ);
 
-            if (TempSummon* summoned = me->SummonCreature(pmEntry, destX, destY, destZ, pmOrientation, TempSummonType::TEMPSUMMON_CORPSE_TIMED_DESPAWN, 10 * TimeConstants::IN_MILLISECONDS))
+            if (TempSummon* summoned = me->SummonCreature(pmEntry, destX, destY, destZ, pmOrientation, TempSummonType::TEMPSUMMON_CORPSE_TIMED_DESPAWN, 2 * TimeConstants::IN_MILLISECONDS))
             {
                 summoned->SetWalk(false);
                 summoned->SetFaction(pmFaction);
+                summoned->SetImmuneToAll(false);
+                summoned->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
                 summoned->SetReactState(ReactStates::REACT_AGGRESSIVE);
                 return summoned->GetGUID();
             }
@@ -2097,9 +2134,111 @@ class spell_teleport_leaders_blessing : public SpellScript
     }
 };
 
+class npc_volatile_ghoul : public CreatureScript
+{
+public:
+    npc_volatile_ghoul() : CreatureScript("npc_volatile_ghoul") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_volatile_ghoulAI(creature);
+    }
+
+    struct npc_volatile_ghoulAI : public ScriptedAI
+    {
+        npc_volatile_ghoulAI(Creature* creature) : ScriptedAI(creature)
+        {
+            Reset();
+        }
+
+        void Reset() override
+        {
+            rendDelay = 5000;
+            DoCastSelf(12787);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (rendDelay >= 0)
+                {
+                    rendDelay -= diff;
+                    if (rendDelay < 0)
+                    {
+                        rendDelay = 5000;
+                        if (Unit* victim = me->GetVictim())
+                        {
+                            if (!victim->HasAura(13738, me->GetGUID()))
+                            {
+                                DoCastVictim(13738);
+                            }
+                        }
+                    }
+                }
+                DoMeleeAttackIfReady();
+            }
+        }
+
+        int rendDelay;
+    };
+};
+
+class npc_argent_protector : public CreatureScript
+{
+public:
+    npc_argent_protector() : CreatureScript("npc_argent_protector") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_argent_protectorAI(creature);
+    }
+
+    struct npc_argent_protectorAI : public ScriptedAI
+    {
+        npc_argent_protectorAI(Creature* creature) : ScriptedAI(creature)
+        {
+            Reset();
+        }
+
+        void Reset() override
+        {
+            crusaderDelay = 5000;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (crusaderDelay >= 0)
+                {
+                    crusaderDelay -= diff;
+                }
+                if (crusaderDelay < 0)
+                {
+                    if (Unit* victim = me->GetVictim())
+                    {
+                        float victimDistance = me->GetDistance(victim);
+                        if (victimDistance < INTERACTION_DISTANCE)
+                        {
+                            crusaderDelay = urand(6000, 10000);
+                            me->CastSpell(victim, 19643);
+                        }
+                    }
+                }
+                DoMeleeAttackIfReady();
+            }
+        }
+
+        int crusaderDelay;
+    };
+};
+
 void AddSC_the_scarlet_enclave_chapter_5()
 {
     new npc_highlord_darion_mograine();
     new npc_the_lich_king_tirion_dawn();
+    new npc_volatile_ghoul();
+    new npc_argent_protector();
     RegisterSpellScript(spell_teleport_leaders_blessing);
 }

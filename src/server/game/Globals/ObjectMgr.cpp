@@ -745,6 +745,14 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.ScriptID = GetScriptId("npc_scarlet_fleet_defender");
     }
+    else if (creatureTemplate.Entry == 29185)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_volatile_ghoul");
+    }
+    else if (creatureTemplate.Entry == 19320)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_argent_protector");
+    }    
     else
     {
         // lfm creature basic spells 
@@ -776,104 +784,110 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModDamage = 8.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModDamage = 10.0f;        
+    }
+    else if (creatureTemplate.Entry == 29185)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;        
+        creatureTemplate.ModHealth = 11.0f;
+        creatureTemplate.ModDamage = 6.0f;        
+    }
+    else if (creatureTemplate.Entry == 19320)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 12.0f;
+        creatureTemplate.ModDamage = 6.0f;        
     }
     else if (creatureTemplate.Entry == 29186)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 20.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 70.0f;
+        creatureTemplate.ModDamage = 8.0f;        
     }
     else if (creatureTemplate.Entry == 29206)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 15.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 60.0f;
+        creatureTemplate.ModDamage = 8.5f;        
     }
     else if (creatureTemplate.Entry == 29190)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 30.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 90.0f;
+        creatureTemplate.ModDamage = 9.0f;        
     }
     else if (creatureTemplate.Entry == 29174)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 20.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 40.0f;        
     }
     else if (creatureTemplate.Entry == 29199)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 310.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 520.0f;        
     }
     else if (creatureTemplate.Entry == 29204)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 330.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 590.0f;        
     }
     else if (creatureTemplate.Entry == 29200)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 330.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 570.0f;        
     }
     else if (creatureTemplate.Entry == 29176)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 290.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 530.0f;        
     }
     else if (creatureTemplate.Entry == 29178)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 315.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 540.0f;        
     }
     else if (creatureTemplate.Entry == 29177)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 220.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 525.0f;        
     }
     else if (creatureTemplate.Entry == 29181)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 200.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 500.0f;        
     }
     else if (creatureTemplate.Entry == 29182)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 210.0f;
-        creatureTemplate.RegenHealth = false;
+        creatureTemplate.ModHealth = 510.0f;        
     }
 
     // lfm creature template modifier definition
@@ -10102,7 +10116,7 @@ void ObjectMgr::LoadScriptNames()
     }
 
     // lfm script names
-    uint32 lfmCount = 4;
+    uint32 lfmCount = 6;
     _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
@@ -10115,7 +10129,9 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("npc_scarlet_land_cannon");
     _scriptNamesStore.push_back("npc_scarlet_fleet_guardian");
     _scriptNamesStore.push_back("npc_scarlet_fleet_defender");
-    _scriptNamesStore.push_back("npc_death_knight_basic"); 
+    _scriptNamesStore.push_back("npc_volatile_ghoul");
+    _scriptNamesStore.push_back("npc_argent_protector"); 
+    _scriptNamesStore.push_back("npc_death_knight_basic");    
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
@@ -10132,7 +10148,6 @@ std::string const& ObjectMgr::GetScriptName(uint32 id) const
     static std::string const empty = "";
     return (id < _scriptNamesStore.size()) ? _scriptNamesStore[id] : empty;
 }
-
 
 uint32 ObjectMgr::GetScriptId(std::string const& name)
 {
