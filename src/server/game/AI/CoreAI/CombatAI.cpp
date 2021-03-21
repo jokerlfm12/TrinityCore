@@ -78,9 +78,19 @@ void CombatAI::JustEngagedWith(Unit* who)
     for (SpellVct::iterator i = spells.begin(); i != spells.end(); ++i)
     {
         if (AISpellInfo[*i].condition == AICOND_AGGRO)
+        {
             me->CastSpell(who, *i, false);
+        }            
         else if (AISpellInfo[*i].condition == AICOND_COMBAT)
-            events.ScheduleEvent(*i, AISpellInfo[*i].cooldown + rand32() % AISpellInfo[*i].cooldown);
+        {
+            uint32 firstSpellSchedule = AISpellInfo[*i].cooldown + rand32() % AISpellInfo[*i].cooldown;
+            if (firstSpellSchedule < 2000)
+            {
+                firstSpellSchedule = 2000;
+            }
+            firstSpellSchedule = urand(1000, firstSpellSchedule);
+            events.ScheduleEvent(*i, firstSpellSchedule);
+        }            
     }
 }
 
@@ -188,6 +198,16 @@ ArcherAI::ArcherAI(Creature* c) : CreatureAI(c)
         m_minRange = MELEE_RANGE;
     me->m_CombatDistance = spellInfo ? spellInfo->GetMaxRange(false) : 0;
     me->m_SightDistance = me->m_CombatDistance;
+
+    // lfm archer and turret range corrections
+    //if (me->m_CombatDistance > MAX_AGGRO_RADIUS)
+    //{
+    //    me->m_CombatDistance = MAX_AGGRO_RADIUS;
+    //}
+    //if (me->m_SightDistance > MAX_AGGRO_RADIUS)
+    //{
+    //    me->m_SightDistance = MAX_AGGRO_RADIUS;
+    //}
 }
 
 void ArcherAI::AttackStart(Unit* who)
@@ -234,6 +254,16 @@ TurretAI::TurretAI(Creature* c) : CreatureAI(c)
     m_minRange = spellInfo ? spellInfo->GetMinRange(false) : 0;
     me->m_CombatDistance = spellInfo ? spellInfo->GetMaxRange(false) : 0;
     me->m_SightDistance = me->m_CombatDistance;
+
+    // lfm archer and turret range corrections
+    //if (me->m_CombatDistance > MAX_AGGRO_RADIUS)
+    //{
+    //    me->m_CombatDistance = MAX_AGGRO_RADIUS;
+    //}
+    //if (me->m_SightDistance > MAX_AGGRO_RADIUS)
+    //{
+    //    me->m_SightDistance = MAX_AGGRO_RADIUS;
+    //}
 }
 
 bool TurretAI::CanAIAttack(Unit const* who) const

@@ -369,7 +369,11 @@ class spell_dk_death_grip : public SpellScript
         if (Unit* target = GetHitUnit())
         {
             if (!target->HasAuraType(SPELL_AURA_DEFLECT_SPELLS)) // Deterrence
+            {
                 target->CastSpell({ pos->GetPositionX(), pos->GetPositionY(), pos->GetPositionZ() }, damage, true);
+                // lfm death grip will interrupt 
+                target->InterruptNonMeleeSpells(false);
+            }                
         }
     }
 

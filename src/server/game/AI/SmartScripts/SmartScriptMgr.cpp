@@ -526,6 +526,19 @@ void SmartAIMgr::LoadSmartAIFromDB()
             temp.target.z = fields[26].GetFloat();
             temp.target.o = fields[27].GetFloat();
 
+            // lfm smart_script correction
+            if (temp.entryOrGuid == 28864 && temp.action.type == 53)
+            {
+                temp.action.raw.param1 = 3;
+            }
+            else if (temp.entryOrGuid == 29030 || temp.entryOrGuid == 29031)
+            {
+                if (temp.action.type == 11)
+                {
+                    temp.action.raw.param1 = 45669;
+                }
+            }
+
             //check target
             if (!IsTargetValid(temp))
                 continue;

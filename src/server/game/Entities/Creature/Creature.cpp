@@ -286,6 +286,9 @@ m_formation(nullptr), m_triggerJustAppeared(true), m_respawnCompatibilityMode(fa
 
     ResetLootMode(); // restore default loot mode
     m_isTempWorldObject = false;
+
+    // lfm creature auto mounting
+    mounting = true;
 }
 
 Creature::~Creature()
@@ -318,6 +321,52 @@ void Creature::AddToWorld()
 
         if (GetZoneScript())
             GetZoneScript()->OnCreatureCreate(this);
+
+        // lfm created creature will do aggro checking
+        if (GetReactState() == ReactStates::REACT_AGGRESSIVE)
+        {
+            if (!IsCivilian())
+            {
+                if (!IsImmuneToNPC())
+                {
+                    if (Unit* hostileUnit = SelectNearestHostileUnitInAggroRange(true))
+                    {
+                        EngageWithTarget(hostileUnit);
+                        return;
+                    }
+                }
+                if (!IsImmuneToPC())
+                {
+                    std::list<Player*> players;
+                    Trinity::AnyPlayerInObjectRangeCheck checker(this, MAX_AGGRO_RADIUS);
+                    Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(this, players, checker);
+                    Cell::VisitWorldObjects(this, searcher, MAX_AGGRO_RADIUS);
+                    for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
+                    {
+                        if (Player* eachPlayer = *itr)
+                        {
+                            if (IsHostileTo(eachPlayer))
+                            {
+                                if (IsValidAttackTarget(eachPlayer))
+                                {
+                                    float playerAggroRange = GetAggroRange(eachPlayer);
+                                    if (IsWithinDistInMap(eachPlayer, playerAggroRange))
+                                    {
+                                        EngageWithTarget(eachPlayer);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // lfm dynamic flag "dead" handling
+        if (HasFlag(EUnitFields::UNIT_DYNAMIC_FLAGS, UnitDynFlags::UNIT_DYNFLAG_DEAD))
+        {
+            SetStandState(UnitStandStateType::UNIT_STAND_STATE_DEAD);
+        }
     }
 }
 
@@ -2126,6 +2175,12 @@ void Creature::ForcedDespawn(uint32 timeMSToDespawn, Seconds forceRespawnTimer)
 
 void Creature::DespawnOrUnsummon(uint32 msTimeToDespawn /*= 0*/, Seconds forceRespawnTimer /*= 0*/)
 {
+    // lfm debug
+    if (GetEntry() == 29173)
+    {
+        bool breakPoint = true;
+    }
+
     if (TempSummon* summon = ToTempSummon())
         summon->UnSummon(msTimeToDespawn);
     else
@@ -2549,8 +2604,13 @@ bool Creature::LoadCreaturesAddon()
     if (!cainfo)
         return false;
 
-    if (cainfo->mount != 0)
-        Mount(cainfo->mount);
+    if (mounting)
+    {
+        if (cainfo->mount != 0)
+        {
+            Mount(cainfo->mount);
+        }            
+    }
 
     if (cainfo->bytes1 != 0)
     {

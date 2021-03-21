@@ -426,27 +426,27 @@ void ObjectMgr::LoadCreatureTemplates()
     uint32 oldMSTime = getMSTime();
 
     creatureEntrySetTBC.clear();
-    QueryResult qrCTEntryTBCResult = WorldDatabase.Query("SELECT entry FROM creature_entry_tbc");
-    if (qrCTEntryTBCResult)
+    QueryResult qrCETBCResult = WorldDatabase.Query("SELECT entry FROM creature_entry_tbc");
+    if (qrCETBCResult)
     {
         do
         {
-            Field* fields = qrCTEntryTBCResult->Fetch();
+            Field* fields = qrCETBCResult->Fetch();
             uint32 entry = fields[0].GetUInt32();
             creatureEntrySetTBC.insert(entry);
-        } while (qrCTEntryTBCResult->NextRow());
+        } while (qrCETBCResult->NextRow());
     }
 
     creatureEntrySetWLK.clear();
-    QueryResult qrCTEntryWLKResult = WorldDatabase.Query("SELECT entry FROM creature_entry_wlk");
-    if (qrCTEntryWLKResult)
+    QueryResult qrCEWLKResult = WorldDatabase.Query("SELECT entry FROM creature_entry_wlk");
+    if (qrCEWLKResult)
     {
         do
         {
-            Field* fields = qrCTEntryWLKResult->Fetch();
+            Field* fields = qrCEWLKResult->Fetch();
             uint32 entry = fields[0].GetUInt32();
             creatureEntrySetWLK.insert(entry);
-        } while (qrCTEntryWLKResult->NextRow());
+        } while (qrCEWLKResult->NextRow());
     }
 
     //                                               0      1                   2                   3                   4            5            6         7         8
@@ -731,6 +731,362 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.SpellSchoolImmuneMask = fields[80].GetUInt32();
     creatureTemplate.flags_extra           = fields[81].GetUInt32();
     creatureTemplate.ScriptID              = GetScriptId(fields[82].GetCString());
+
+    // lfm creature scripts
+    if (creatureTemplate.Entry == 28850)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_scarlet_land_cannon");
+    }
+    else if (creatureTemplate.Entry == 28856)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_scarlet_fleet_guardian");
+    }
+    else if (creatureTemplate.Entry == 28834)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_scarlet_fleet_defender");
+    }
+    else
+    {
+        // lfm creature basic spells 
+        if (creatureTemplate.Entry == 28390 || creatureTemplate.Entry == 28391 || creatureTemplate.Entry == 28392 || creatureTemplate.Entry == 28393 || creatureTemplate.Entry == 28394 || creatureTemplate.Entry == 28934 || creatureTemplate.Entry == 30957 || creatureTemplate.Entry == 30958 || creatureTemplate.Entry == 31326 || creatureTemplate.Entry == 31327)
+        {
+            creatureTemplate.ScriptID = GetScriptId("npc_death_knight_basic");
+        }
+    }
+
+    // lfm creature_template correction
+    if (creatureTemplate.Entry == 28557 || creatureTemplate.Entry == 28626 || creatureTemplate.Entry == 28892)
+    {
+        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
+    }
+    else if (creatureTemplate.Entry == 28576 || creatureTemplate.Entry == 28577 || creatureTemplate.Entry == 28660 || creatureTemplate.Entry == 28662 || creatureTemplate.Entry == 28764)
+    {
+        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
+    }
+    if (creatureTemplate.Entry == 28834 || creatureTemplate.Entry == 28850 || creatureTemplate.Entry == 28856)
+    {
+        if (creatureTemplate.ModHealth < 20.0f)
+        {
+            creatureTemplate.ModHealth = 20.0f;
+        }
+    }
+    else if (creatureTemplate.Entry == 29173)
+    {
+        // Highlord Darion Mograine level 
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModDamage = 8.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29186)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 20.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29206)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 15.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29190)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 30.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29174)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 20.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29199)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 310.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29204)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 330.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29200)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 330.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29176)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 290.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29178)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 315.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29177)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 220.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29181)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 200.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+    else if (creatureTemplate.Entry == 29182)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 210.0f;
+        creatureTemplate.RegenHealth = false;
+    }
+
+    // lfm creature template modifier definition
+    switch (creatureTemplate.rank)
+    {
+    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+    {
+        if (creatureTemplate.ModHealth < 1.5f)
+        {
+            creatureTemplate.ModHealth = 1.5f;
+        }
+        break;
+    }
+    case CreatureEliteType::CREATURE_ELITE_ELITE:
+    {
+        if (creatureTemplate.ModHealth < 4.0f)
+        {
+            creatureTemplate.ModHealth = 4.0f;
+        }
+        break;
+    }
+    case CreatureEliteType::CREATURE_ELITE_RARE:
+    {
+        if (creatureTemplate.ModHealth < 3.0f)
+        {
+            creatureTemplate.ModHealth = 3.0f;
+        }
+        break;
+    }
+    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+    {
+        if (creatureTemplate.ModHealth < 5.0f)
+        {
+            creatureTemplate.ModHealth = 5.0f;
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+    if (creatureTemplate.minlevel > 80)
+    {
+    }
+    else if (creatureTemplate.minlevel > 70)
+    {
+        switch (creatureTemplate.rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            if (creatureTemplate.ModDamage < 3.0f)
+            {
+                creatureTemplate.ModDamage = 3.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            if (creatureTemplate.ModDamage < 6.0f)
+            {
+                creatureTemplate.ModDamage = 6.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            if (creatureTemplate.ModDamage < 5.0f)
+            {
+                creatureTemplate.ModDamage = 5.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModDamage < 7.0f)
+            {
+                creatureTemplate.ModDamage = 7.0f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
+    else if (creatureTemplate.minlevel > 60)
+    {
+        switch (creatureTemplate.rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            if (creatureTemplate.ModDamage < 2.5f)
+            {
+                creatureTemplate.ModDamage = 2.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            if (creatureTemplate.ModDamage < 4.75f)
+            {
+                creatureTemplate.ModDamage = 4.75f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            if (creatureTemplate.ModDamage < 4.0f)
+            {
+                creatureTemplate.ModDamage = 4.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModDamage < 5.5f)
+            {
+                creatureTemplate.ModDamage = 5.5f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
+    else if (creatureTemplate.minlevel > 30)
+    {
+        switch (creatureTemplate.rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            if (creatureTemplate.ModDamage < 2.0f)
+            {
+                creatureTemplate.ModDamage = 2.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            if (creatureTemplate.ModDamage < 3.5f)
+            {
+                creatureTemplate.ModDamage = 3.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            if (creatureTemplate.ModDamage < 3.0f)
+            {
+                creatureTemplate.ModDamage = 3.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModDamage < 4.0f)
+            {
+                creatureTemplate.ModDamage = 4.0f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
+    else
+    {
+        switch (creatureTemplate.rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            if (creatureTemplate.ModDamage < 1.5f)
+            {
+                creatureTemplate.ModDamage = 1.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            if (creatureTemplate.ModDamage < 2.25f)
+            {
+                creatureTemplate.ModDamage = 2.25f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            if (creatureTemplate.ModDamage < 2.0f)
+            {
+                creatureTemplate.ModDamage = 2.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModDamage < 2.5f)
+            {
+                creatureTemplate.ModDamage = 2.5f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 }
 
 void ObjectMgr::LoadCreatureTemplateAddons()
@@ -767,6 +1123,19 @@ void ObjectMgr::LoadCreatureTemplateAddons()
         creatureAddon.bytes1                    = fields[4].GetUInt32();
         creatureAddon.bytes2                    = fields[5].GetUInt32();
         creatureAddon.emote                     = fields[6].GetUInt32();
+
+        // lfm creature_template_addon correction
+        if (entry == 28834)
+        {
+            creatureAddon.bytes2 = 1;
+            creatureAddon.emote = 0;
+        }
+        else if (entry == 28856)
+        {
+            creatureAddon.bytes2 = 2;
+            creatureAddon.emote = 0;
+        }
+
         creatureAddon.aiAnimKit                 = fields[7].GetUInt16();
         creatureAddon.movementAnimKit           = fields[8].GetUInt16();
         creatureAddon.meleeAnimKit              = fields[9].GetUInt16();
@@ -1609,6 +1978,14 @@ void ObjectMgr::LoadEquipmentTemplates()
         equipmentInfo.ItemEntry[1] = fields[3].GetUInt32();
         equipmentInfo.ItemEntry[2] = fields[4].GetUInt32();
 
+        // lfm creature_equip_template correction
+        if (entry == 28834)
+        {
+            equipmentInfo.ItemEntry[0] = 38723;
+            equipmentInfo.ItemEntry[1] = 12932;
+            equipmentInfo.ItemEntry[2] = 11021;
+        }
+
         for (uint8 i = 0; i < MAX_EQUIPMENT_ITEMS; ++i)
         {
             if (!equipmentInfo.ItemEntry[i])
@@ -1643,6 +2020,12 @@ void ObjectMgr::LoadEquipmentTemplates()
         ++count;
     }
     while (result->NextRow());
+
+    // lfm extra creature equip
+    EquipmentInfo& equipmentInfo = _equipmentInfoStore[28912][1];
+    equipmentInfo.ItemEntry[0] = 38633;
+    equipmentInfo.ItemEntry[1] = 0;
+    equipmentInfo.ItemEntry[2] = 0;
 
     TC_LOG_INFO("server.loading", ">> Loaded %u equipment templates in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
@@ -4066,6 +4449,24 @@ void ObjectMgr::LoadPlayerInfo()
             uint32 current_level = fields[0].GetUInt8();
             uint32 current_xp    = fields[1].GetUInt32();
 
+            // lfm xp modification
+            if (current_level >= 80)
+            {
+                current_xp = current_xp * 1.25f;
+            }
+            else if (current_level >= 70)
+            {
+                current_xp = current_xp * 2.0f;
+            }
+            else if (current_level >= 60)
+            {
+                current_xp = current_xp * 1.75f;
+            }
+            else
+            {
+                
+            }
+
             if (current_level >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
             {
                 if (current_level > STRONG_MAX_LEVEL)        // hardcoded level maximum
@@ -4322,6 +4723,45 @@ void ObjectMgr::LoadQuests()
         }
     }
 
+    // lfm implementation from quest_template_addon_wlk
+    struct QuestInfoWLK
+    {
+        uint32 id;
+        uint32 pid;
+        uint32 nid;
+        uint32 allowableRaces;
+    };
+
+    std::unordered_map<uint32, QuestInfoWLK*> qiWLKMap;
+    QueryResult qrQTAResult = WorldDatabase.Query("SELECT ID, PrevQuestID, NextQuestID FROM quest_template_addon_wlk");    
+    if (qrQTAResult)
+    {
+        do
+        {
+            Field* fields = qrQTAResult->Fetch();
+            QuestInfoWLK* qiWLK = new QuestInfoWLK();
+            qiWLK->id = fields[0].GetUInt32();
+            qiWLK->pid = fields[1].GetUInt32();
+            qiWLK->nid = fields[2].GetUInt32();
+            qiWLKMap[qiWLK->id] = qiWLK;
+
+        } while (qrQTAResult->NextRow());
+    }
+
+    QueryResult qrQTResult = WorldDatabase.Query("SELECT ID, AllowableRaces FROM quest_template_wlk");
+    if (qrQTResult)
+    {
+        do
+        {
+            Field* fields = qrQTResult->Fetch();
+            uint32 checkID = fields[0].GetUInt32();
+            if (qiWLKMap.find(checkID) != qiWLKMap.end())
+            {
+                qiWLKMap[checkID]->allowableRaces = fields[1].GetUInt32();
+            }
+        } while (qrQTResult->NextRow());
+    }
+
     // Post processing
     for (auto& questPair : _questTemplates)
     {
@@ -4330,6 +4770,18 @@ void ObjectMgr::LoadQuests()
             continue;
 
         Quest* qinfo = &questPair.second;
+
+        // lfm quest implementation
+        uint32 qid = qinfo->GetQuestId();
+        if (qiWLKMap.find(qid) != qiWLKMap.end())
+        {
+            if (QuestInfoWLK* checkQI = qiWLKMap[qid])
+            {
+                qinfo->_prevQuestId = checkQI->pid;
+                qinfo->_nextQuestId = checkQI->nid;
+                qinfo->_allowableRaces = checkQI->allowableRaces;                
+            }
+        }
 
         // additional quest integrity checks (GO, creature_template and item_template must be loaded already)
 
@@ -5079,6 +5531,47 @@ void ObjectMgr::LoadQuests()
 
 void ObjectMgr::LoadQuestStartersAndEnders()
 {
+    // lfm quest relations correction from wlk 
+    cqsMap.clear();
+    QueryResult qrCQSResult = WorldDatabase.Query("SELECT id, quest FROM creature_queststarter_wlk;");
+    if (qrCQSResult)
+    {
+        do
+        {
+            Field* fields = qrCQSResult->Fetch();
+            uint32 cid = fields[0].GetUInt32();
+            uint32 qid = fields[1].GetUInt32();
+            if (qid == 12779)
+            {
+                bool breakPoint = true;
+            }
+            if (cqsMap.find(qid) == cqsMap.end())
+            {
+                cqsMap[qid] = cid;
+            }
+        } while (qrCQSResult->NextRow());
+    }
+
+    cqeMap.clear();
+    QueryResult qrCQEResult = WorldDatabase.Query("SELECT id, quest FROM creature_questender_wlk;");
+    if (qrCQEResult)
+    {
+        do
+        {
+            Field* fields = qrCQEResult->Fetch();
+            uint32 cid = fields[0].GetUInt32();
+            uint32 qid = fields[1].GetUInt32();
+            if (qid == 12779)
+            {
+                bool breakPoint = true;
+            }
+            if (cqeMap.find(qid) == cqeMap.end())
+            {
+                cqeMap[qid] = cid;
+            }
+        } while (qrCQEResult->NextRow());
+    }
+
     TC_LOG_INFO("server.loading", "Loading GO Start Quest Data...");
     LoadGameobjectQuestStarters();
     TC_LOG_INFO("server.loading", "Loading GO End Quest Data...");
@@ -7275,6 +7768,68 @@ void ObjectMgr::LoadGameObjectTemplate()
 {
     uint32 oldMSTime = getMSTime();
 
+    // lfm gameobject wlk implementation 
+    gameobjectEntrySetTBC.clear();
+    QueryResult qrGETBCResult = WorldDatabase.Query("SELECT entry FROM gameobject_entry_tbc");
+    if (qrGETBCResult)
+    {
+        do
+        {
+            Field* fields = qrGETBCResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            gameobjectEntrySetTBC.insert(entry);
+        } while (qrGETBCResult->NextRow());
+    }
+
+    gameobjectEntrySetWLK.clear();
+    QueryResult qrGEWLKResult = WorldDatabase.Query("SELECT entry FROM gameobject_entry_wlk");
+    if (qrGEWLKResult)
+    {
+        do
+        {
+            Field* fields = qrGEWLKResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            gameobjectEntrySetWLK.insert(entry);
+        } while (qrGEWLKResult->NextRow());
+    }
+
+    goMapWLK.clear();
+    QueryResult qrGTWLKResult = WorldDatabase.Query("SELECT entry, type, displayId, name, IconName, castBarCaption, unk1, size, "        
+        "Data0, Data1, Data2, Data3, Data4, Data5, Data6, Data7, Data8, Data9, Data10, Data11, Data12, "        
+        "Data13, Data14, Data15, Data16, Data17, Data18, Data19, Data20, Data21, Data22, Data23, AIName, ScriptName "
+        "FROM gameobject_template_wlk");
+    if (qrGTWLKResult)
+    {
+        goMapWLK.rehash(qrGTWLKResult->GetRowCount());
+        uint32 count = 0;
+        do
+        {
+            Field* fields = qrGTWLKResult->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            GameObjectTemplate& got = goMapWLK[entry];
+            got.entry = entry;
+            got.type = uint32(fields[1].GetUInt8());
+            got.displayId = fields[2].GetUInt32();
+            got.name = fields[3].GetString();
+            got.IconName = fields[4].GetString();
+            got.castBarCaption = fields[5].GetString();
+            got.unk1 = fields[6].GetString();
+            got.size = fields[7].GetFloat();
+            for (uint8 i = 0; i < MAX_GAMEOBJECT_DATA; ++i)
+            {
+                got.raw.data[i] = 0;
+            }
+            for (uint8 i = 0; i < 24; ++i)
+            {
+                got.raw.data[i] = fields[8 + i].GetUInt32();
+            }                
+
+            got.RequiredLevel = 0;
+            got.AIName = fields[32].GetString();
+            got.ScriptId = GetScriptId(fields[33].GetCString());
+        } while (qrGTWLKResult->NextRow());
+    }
+
     //                                               0      1     2          3     4         5               6     7
     QueryResult result = WorldDatabase.Query("SELECT entry, type, displayId, name, IconName, castBarCaption, unk1, size, "
     //                                        8      9      10     11     12     13     14     15     16     17     18      19      20
@@ -7315,6 +7870,13 @@ void ObjectMgr::LoadGameObjectTemplate()
 
         got.RequiredLevel = fields[40].GetInt32();
         got.AIName = fields[41].GetString();
+
+        // lfm changes from gameobjects from wlk
+        if (goMapWLK.find(got.entry) != goMapWLK.end())
+        {
+            got.AIName = goMapWLK[got.entry].AIName;
+        }
+
         got.ScriptId = GetScriptId(fields[42].GetCString());
 
         // Checks
@@ -8200,9 +8762,31 @@ void ObjectMgr::LoadQuestRelationsHelper(QuestRelations& map, QuestRelationsReve
             continue;
         }
 
+        // lfm quest relation corrections from wlk
+        if (quest == 12779 || quest == 12697)
+        {
+            bool breakPoint = true;
+        }
+        if (table == "creature_queststarter")
+        {            
+            if (cqsMap.find(quest) != cqsMap.end())
+            {
+                id = cqsMap[quest];
+            }
+        }
+        else if (table == "creature_questender")
+        {
+            if (cqeMap.find(quest) != cqeMap.end())
+            {
+                id = cqeMap[quest];
+            }
+        }
+
         map.insert(QuestRelations::value_type(id, quest));
         if (reversedMap)
+        {
             reversedMap->insert(QuestRelationsReverse::value_type(quest, id));
+        }
 
         ++count;
     } while (result->NextRow());
@@ -9517,13 +10101,21 @@ void ObjectMgr::LoadScriptNames()
         return;
     }
 
-    _scriptNamesStore.reserve(result->GetRowCount() + 1);
+    // lfm script names
+    uint32 lfmCount = 4;
+    _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
     {
         _scriptNamesStore.push_back((*result)[0].GetString());
     }
     while (result->NextRow());
+
+    // lfm script names
+    _scriptNamesStore.push_back("npc_scarlet_land_cannon");
+    _scriptNamesStore.push_back("npc_scarlet_fleet_guardian");
+    _scriptNamesStore.push_back("npc_scarlet_fleet_defender");
+    _scriptNamesStore.push_back("npc_death_knight_basic"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
@@ -9816,12 +10408,24 @@ void ObjectMgr::LoadCreatureClassLevelStats()
                 TC_LOG_ERROR("sql.sql", "Creature base stats for class %u, level %u has invalid zero base HP[%u] - set to 1", Class, Level, i);
                 stats.BaseHealth[i] = 1;
             }
-
             stats.BaseDamage[i] = fields[10 + i].GetFloat();
             if (stats.BaseDamage[i] < 0.0f)
             {
                 TC_LOG_ERROR("sql.sql", "Creature base stats for class %u, level %u has invalid negative base damage[%u] - set to 0.0", Class, Level, i);
                 stats.BaseDamage[i] = 0.0f;
+            }
+        }
+
+        // lfm creature level class state correction 
+        for (uint8 i = 1; i < MAX_EXPANSIONS; ++i)
+        {
+            if (stats.BaseHealth[i] <= 1)
+            {
+                stats.BaseHealth[i] = stats.BaseHealth[i - 1];
+            }
+            if (stats.BaseDamage[i] == 0)
+            {
+                stats.BaseDamage[i] = stats.BaseDamage[i - 1];
             }
         }
 

@@ -753,7 +753,7 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPackets::Character::PlayerLogin&
         return;
     }
 
-    SendConnectToInstance(WorldPackets::Auth::ConnectToSerial::WorldAttempt1);
+    SendConnectToInstance(WorldPackets::Auth::ConnectToSerial::WorldAttempt1);    
 }
 
 void WorldSession::HandleContinuePlayerLogin()

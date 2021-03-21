@@ -52,7 +52,7 @@ class TC_GAME_API SmartAI : public CreatureAI
         bool IsAIControlled() const;
 
         // Start moving to the desired MovePoint
-        void StartPath(bool run = false, uint32 pathId = 0, bool repeat = false, Unit* invoker = nullptr, uint32 nodeId = 1);
+        void StartPath(bool run = false, uint32 pathId = 0, bool repeat = false, Unit* invoker = nullptr, uint32 nodeId = 1, bool pmFly = false);
         bool LoadPath(uint32 entry);
         void PausePath(uint32 delay, bool forced = false);
         void StopPath(uint32 DespawnTime = 0, uint32 quest = 0, bool fail = false);

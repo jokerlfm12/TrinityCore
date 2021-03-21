@@ -5382,6 +5382,29 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGoT
     {
         (this->*SpellEffects[eff])((SpellEffIndex)i);
     }
+
+    // lfm spell effect handling
+    if (m_spellInfo->Id == 52264)
+    {
+        if (m_caster->GetTypeId() == TYPEID_UNIT && m_caster->IsVehicle())
+        {
+            if (Unit* charmer = m_caster->GetCharmer())
+            {
+                if (charmer->HasAura(52263))
+                {
+                    charmer->RemoveAurasDueToSpell(52263);
+                    charmer->ExitVehicle();
+                    m_caster->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
+                    m_caster->SetFaction(FACTION_FRIENDLY);
+                    m_caster->GetAI()->DoCast(m_caster, 52266, true);
+                    if (Creature* Dark_Rider = m_caster->FindNearestCreature(28654, 15))
+                    {
+                        Dark_Rider->AI()->SetData(11, m_caster->GetEntry());
+                    }
+                }
+            }
+        }
+    }
 }
 
 /*static*/ Spell const* Spell::ExtractSpellFromEvent(BasicEvent* event)

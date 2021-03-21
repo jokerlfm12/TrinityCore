@@ -64,6 +64,9 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         explicit Creature(bool isWorldObject = false);
         virtual ~Creature();
 
+        // lfm creature auto mounting 
+        bool mounting;
+
         void AddToWorld() override;
         void RemoveFromWorld() override;
 

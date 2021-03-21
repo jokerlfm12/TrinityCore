@@ -280,6 +280,16 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             if (!talker)
                 break;
 
+            // lfm dead creature will not talk
+            if (!talker->IsAlive())
+            {
+                break;
+            }
+            else if (talker->HasFlag(EUnitFields::UNIT_DYNAMIC_FLAGS, UnitDynFlags::UNIT_DYNFLAG_DEAD))
+            {
+                break;
+            }
+
             mTalkerEntry = talker->GetEntry();
             mLastTextID = e.action.talk.textGroupID;
             mTextTimer = e.action.talk.duration;
@@ -1422,7 +1432,14 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             }
 
             me->SetReactState((ReactStates)e.action.wpStart.reactState);
-            ENSURE_AI(SmartAI, me->AI())->StartPath(run, entry, repeat, unit);
+
+            // lfm waypoints fly 
+            bool fly = false;
+            if (e.action.wpStart.run == 3)
+            {
+                fly = true;
+            }
+            ENSURE_AI(SmartAI, me->AI())->StartPath(run, entry, repeat, unit, 1, fly);
 
             uint32 quest = e.action.wpStart.quest;
             uint32 DespawnTime = e.action.wpStart.despawnTime;

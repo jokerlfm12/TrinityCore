@@ -1663,6 +1663,11 @@ class TC_GAME_API ObjectMgr
         QuestRelationsReverse _goQuestInvolvedRelationsReverse;
         QuestRelations _creatureQuestRelations;
         QuestRelations _creatureQuestInvolvedRelations;
+
+        // lfm quest relations from wlk
+        std::unordered_map<uint32, uint32> cqsMap;
+        std::unordered_map<uint32, uint32> cqeMap;
+
         QuestRelationsReverse _creatureQuestInvolvedRelationsReverse;
 
         ExclusiveQuestGroups _exclusiveQuestGroups;
@@ -1734,10 +1739,15 @@ class TC_GAME_API ObjectMgr
 
         MapObjectGuids _mapObjectGuidsStore;
         CreatureDataContainer _creatureDataStore;
+
         // lfm creature_template wlk implementation
         std::unordered_set<uint32> creatureEntrySetTBC;
         std::unordered_set<uint32> creatureEntrySetWLK;
+        std::unordered_set<uint32> gameobjectEntrySetTBC;
+        std::unordered_set<uint32> gameobjectEntrySetWLK;
         std::unordered_map<uint32, CreatureTemplate> ctMapWLK;
+        std::unordered_map<uint32, GameObjectTemplate> goMapWLK;
+
         CreatureTemplateContainer _creatureTemplateStore;
         CreatureModelContainer _creatureModelStore;
         CreatureAddonContainer _creatureAddonStore;

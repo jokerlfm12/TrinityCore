@@ -130,7 +130,9 @@ void EscortAI::ReturnToLastPoint()
 
 void EscortAI::EnterEvadeMode(EvadeReason /*why*/)
 {
-    me->RemoveAllAuras();
+    // lfm remove all auras while in evade mode is not necessary 
+    //me->RemoveAllAuras();
+
     me->CombatStop(true);
     me->SetLootRecipient(nullptr);
 

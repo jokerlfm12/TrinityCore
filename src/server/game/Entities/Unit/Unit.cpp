@@ -1065,6 +1065,12 @@ void Unit::CastSpell(SpellCastTargets const& targets, uint32 spellId, CastSpellE
         return;
     }
 
+    // lfm check chapter spell
+    if (spellId == 52597)
+    {
+        bool breakPoint = true;
+    }
+
     Spell* spell = new Spell(this, info, args.TriggerFlags, args.OriginalCaster);
     for (auto const& pair : args.SpellValueOverrides)
         spell->SetSpellValue(pair.first, pair.second);
@@ -6623,7 +6629,141 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
 
     // Pet damage?
     if (GetTypeId() == TYPEID_UNIT && !IsPet())
+    {
         DoneTotalMod *= ToCreature()->GetSpellDamageMod(ToCreature()->GetCreatureTemplate()->rank);
+
+        // lfm spell damage modifier definition
+        if (const Creature* meCreature = ToCreature())
+        {
+            if (const CreatureTemplate* ct = meCreature->GetCreatureTemplate())
+            {
+                uint32 myLevel = getLevel();
+                if (myLevel > 80)
+                {
+
+                }
+                else if (myLevel > 70)
+                {
+                    switch (ct->rank)
+                    {
+                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+                    {
+                        DoneTotalMod *= 2.0f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_ELITE:
+                    {
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RARE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+                    {
+                        DoneTotalMod *= 1.5f;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+                else if (myLevel > 60)
+                {
+                    switch (ct->rank)
+                    {
+                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+                    {
+                        DoneTotalMod *= 1.75f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_ELITE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RARE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+                    {
+                        DoneTotalMod *= 1.5f;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+                else if (myLevel > 30)
+                {
+                    switch (ct->rank)
+                    {
+                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+                    {
+                        DoneTotalMod *= 1.5f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_ELITE:
+                    {
+                        DoneTotalMod *= 1.5f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RARE:
+                    {
+                        DoneTotalMod *= 1.5f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+                    {
+                        DoneTotalMod *= 1.75f;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+                else
+                {
+                    switch (ct->rank)
+                    {
+                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_ELITE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RARE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+                    {
+                        DoneTotalMod *= 1.25f;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+    }
 
     float maxModDamagePercentSchool = 0.0f;
     if (GetTypeId() == TYPEID_PLAYER)

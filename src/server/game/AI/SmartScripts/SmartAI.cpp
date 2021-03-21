@@ -60,12 +60,10 @@ void SmartAI::UpdateDespawn(uint32 diff)
     } else _despawnTime -= diff;
 }
 
-void SmartAI::StartPath(bool run/* = false*/, uint32 pathId/* = 0*/, bool repeat/* = false*/, Unit* invoker/* = nullptr*/, uint32 nodeId/* = 1*/)
+void SmartAI::StartPath(bool run/* = false*/, uint32 pathId/* = 0*/, bool repeat/* = false*/, Unit* invoker/* = nullptr*/, uint32 nodeId/* = 1*/, bool pmFly)
 {
     if (HasEscortState(SMART_ESCORT_ESCORTING))
         StopPath();
-
-    SetRun(run);
 
     if (pathId)
     {
@@ -73,8 +71,19 @@ void SmartAI::StartPath(bool run/* = false*/, uint32 pathId/* = 0*/, bool repeat
             return;
     }
 
+    SetRun(run);
+
     if (_path.Nodes.empty())
         return;
+
+    // lfm waypoints fly 
+    if (pmFly)
+    {
+        for (auto& node : _path.Nodes)
+        {
+            node.MoveType = WAYPOINT_MOVE_TYPE_TAKEOFF;
+        }            
+    }
 
     _currentWaypointNode = nodeId;
     _waypointPathEnded = false;

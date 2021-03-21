@@ -439,12 +439,20 @@ bool LootTemplate::LootGroup::HasQuestDrop() const
 bool LootTemplate::LootGroup::HasQuestDropForPlayer(Player const* player) const
 {
     for (LootStoreItemList::const_iterator i = ExplicitlyChanced.begin(); i != ExplicitlyChanced.end(); ++i)
+    {
         if (player->HasQuestForItem((*i)->itemid))
+        {
             return true;
+        }
+    }
 
     for (LootStoreItemList::const_iterator i = EqualChanced.begin(); i != EqualChanced.end(); ++i)
+    {
         if (player->HasQuestForItem((*i)->itemid))
+        {
             return true;
+        }            
+    }        
 
     return false;
 }
