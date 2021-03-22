@@ -784,6 +784,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 500.0f;
         creatureTemplate.ModDamage = 10.0f;        
     }
     else if (creatureTemplate.Entry == 29185)
@@ -807,7 +808,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 70.0f;
+        creatureTemplate.ModHealth = 20.0f;
         creatureTemplate.ModDamage = 8.0f;        
     }
     else if (creatureTemplate.Entry == 29206)
@@ -815,7 +816,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 60.0f;
+        creatureTemplate.ModHealth = 18.0f;
         creatureTemplate.ModDamage = 8.5f;        
     }
     else if (creatureTemplate.Entry == 29190)
@@ -823,7 +824,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 90.0f;
+        creatureTemplate.ModHealth = 22.0f;
         creatureTemplate.ModDamage = 9.0f;        
     }
     else if (creatureTemplate.Entry == 29174)
@@ -831,63 +832,63 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 40.0f;        
+        creatureTemplate.ModHealth = 16.0f;        
     }
     else if (creatureTemplate.Entry == 29199)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 520.0f;        
+        creatureTemplate.ModHealth = 65.0f;        
     }
     else if (creatureTemplate.Entry == 29204)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 590.0f;        
+        creatureTemplate.ModHealth = 70.0f;        
     }
     else if (creatureTemplate.Entry == 29200)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 570.0f;        
+        creatureTemplate.ModHealth = 75.0f;        
     }
     else if (creatureTemplate.Entry == 29176)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 530.0f;        
+        creatureTemplate.ModHealth = 68.0f;        
     }
     else if (creatureTemplate.Entry == 29178)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 540.0f;        
+        creatureTemplate.ModHealth = 69.0f;        
     }
     else if (creatureTemplate.Entry == 29177)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 525.0f;        
+        creatureTemplate.ModHealth = 64.0f;        
     }
     else if (creatureTemplate.Entry == 29181)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 500.0f;        
+        creatureTemplate.ModHealth = 62.0f;        
     }
     else if (creatureTemplate.Entry == 29182)
     {
         creatureTemplate.minlevel = 60;
         creatureTemplate.maxlevel = 60;
         creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 510.0f;        
+        creatureTemplate.ModHealth = 63.0f;        
     }
 
     // lfm creature template modifier definition
