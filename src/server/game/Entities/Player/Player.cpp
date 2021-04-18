@@ -155,6 +155,7 @@ Player::Player(WorldSession* session): Unit(true)
 
     m_ingametime = 0;
     m_sharedQuestId = 0;
+    m_popupQuestId = 0;
 
     m_ExtraFlags = 0;
 
@@ -1139,7 +1140,7 @@ void Player::Update(uint32 p_time)
             if (u->IsPvP() && (!duel || duel->opponent != u))
             {
                 UpdatePvP(true);
-                RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ENTER_PVP_COMBAT);
+                RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::PvPActive);
             }*/
         }
     }
@@ -1609,7 +1610,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                     InterruptNonMeleeSpells(true);
 
             //remove auras before removing from map...
-            RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CHANGE_MAP | AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING);
+            RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Moving | SpellAuraInterruptFlags::Turning);
 
             if (!GetSession()->PlayerLogout())
             {
@@ -1867,12 +1868,12 @@ void Player::RegenerateAll(uint32 diff)
         for (auto itr = auraList.begin(); itr != auraList.end(); ++itr)
         {
             // Food emote comes above drinking emote if we have to decide (mage regen food for example)
-            if ((*itr)->GetBase()->HasEffectType(SPELL_AURA_MOD_REGEN) && (*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED)
+            if ((*itr)->GetBase()->HasEffectType(SPELL_AURA_MOD_REGEN) && (*itr)->GetSpellInfo()->HasAuraInterruptFlag(SpellAuraInterruptFlags::Standing))
             {
                 SendPlaySpellVisualKit(SPELL_VISUAL_KIT_FOOD, 0, 0);
                 break;
             }
-            else if ((*itr)->GetBase()->HasEffectType(SPELL_AURA_MOD_POWER_REGEN) && (*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED)
+            else if ((*itr)->GetBase()->HasEffectType(SPELL_AURA_MOD_POWER_REGEN) && (*itr)->GetSpellInfo()->HasAuraInterruptFlag(SpellAuraInterruptFlags::Standing))
             {
                 SendPlaySpellVisualKit(SPELL_VISUAL_KIT_DRINK, 0, 0);
                 break;
@@ -2069,7 +2070,7 @@ void Player::SetInWater(bool apply)
     m_isInWater = apply;
 
     // remove auras that need water/land
-    RemoveAurasWithInterruptFlags(apply ? AURA_INTERRUPT_FLAG_NOT_ABOVEWATER : AURA_INTERRUPT_FLAG_NOT_UNDERWATER);
+    RemoveAurasWithInterruptFlags(apply ? SpellAuraInterruptFlags::UnderWater : SpellAuraInterruptFlags::AboveWater);
 }
 
 bool Player::IsInAreaTriggerRadius(AreaTriggerEntry const* trigger) const
@@ -4082,6 +4083,8 @@ void Player::BuildPlayerRepop()
         CastSpell(this, 20584, true);
     CastSpell(this, 8326, true);
 
+    RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Release);
+
     // there must be SMSG.FORCE_RUN_SPEED_CHANGE, SMSG.FORCE_SWIM_SPEED_CHANGE, SMSG.MOVE_WATER_WALK
     // there must be SMSG.STOP_MIRROR_TIMER
 
@@ -5874,12 +5877,10 @@ bool Player::UpdatePosition(float x, float y, float z, float orientation, bool t
 
     if (!Unit::UpdatePosition(x, y, z, orientation, teleport))
         return false;
-
     //if (movementInfo.flags & MOVEMENTFLAG_MOVING)
-    //    mover->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE);
+    //    mover->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Moving);
     //if (movementInfo.flags & MOVEMENTFLAG_TURNING)
-    //    mover->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING);
-    //AURA_INTERRUPT_FLAG_JUMP not sure
+    //    mover->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Turning);
 
     // Update player zone if needed
     if (m_needsZoneUpdate)
@@ -7860,7 +7861,17 @@ void Player::CastItemCombatSpell(DamageInfo const& damageInfo, Item* item, ItemT
 {
     // Can do effect if any damage done to target
     // for done procs allow normal + critical + absorbs by default
-    bool canTrigger = (damageInfo.GetHitMask() & (PROC_HIT_NORMAL | PROC_HIT_CRITICAL | PROC_HIT_ABSORB)) != 0;
+    bool canTrigger = [&]()
+    {
+        if (!(damageInfo.GetHitMask() & (PROC_HIT_NORMAL | PROC_HIT_CRITICAL | PROC_HIT_ABSORB)))
+            return false;
+
+        if (damageInfo.GetSpellInfo() && damageInfo.GetSpellInfo()->HasAttribute(SPELL_ATTR3_CANT_TRIGGER_CASTER_PROCS))
+            return false;
+
+        return true;
+    }();
+
     if (canTrigger)
     {
         for (ItemEffect const& effect : proto->Effects)
@@ -14259,7 +14270,10 @@ void Player::SendPreparedQuest(ObjectGuid guid)
                 if (quest->IsAutoComplete() && quest->IsRepeatable() && !quest->IsDailyOrWeekly())
                     PlayerTalkClass->SendQuestGiverRequestItems(quest, guid, CanCompleteRepeatableQuest(quest), true);
                 else
+                {
+                    SetPopupQuestId(0);
                     PlayerTalkClass->SendQuestGiverQuestDetails(quest, guid, true, false);
+                }
             }
         }
     }
@@ -21120,7 +21134,7 @@ void Player::PetSpellInitialize()
                 continue;
 
             // Do not send this spells, they are used indirectly
-            if (sSpellMgr->GetSpellInfo(itr->first)->HasAttribute(SPELL_ATTR4_UNK15))
+            if (sSpellMgr->GetSpellInfo(itr->first)->HasAttribute(SPELL_ATTR4_HIDDEN_IN_SPELLBOOK))
                 continue;
 
             data << uint32(MAKE_UNIT_ACTION_BUTTON(itr->first, itr->second.active));
@@ -21815,7 +21829,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_FLIGHT_PATHS_TAKEN, 1);
 
     // prevent stealth flight
-    //RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
+    //RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Interacting);
 
     if (sWorld->getBoolConfig(CONFIG_INSTANT_TAXI))
     {
@@ -23299,6 +23313,19 @@ void Player::ClearComboPoints()
     m_comboTarget.Clear();
 }
 
+bool Player::IsInGroup(ObjectGuid groupGuid) const
+{
+    if (Group const* group = GetGroup())
+        if (group->GetGUID() == groupGuid)
+            return true;
+
+    if (Group const* group = GetOriginalGroup())
+        if (group->GetGUID() == groupGuid)
+            return true;
+
+    return false;
+}
+
 void Player::SetGroup(Group* group, int8 subgroup)
 {
     if (group == nullptr)
@@ -23474,7 +23501,10 @@ void Player::SendInitialPacketsAfterAddToMap()
     if (GetPlayerSharingQuest())
     {
         if (Quest const* quest = sObjectMgr->GetQuestTemplate(GetSharedQuestID()))
+        {
+            SetPopupQuestId(0);
             PlayerTalkClass->SendQuestGiverQuestDetails(quest, GetGUID(), true, false);
+        }
         else
             ClearQuestSharingInfo();
     }
@@ -24378,6 +24408,7 @@ void Player::SummonIfPossible(bool agree)
     m_summon_expire = 0;
 
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ACCEPTED_SUMMONINGS, 1);
+    RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Summon);
 
     TeleportTo(m_summon_location);
 }
@@ -24928,9 +24959,9 @@ int32 Player::CalculateCorpseReclaimDelay(bool load) const
 
 void Player::SendCorpseReclaimDelay(uint32 delay) const
 {
-    WorldPacket data(SMSG_CORPSE_RECLAIM_DELAY, 4);
-    data << uint32(delay);
-    SendDirectMessage(&data);
+    WorldPackets::Misc::CorpseReclaimDelay packet;
+    packet.Remaining = delay;
+    SendDirectMessage(packet.Write());
 }
 
 Player* Player::GetNextRandomRaidMember(float radius)

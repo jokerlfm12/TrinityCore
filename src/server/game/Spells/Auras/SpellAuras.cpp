@@ -755,7 +755,7 @@ void Aura::RefreshDuration(bool withMods)
     {
         int32 duration = m_spellInfo->GetMaxDuration();
         // Calculate duration of periodics affected by haste.
-        if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_HASTE_AFFECT_DURATION))
+        if (caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, m_spellInfo) || m_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC))
             duration = int32(duration * caster->GetFloatValue(UNIT_MOD_CAST_SPEED));
 
         SetMaxDuration(duration);
@@ -2427,7 +2427,7 @@ void DynObjAura::FillTargetMap(std::unordered_map<Unit*, uint8>& targets, Unit* 
         if (GetSpellInfo()->Effects[effIndex].TargetB.GetTarget() == TARGET_DEST_DYNOBJ_ALLY
             || GetSpellInfo()->Effects[effIndex].TargetB.GetTarget() == TARGET_UNIT_DEST_AREA_ALLY)
         {
-            Trinity::AnyFriendlyUnitInObjectRangeCheck u_check(GetDynobjOwner(), dynObjOwnerCaster, radius, m_spellInfo->HasAttribute(SPELL_ATTR3_ONLY_TARGET_PLAYERS));
+            Trinity::AnyFriendlyUnitInObjectRangeCheck u_check(GetDynobjOwner(), dynObjOwnerCaster, radius, m_spellInfo->HasAttribute(SPELL_ATTR3_ONLY_TARGET_PLAYERS), m_spellInfo->HasAttribute(SPELL_ATTR5_DONT_TARGET_PLAYERS));
             Trinity::UnitListSearcher<Trinity::AnyFriendlyUnitInObjectRangeCheck> searcher(GetDynobjOwner(), units, u_check);
             Cell::VisitAllObjects(GetDynobjOwner(), searcher, radius);
         }

@@ -67,8 +67,8 @@ void WaypointMovementGenerator<Creature>::DoInitialize(Creature* creature)
         }
     }
 
-    // We launch the first movement after a initial 1s delay.
-    _nextMoveTimer.Reset(1000);
+    // We launch the first movement after a initial 1ms delay.
+    _nextMoveTimer.Reset(1);
 
     // inform AI
     if (creature->IsAIEnabled)
@@ -132,7 +132,7 @@ void WaypointMovementGenerator<Creature>::HandleMovementInformationHooks(Creatur
 
         // Inform the AI that the path has ended.
         if (creature->IsAIEnabled)
-            creature->AI()->WaypointPathEnded(_path->Nodes.at(_currentNode).Id, _path->Id);
+            creature->AI()->WaypointPathEnded(waypoint.Id, _path->Id);
     }
 
     if (waypoint.EventId && urand(0, 99) < waypoint.EventChance)
@@ -142,14 +142,14 @@ void WaypointMovementGenerator<Creature>::HandleMovementInformationHooks(Creatur
         creature->GetMap()->ScriptsStart(sWaypointScripts, waypoint.EventId, creature, nullptr);
     }
 
+    creature->UpdateCurrentWaypointInfo(waypoint.Id, _path->Id);
+
     // inform AI
     if (creature->IsAIEnabled)
     {
         creature->AI()->MovementInform(WAYPOINT_MOTION_TYPE, _currentNode);
         creature->AI()->WaypointReached(waypoint.Id, _path->Id);
     }
-
-    creature->UpdateCurrentWaypointInfo(waypoint.Id, _path->Id);
 
     // All hooks called and infos updated. Time to increment the waypoint node id
     if (_path && !_path->Nodes.empty()) // ensure that the path has not been changed in one of the hooks.
@@ -230,6 +230,13 @@ void WaypointMovementGenerator<Creature>::StartMove(Creature* creature, bool rel
             break;
         default:
             break;
+    }
+
+    if (creature->CanFly())
+    {
+        init.SetFly();
+        init.SetSmooth();
+        init.SetUncompressed();
     }
 
     if (waypoint.Velocity > 0.f)

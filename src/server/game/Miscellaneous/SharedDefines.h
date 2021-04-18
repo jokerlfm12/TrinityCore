@@ -22,7 +22,7 @@
 #include "DetourNavMesh.h"
 
 float const GROUND_HEIGHT_TOLERANCE = 0.05f; // Extra tolerance to z position to check if it is in air or on ground.
-constexpr float Z_OFFSET_FIND_HEIGHT = 0.5f;
+constexpr float Z_OFFSET_FIND_HEIGHT = 1.5f;
 
 enum SpellEffIndex : uint8
 {
@@ -432,7 +432,7 @@ enum SpellAttr2
     SPELL_ATTR2_DISPLAY_IN_STANCE_BAR            = 0x00000010, //  4 client displays icon in stance bar when learned, even if not shapeshift
     SPELL_ATTR2_AUTOREPEAT_FLAG                  = 0x00000020, //  5
     SPELL_ATTR2_CANT_TARGET_TAPPED               = 0x00000040, //  6 target must be tapped by caster
-    SPELL_ATTR2_UNK7                             = 0x00000080, //  7
+    SPELL_ATTR2_DONT_REPORT_SPELL_FAILURE        = 0x00000080, //  7 Does not send spell failure packets when the cast has failed
     SPELL_ATTR2_UNK8                             = 0x00000100, //  8 not set in 3.0.3
     SPELL_ATTR2_UNK9                             = 0x00000200, //  9
     SPELL_ATTR2_UNK10                            = 0x00000400, // 10 related to tame
@@ -447,13 +447,13 @@ enum SpellAttr2
     SPELL_ATTR2_NOT_NEED_SHAPESHIFT              = 0x00080000, // 19 does not necessarly need shapeshift
     SPELL_ATTR2_UNK20                            = 0x00100000, // 20
     SPELL_ATTR2_DAMAGE_REDUCED_SHIELD            = 0x00200000, // 21 for ice blocks, pala immunity buffs, priest absorb shields, but used also for other spells -> not sure!
-    SPELL_ATTR2_UNK22                            = 0x00400000, // 22 Ambush, Backstab, Cheap Shot, Death Grip, Garrote, Judgements, Mutilate, Pounce, Ravage, Shiv, Shred
+    SPELL_ATTR2_NO_INITIAL_THREAT                = 0x00400000, // 22 No Initial Threat
     SPELL_ATTR2_IS_ARCANE_CONCENTRATION          = 0x00800000, // 23 Only mage Arcane Concentration have this flag
     SPELL_ATTR2_UNK24                            = 0x01000000, // 24
     SPELL_ATTR2_UNK25                            = 0x02000000, // 25
     SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE = 0x04000000, // 26 unaffected by school immunity
     SPELL_ATTR2_UNK27                            = 0x08000000, // 27
-    SPELL_ATTR2_UNK28                            = 0x10000000, // 28
+    SPELL_ATTR2_IGNORE_ACTION_AURA_INTERRUPT_FLAGS = 0x10000000, // 28 doesnt break auras with SpellAuraInterruptFlags::Action and SpellAuraInterruptFlags::ActionDelayed
     SPELL_ATTR2_CANT_CRIT                        = 0x20000000, // 29 Spell can't crit
     SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC       = 0x40000000, // 30 spell can trigger even if triggered
     SPELL_ATTR2_FOOD_BUFF                        = 0x80000000  // 31 Food or Drink Buff (like Well Fed)
@@ -464,7 +464,7 @@ enum SpellAttr3
     SPELL_ATTR3_UNK0                             = 0x00000001, //  0
     SPELL_ATTR3_IGNORE_PROC_SUBCLASS_MASK        = 0x00000002, //  1 Ignores subclass mask check when checking proc
     SPELL_ATTR3_UNK2                             = 0x00000004, //  2
-    SPELL_ATTR3_BLOCKABLE_SPELL                  = 0x00000008, //  3 Only dmg class melee in 3.1.3
+    SPELL_ATTR3_COMPLETELY_BLOCKED               = 0x00000008, //  3 Completely Blocked
     SPELL_ATTR3_IGNORE_RESURRECTION_TIMER        = 0x00000010, //  4 you don't have to wait to be resurrected with these spells
     SPELL_ATTR3_UNK5                             = 0x00000020, //  5
     SPELL_ATTR3_UNK6                             = 0x00000040, //  6
@@ -477,8 +477,8 @@ enum SpellAttr3
     SPELL_ATTR3_DONT_DISPLAY_CHANNEL_BAR         = 0x00002000, // 13 Clientside attribute - will not display channeling bar
     SPELL_ATTR3_IS_HONORLESS_TARGET              = 0x00004000, // 14 "Honorless Target" only this spells have this flag
     SPELL_ATTR3_UNK15                            = 0x00008000, // 15 Auto Shoot, Shoot, Throw,  - this is autoshot flag
-    SPELL_ATTR3_CANT_TRIGGER_PROC                = 0x00010000, // 16 confirmed with many patchnotes
-    SPELL_ATTR3_NO_INITIAL_AGGRO                 = 0x00020000, // 17 Soothe Animal, 39758, Mind Soothe
+    SPELL_ATTR3_CANT_TRIGGER_CASTER_PROCS        = 0x00010000, // 16 Suppress Caster Procs
+    SPELL_ATTR3_CANT_TRIGGER_TARGET_PROCS        = 0x00020000, // 17 Suppress Target Procs
     SPELL_ATTR3_IGNORE_HIT_RESULT                = 0x00040000, // 18 Spell should always hit its target
     SPELL_ATTR3_DISABLE_PROC                     = 0x00080000, // 19 during aura proc no spells can trigger (20178, 20375)
     SPELL_ATTR3_DEATH_PERSISTENT                 = 0x00100000, // 20 Death persistent spells
@@ -512,7 +512,7 @@ enum SpellAttr4
     SPELL_ATTR4_UNK12                            = 0x00001000, // 12
     SPELL_ATTR4_UNK13                            = 0x00002000, // 13
     SPELL_ATTR4_DAMAGE_DOESNT_BREAK_AURAS        = 0x00004000, // 14 doesn't break auras by damage from these spells
-    SPELL_ATTR4_UNK15                            = 0x00008000, // 15
+    SPELL_ATTR4_HIDDEN_IN_SPELLBOOK              = 0x00008000, // 15
     SPELL_ATTR4_NOT_USABLE_IN_ARENA_OR_RATED_BG  = 0x00010000, // 16 Cannot be used in both Arenas or Rated Battlegrounds
     SPELL_ATTR4_USABLE_IN_ARENA                  = 0x00020000, // 17
     SPELL_ATTR4_AREA_TARGET_CHAIN                = 0x00040000, // 18 (NYI)hits area targets one after another instead of all at once
@@ -540,13 +540,13 @@ enum SpellAttr5
     SPELL_ATTR5_UNK4                             = 0x00000010, //  4
     SPELL_ATTR5_SINGLE_TARGET_SPELL              = 0x00000020, //  5 Only one target can be apply at a time
     SPELL_ATTR5_UNK6                             = 0x00000040, //  6
-    SPELL_ATTR5_UNK7                             = 0x00000080, //  7
+    SPELL_ATTR5_DONT_TARGET_PLAYERS              = 0x00000080, //  7 Not On Player
     SPELL_ATTR5_DONT_ALLOW_PET_TARGET            = 0x00000100, //  8 do not allow the following spell to affect or target pets
     SPELL_ATTR5_START_PERIODIC_AT_APPLY          = 0x00000200, //  9 begin periodic tick at aura apply
     SPELL_ATTR5_HIDE_DURATION                    = 0x00000400, // 10 do not send duration to client
     SPELL_ATTR5_ALLOW_TARGET_OF_TARGET_AS_TARGET = 0x00000800, // 11 (NYI) uses target's target as target if original target not valid (intervene for example)
     SPELL_ATTR5_UNK12                            = 0x00001000, // 12 Cleave related?
-    SPELL_ATTR5_HASTE_AFFECT_DURATION            = 0x00002000, // 13 haste effects decrease duration of this
+    SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC     = 0x00002000, // 13 Spell Haste Affects Periodic
     SPELL_ATTR5_NOT_USABLE_WHILE_CHARMED         = 0x00004000, // 14 Charmed units cannot cast this spell
     SPELL_ATTR5_INCLUDE_MELEE_RANGE              = 0x00008000, // 15 Area target selection includes the combat reach of caster and potential target
     SPELL_ATTR5_UNK16                            = 0x00010000, // 16
@@ -617,20 +617,20 @@ enum SpellAttr7
     SPELL_ATTR7_ALLIANCE_ONLY                    = 0x00000200, //  9 Teleports, mounts and other spells.
     SPELL_ATTR7_DISPEL_CHARGES                   = 0x00000400, // 10 Dispel and Spellsteal individual charges instead of whole aura.
     SPELL_ATTR7_INTERRUPT_ONLY_NONPLAYER         = 0x00000800, // 11 Only non-player casts interrupt, though Feral Charge - Bear has it.
-    SPELL_ATTR7_UNK12                            = 0x00001000, // 12 Not set in 3.2.2a.
-    SPELL_ATTR7_UNK13                            = 0x00002000, // 13 Not set in 3.2.2a.
+    SPELL_ATTR7_SILENCE_ONLY_NONPLAYER           = 0x00001000, // 12 Not set in 3.2.2a.
+    SPELL_ATTR7_CAN_ALWAYS_BE_INTERRUPTED        = 0x00002000, // 13 Can always be interrupted, even if caster is immune
     SPELL_ATTR7_UNK14                            = 0x00004000, // 14 Only 52150 (Raise Dead - Pet) spell.
     SPELL_ATTR7_UNK15                            = 0x00008000, // 15 Exorcism. Usable on players? 100% crit chance on undead and demons?
-    SPELL_ATTR7_CAN_RESTORE_SECONDARY_POWER      = 0x00010000, // 16 These spells can replenish a powertype, which is not the current powertype.
+    SPELL_ATTR7_HIDDEN_IN_SPELLBOOK_WHEN_LEARNED = 0x00010000, // 16 After learning these spells become hidden in spellbook (but are visible when not learned for low level characters)
     SPELL_ATTR7_UNK17                            = 0x00020000, // 17 Only 27965 (Suicide) spell.
     SPELL_ATTR7_HAS_CHARGE_EFFECT                = 0x00040000, // 18 Only spells that have Charge among effects.
     SPELL_ATTR7_ZONE_TELEPORT                    = 0x00080000, // 19 Teleports to specific zones.
     SPELL_ATTR7_UNK20                            = 0x00100000, // 20 Blink, Divine Shield, Ice Block
     SPELL_ATTR7_UNK21                            = 0x00200000, // 21 Not set
     SPELL_ATTR7_UNK22                            = 0x00400000, // 22
-    SPELL_ATTR7_UNK23                            = 0x00800000, // 23 Motivate, Mutilate, Shattering Throw
-    SPELL_ATTR7_UNK24                            = 0x01000000, // 24 Motivate, Mutilate, Perform Speech, Shattering Throw
-    SPELL_ATTR7_UNK25                            = 0x02000000, // 25
+    SPELL_ATTR7_CANT_DODGE                       = 0x00800000, // 23 No Attack Dodge
+    SPELL_ATTR7_CANT_PARRY                       = 0x01000000, // 24 No Attack Parry
+    SPELL_ATTR7_CANT_MISS                        = 0x02000000, // 25 No Attack Miss
     SPELL_ATTR7_UNK26                            = 0x04000000, // 26
     SPELL_ATTR7_UNK27                            = 0x08000000, // 27 Not set
     SPELL_ATTR7_CONSOLIDATED_RAID_BUFF           = 0x10000000, // 28 May be collapsed in raid buff frame (clientside attribute)
@@ -641,7 +641,7 @@ enum SpellAttr7
 
 enum SpellAttr8
 {
-    SPELL_ATTR8_CANT_MISS                        = 0x00000001, //  0
+    SPELL_ATTR8_CANT_BLOCK                       = 0x00000001, //  0 No Attack Block
     SPELL_ATTR8_UNK1                             = 0x00000002, //  1
     SPELL_ATTR8_UNK2                             = 0x00000004, //  2
     SPELL_ATTR8_UNK3                             = 0x00000008, //  3
@@ -658,14 +658,14 @@ enum SpellAttr8
     SPELL_ATTR8_UNK14                            = 0x00004000, // 14
     SPELL_ATTR8_WATER_MOUNT                      = 0x00008000, // 15 only one River Boat used in Thousand Needles
     SPELL_ATTR8_UNK16                            = 0x00010000, // 16
-    SPELL_ATTR8_UNK17                            = 0x00020000, // 17
+    SPELL_ATTR8_HASTE_AFFECTS_DURATION           = 0x00020000, // 17 Haste Affects Duration
     SPELL_ATTR8_REMEMBER_SPELLS                  = 0x00040000, // 18 at some point in time, these auras remember spells and allow to cast them later
     SPELL_ATTR8_USE_COMBO_POINTS_ON_ANY_TARGET   = 0x00080000, // 19 allows to consume combo points from dead targets
     SPELL_ATTR8_ARMOR_SPECIALIZATION             = 0x00100000, // 20
     SPELL_ATTR8_UNK21                            = 0x00200000, // 21
     SPELL_ATTR8_UNK22                            = 0x00400000, // 22
     SPELL_ATTR8_BATTLE_RESURRECTION              = 0x00800000, // 23 Used to limit the Amount of Resurrections in Boss Encounters
-    SPELL_ATTR8_HEALING_SPELL                    = 0x01000000, // 24
+    SPELL_ATTR8_HEAL_PREDICTION                  = 0x01000000, // 24 Displays a predicted health amount on the targets frame
     SPELL_ATTR8_UNK25                            = 0x02000000, // 25
     SPELL_ATTR8_RAID_MARKER                      = 0x04000000, // 26 probably spell no need learn to cast
     SPELL_ATTR8_UNK27                            = 0x08000000, // 27
@@ -714,7 +714,7 @@ enum SpellAttr9
 enum SpellAttr10
 {
     SPELL_ATTR10_UNK0                             = 0x00000001, //  0
-    SPELL_ATTR10_UNK1                             = 0x00000002, //  1
+    SPELL_ATTR10_IGNORE_POSITIVE_DAMAGE_TAKEN_MODS = 0x00000002, //  1 Ignore Positive Damage Taken Modifiers
     SPELL_ATTR10_UNK2                             = 0x00000004, //  2
     SPELL_ATTR10_UNK3                             = 0x00000008, //  3
     SPELL_ATTR10_WATER_SPOUT                      = 0x00000010, //  4
@@ -730,8 +730,8 @@ enum SpellAttr10
     SPELL_ATTR10_UNK14                            = 0x00004000, // 14
     SPELL_ATTR10_UNK15                            = 0x00008000, // 15
     SPELL_ATTR10_UNK16                            = 0x00010000, // 16
-    SPELL_ATTR10_CAN_DODGE_PARRY_WHILE_CASTING    = 0x00020000, // 17
-    SPELL_ATTR10_UNK18                            = 0x00040000, // 18
+    SPELL_ATTR10_ALLOW_DEFENSE_WHILE_CASTING      = 0x00020000, // 17 Allow Defense While Casting
+    SPELL_ATTR10_ALLOW_DEFENSE_WHILE_CHANNELING   = 0x00040000, // 18 Allow Defense While Channeling
     SPELL_ATTR10_UNK19                            = 0x00080000, // 19
     SPELL_ATTR10_UNK20                            = 0x00100000, // 20
     SPELL_ATTR10_UNK21                            = 0x00200000, // 21

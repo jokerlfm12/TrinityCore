@@ -19,6 +19,7 @@
 #define DBCENUMS_H
 
 #include "Define.h"
+#include "EnumFlag.h"
 #include <array>
 
 enum LevelLimit
@@ -495,12 +496,16 @@ enum SkillRaceClassInfoFlags
     SKILL_FLAG_MONO_VALUE               = 0x400     // Skill always has value 1 - clientside display flag, real value can be different
 };
 
-enum SpellCategoryFlags
+enum class SpellCategoryFlags : uint8
 {
-    SPELL_CATEGORY_FLAG_COOLDOWN_SCALES_WITH_WEAPON_SPEED   = 0x01, // unused
-    SPELL_CATEGORY_FLAG_COOLDOWN_STARTS_ON_EVENT            = 0x04,
-    SPELL_CATEGORY_FLAG_COOLDOWN_EXPIRES_AT_DAILY_RESET     = 0x08
+    None                        = 0,
+    CooldownModifiesItem        = 0x1, // NYI
+    GlobalCooldown              = 0x2, // NYI
+    CooldownEventOnLeaveCombat  = 0x4,
+    CooldownInDays              = 0x8,
 };
+
+DEFINE_ENUM_FLAG(SpellCategoryFlags);
 
 #define MAX_SPELL_EFFECTS 3
 #define MAX_EFFECT_MASK 7
@@ -517,6 +522,29 @@ enum EnchantmentSlotMask
 #define MAX_TALENT_RANK 5
 #define MAX_PET_TALENT_RANK 3                               // use in calculations, expected <= MAX_TALENT_RANK
 #define MAX_TALENT_TABS 3
+
+enum class SpellShapeshiftFormFlags : int32
+{
+    Stance                      = 0x00000001,
+    NotToggleable               = 0x00000002,   // player cannot cancel the aura giving this shapeshift
+    PersistOnDeath              = 0x00000004,
+    CanInteractNPC              = 0x00000008,   // if the form does not have SHAPESHIFT_FORM_IS_NOT_A_SHAPESHIFT then this flag must be present to allow NPC interaction
+    DontUseWeapon               = 0x00000010,
+
+    CanUseEquippedItems         = 0x00000040,   // if the form does not have SHAPESHIFT_FORM_IS_NOT_A_SHAPESHIFT then this flag allows equipping items without ITEM_FLAG_USABLE_WHEN_SHAPESHIFTED
+    CanUseItems                 = 0x00000080,   // if the form does not have SHAPESHIFT_FORM_IS_NOT_A_SHAPESHIFT then this flag allows using items without ITEM_FLAG_USABLE_WHEN_SHAPESHIFTED
+    DontAutoUnshift             = 0x00000100,   // clientside
+    ConsideredDead              = 0x00000200,
+    CanOnlyCastShapeshiftSpells = 0x00000400,   // prevents using spells that don't have any shapeshift requirement
+    StanceCancelsAtFlightmaster = 0x00000800,
+    NoEmoteSounds               = 0x00001000,
+    NoTriggerTeleport           = 0x00002000,
+    CannotChangeEquippedItems   = 0x00004000,
+
+    CannotUseGameObjects        = 0x00010000
+};
+
+DEFINE_ENUM_FLAG(SpellShapeshiftFormFlags);
 
 #define TaxiMaskSize 114
 typedef std::array<uint8, TaxiMaskSize> TaxiMask;
@@ -577,7 +605,7 @@ enum SummonPropFlags
     SUMMON_PROP_FLAG_UNK2            = 0x00000002,          // 616 spells in 3.0.3, something friendly
     SUMMON_PROP_FLAG_UNK3            = 0x00000004,          // 22 spells in 3.0.3, no idea...
     SUMMON_PROP_FLAG_UNK4            = 0x00000008,          // 49 spells in 3.0.3, some mounts
-    SUMMON_PROP_FLAG_PERSONAL_SPAWN  = 0x00000010,          // Personal Spawn (creature visible only by summoner)
+    SUMMON_PROP_FLAG_PERSONAL_SPAWN  = 0x00000010,          // Only Visible to Summoner
     SUMMON_PROP_FLAG_UNK6            = 0x00000020,          // 0 spells in 3.3.5, unused
     SUMMON_PROP_FLAG_UNK7            = 0x00000040,          // 12 spells in 3.0.3, no idea
     SUMMON_PROP_FLAG_UNK8            = 0x00000080,          // 4 spells in 3.0.3, no idea
@@ -589,7 +617,7 @@ enum SummonPropFlags
     SUMMON_PROP_FLAG_UNK14           = 0x00002000,          // Guides, player follows
     SUMMON_PROP_FLAG_UNK15           = 0x00004000,          // Force of Nature, Shadowfiend, Feral Spirit, Summon Water Elemental
     SUMMON_PROP_FLAG_UNK16           = 0x00008000,          // Light/Dark Bullet, Soul/Fiery Consumption, Twisted Visage, Twilight Whelp. Phase related?
-    SUMMON_PROP_FLAG_UNK17           = 0x00010000,
+    SUMMON_PROP_FLAG_PERSONAL_GROUP_SPAWN = 0x00010000,     // Only Visible to Summoner's Group
     SUMMON_PROP_FLAG_UNK18           = 0x00020000,
     SUMMON_PROP_FLAG_UNK19           = 0x00040000,
     SUMMON_PROP_FLAG_UNK20           = 0x00080000,

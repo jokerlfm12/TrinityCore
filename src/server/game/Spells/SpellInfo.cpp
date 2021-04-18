@@ -446,7 +446,7 @@ uint32 SpellEffectInfo::CalcPeriod(Unit* caster, Spell* spell /* = nullptr */) c
         if (Player* modOwner = caster->GetSpellModOwner())
             modOwner->ApplySpellMod(_spellInfo->Id, SPELLMOD_ACTIVATION_TIME, period, spell);
 
-        if (_spellInfo->HasAttribute(SPELL_ATTR5_HASTE_AFFECT_DURATION) && !_spellInfo->HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
+        if (_spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC) && !_spellInfo->HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
             period = int32(period * caster->GetFloatValue(UNIT_MOD_CAST_HASTE));
     }
 
@@ -988,9 +988,12 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry, SpellEffectEntry const** effe
 
     // SpellInterruptsEntry
     SpellInterruptsEntry const* _interrupt = GetSpellInterrupts();
-    InterruptFlags = _interrupt ? _interrupt->InterruptFlags : 0;
-    AuraInterruptFlags = _interrupt ? _interrupt->AuraInterruptFlags[0] : 0;
-    ChannelInterruptFlags = _interrupt ? _interrupt->ChannelInterruptFlags[0] : 0;
+
+    AuraInterruptFlags = _interrupt ? SpellAuraInterruptFlags(_interrupt->AuraInterruptFlags[0]) : SpellAuraInterruptFlags::None;
+    AuraInterruptFlags2 = _interrupt? SpellAuraInterruptFlags2(_interrupt->AuraInterruptFlags[1]) : SpellAuraInterruptFlags2::None;
+    ChannelInterruptFlags = _interrupt ? SpellAuraInterruptFlags(_interrupt->ChannelInterruptFlags[0] ) : SpellAuraInterruptFlags::None;
+    ChannelInterruptFlags2 =  _interrupt ? SpellAuraInterruptFlags2(_interrupt->ChannelInterruptFlags[1]) : SpellAuraInterruptFlags2::None;
+    InterruptFlags = _interrupt ? SpellInterruptFlags(_interrupt->InterruptFlags) : SpellInterruptFlags::None;
 
     // SpellLevelsEntry
     SpellLevelsEntry const* _levels = GetSpellLevels();
@@ -1107,6 +1110,20 @@ bool SpellInfo::HasOnlyDamageEffects() const
     }
 
     return true;
+}
+
+bool SpellInfo::CanBeInterrupted(Unit* interruptTarget) const
+{
+    return HasAttribute(SPELL_ATTR7_CAN_ALWAYS_BE_INTERRUPTED)
+        || HasChannelInterruptFlag(SpellAuraInterruptFlags::Damage | SpellAuraInterruptFlags::EnteringCombat)
+        || (interruptTarget->IsPlayer() && InterruptFlags.HasFlag(SpellInterruptFlags::DamageCancelsPlayerOnly))
+        || (!(interruptTarget->GetMechanicImmunityMask() & (1 << MECHANIC_INTERRUPT))
+        && PreventionType & SPELL_PREVENTION_TYPE_SILENCE);
+}
+
+bool SpellInfo::HasAnyAuraInterruptFlag() const
+{
+    return AuraInterruptFlags != SpellAuraInterruptFlags::None || AuraInterruptFlags2 != SpellAuraInterruptFlags2::None;
 }
 
 bool SpellInfo::IsExplicitDiscovery() const
@@ -1360,7 +1377,7 @@ bool SpellInfo::IsCooldownStartedOnEvent() const
     if (HasAttribute(SPELL_ATTR0_DISABLED_WHILE_ACTIVE))
         return true;
 
-    return CategoryEntry && CategoryEntry->Flags & SPELL_CATEGORY_FLAG_COOLDOWN_STARTS_ON_EVENT;
+    return CategoryEntry && CategoryEntry->GetFlags().HasFlag(SpellCategoryFlags::CooldownEventOnLeaveCombat);
 }
 
 bool SpellInfo::IsDeathPersistent() const
@@ -1434,7 +1451,7 @@ bool SpellInfo::IsChanneled() const
 
 bool SpellInfo::IsMoveAllowedChannel() const
 {
-    return IsChanneled() && ((HasAttribute(SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING) && !(ChannelInterruptFlags & AURA_INTERRUPT_FLAG_MOVE)) || (!(ChannelInterruptFlags & (AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING))));
+    return IsChanneled() && ((HasAttribute(SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING) && !ChannelInterruptFlags.HasFlag(SpellAuraInterruptFlags::Moving | SpellAuraInterruptFlags::Turning)));
 }
 
 bool SpellInfo::NeedsComboPoints() const
@@ -1462,9 +1479,9 @@ bool SpellInfo::IsAutoRepeatRangedSpell() const
     return HasAttribute(SPELL_ATTR2_AUTOREPEAT_FLAG);
 }
 
-bool SpellInfo::HasInitialAggro() const
+bool SpellInfo::CausesInitialThreat() const
 {
-    return !(HasAttribute(SPELL_ATTR1_NO_THREAT) || HasAttribute(SPELL_ATTR3_NO_INITIAL_AGGRO));
+    return !(HasAttribute(SPELL_ATTR1_NO_THREAT) || HasAttribute(SPELL_ATTR2_NO_INITIAL_THREAT));
 }
 
 WeaponAttackType SpellInfo::GetAttackType() const
@@ -1522,6 +1539,9 @@ bool SpellInfo::IsAffectedBySpellMod(SpellModifier const* mod) const
         return false;
 
     return IsAffected(affectSpell->SpellFamilyName, mod->mask);
+    // TEMP: dont use IsAffected - !familyName and !familyFlags are not valid options for spell mods
+    // TODO: investigate if the !familyName and !familyFlags conditions are even valid for all other (nonmod) uses of SpellInfo::IsAffected
+    return affectSpell->SpellFamilyName == SpellFamilyName && mod->mask & SpellFamilyFlags;
 }
 
 bool SpellInfo::CanPierceImmuneAura(SpellInfo const* auraSpellInfo) const
@@ -1664,14 +1684,14 @@ SpellCastResult SpellInfo::CheckShapeshift(uint32 form) const
             TC_LOG_ERROR("spells", "GetErrorAtShapeshiftedCast: unknown shapeshift %u", form);
             return SPELL_CAST_OK;
         }
-        actAsShifted = !(shapeInfo->Flags & 1);            // shapeshift acts as normal form for spells
+        actAsShifted = !shapeInfo->GetFlags().HasFlag(SpellShapeshiftFormFlags::Stance);
     }
 
     if (actAsShifted)
     {
-        if (HasAttribute(SPELL_ATTR0_NOT_SHAPESHIFT)) // not while shapeshifted
+        if (HasAttribute(SPELL_ATTR0_NOT_SHAPESHIFT) || (shapeInfo && shapeInfo->GetFlags().HasFlag(SpellShapeshiftFormFlags::CanOnlyCastShapeshiftSpells))) // not while shapeshifted
             return SPELL_FAILED_NOT_SHAPESHIFT;
-        else if (Stances != UI64LIT(0))               // needs other shapeshift
+        else if (Stances != 0)                   // needs other shapeshift
             return SPELL_FAILED_ONLY_SHAPESHIFT;
     }
     else
@@ -1987,10 +2007,8 @@ SpellCastResult SpellInfo::CheckTarget(Unit const* caster, WorldObject const* ta
         if (HasEffect(SPELL_EFFECT_SELF_RESURRECT) || HasEffect(SPELL_EFFECT_RESURRECT) || HasEffect(SPELL_EFFECT_RESURRECT_NEW))
             return SPELL_FAILED_TARGET_CANNOT_BE_RESURRECTED;
 
-    if (caster->IsPlayer())
-        if (TempSummon const* summon = unitTarget->ToTempSummon())
-            if (summon->IsVisibleBySummonerOnly() && summon->GetSummonerGUID() != caster->GetGUID())
-                return SPELL_FAILED_BAD_TARGETS;
+    if (!unitTarget->CheckPrivateObjectOwnerVisibility(caster))
+        return SPELL_FAILED_BAD_TARGETS;
 
     return SPELL_CAST_OK;
 }
@@ -2265,7 +2283,7 @@ void SpellInfo::_LoadSpellSpecific()
             case SPELLFAMILY_GENERIC:
             {
                 // Food / Drinks (mostly)
-                if (AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED)
+                if (HasAuraInterruptFlag(SpellAuraInterruptFlags::Standing))
                 {
                     bool food = false;
                     bool drink = false;
@@ -3079,6 +3097,8 @@ void SpellInfo::ApplyAllSpellImmunitiesTo(Unit* target, uint8 effIndex, bool app
                     auraSpellInfo->Id != Id);                                     // Don't remove self
             });
         }
+        if (apply && schoolImmunity & SPELL_SCHOOL_MASK_NORMAL)
+            target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::InvulnerabilityBuff);
     }
 
     if (uint32 mechanicImmunity = immuneInfo->MechanicImmuneMask)
@@ -3109,7 +3129,12 @@ void SpellInfo::ApplyAllSpellImmunitiesTo(Unit* target, uint8 effIndex, bool app
     }
 
     if (uint32 damageImmunity = immuneInfo->DamageSchoolMask)
+    {
         target->ApplySpellImmune(Id, IMMUNITY_DAMAGE, damageImmunity, apply);
+
+        if (apply && damageImmunity & SPELL_SCHOOL_MASK_NORMAL)
+            target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::InvulnerabilityBuff);
+    }
 
     for (AuraType auraType : immuneInfo->AuraTypeImmune)
     {
@@ -3253,20 +3278,20 @@ uint32 SpellInfo::GetAllowedMechanicMask() const
     return _allowedMechanicMask;
 }
 
-uint32 SpellInfo::GetMechanicImmunityMask(Unit* caster, bool channeled) const
+uint32 SpellInfo::GetMechanicImmunityMask(Unit* caster) const
 {
+    if (HasAttribute(SPELL_ATTR7_CAN_ALWAYS_BE_INTERRUPTED))
+        return 0;
+
     uint32 casterMechanicImmunityMask = caster->GetMechanicImmunityMask();
     uint32 mechanicImmunityMask = 0;
-    uint32 flags = channeled ? ChannelInterruptFlags : InterruptFlags;
-
-    // @todo: research other interrupt flags
-    if (flags & SPELL_INTERRUPT_FLAG_INTERRUPT)
+    if (CanBeInterrupted(caster))
     {
-        if (casterMechanicImmunityMask & (1 << MECHANIC_SILENCE))
-            mechanicImmunityMask |= (1 << MECHANIC_SILENCE);
-
         if (casterMechanicImmunityMask & (1 << MECHANIC_INTERRUPT))
             mechanicImmunityMask |= (1 << MECHANIC_INTERRUPT);
+
+        if (casterMechanicImmunityMask & (1 << MECHANIC_SILENCE))
+            mechanicImmunityMask |= (1 << MECHANIC_SILENCE);
     }
 
     return mechanicImmunityMask;
@@ -3349,12 +3374,12 @@ int32 SpellInfo::CalcDuration(Unit* caster, Spell* spell) const
         if (Player* modOwner = caster->GetSpellModOwner())
             modOwner->ApplySpellMod(Id, SPELLMOD_DURATION, duration, spell);
 
-    bool hasUnk17 = HasAttribute(SPELL_ATTR8_UNK17);
-    bool hasAffectDuration = HasAttribute(SPELL_ATTR5_HASTE_AFFECT_DURATION);
+    bool hasteAffectsDuration = HasAttribute(SPELL_ATTR8_HASTE_AFFECTS_DURATION);
+    bool spellHasteAffectsPeriodic = HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC);
     // That aura is not used as of 4.3.4, but just include it, as it still is technically supported by the client, and so should we.
     bool hasPeriodicHasteAuras = caster != nullptr && caster->HasAuraTypeWithAffectMask(SPELL_AURA_PERIODIC_HASTE, this);
 
-    if (hasAffectDuration || hasUnk17)
+    if (spellHasteAffectsPeriodic || hasteAffectsDuration)
     {
         // This is just a stupid way to find the first periodic effect.
         int32 periodicEffectIndex = 0;
@@ -3365,12 +3390,12 @@ int32 SpellInfo::CalcDuration(Unit* caster, Spell* spell) const
                 return duration;
         }
 
-        if ((hasAffectDuration || hasPeriodicHasteAuras) && !HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
+        if ((spellHasteAffectsPeriodic || hasPeriodicHasteAuras) && !HasAttribute(SPELL_ATTR3_NO_DONE_BONUS))
         {
             float hasteValue = caster ? caster->GetFloatValue(UNIT_MOD_CAST_HASTE) : 0.0f;
             if (hasteValue > 0.0f)
             {
-                if (hasUnk17)
+                if (hasteAffectsDuration)
                     return int32(duration * hasteValue);
 
                 int32 effectPeriod = Effects[periodicEffectIndex].CalcPeriod(caster, spell);
