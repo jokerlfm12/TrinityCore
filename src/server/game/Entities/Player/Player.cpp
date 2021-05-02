@@ -1204,8 +1204,14 @@ void Player::Update(uint32 p_time)
             m_zoneUpdateTimer -= p_time;
     }
 
+    // Power regeneration update
+    _powerUpdateTimer -= p_time;
     if (IsAlive())
         RegenerateAll(p_time);
+
+    // Reset the power update timer after regeneration happened
+    if (_powerUpdateTimer <= 0)
+        _powerUpdateTimer = GetPowerUpdateInterval();
 
     if (m_deathState == JUST_DIED)
         KillPlayer();
@@ -2587,7 +2593,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);// must be set
 
     // cleanup player flags (will be re-applied if need at aura load), to avoid have ghost flag without ghost aura, for example.
-    RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK | PLAYER_FLAGS_DND | PLAYER_FLAGS_GM | PLAYER_FLAGS_GHOST | PLAYER_ALLOW_ONLY_ABILITY);
+    RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK | PLAYER_FLAGS_DND | PLAYER_FLAGS_GM | PLAYER_FLAGS_GHOST | PLAYER_FLAGS_DISABLE_CASTING_EXCEPT_ABILITIES | PLAYER_FLAGS_DISABLE_ATTACKING_EXCEPT_ABILITIES);
 
     RemoveStandFlags(UNIT_STAND_FLAGS_ALL);                 // one form stealth modified bytes
     RemoveByteFlag(UNIT_FIELD_BYTES_2, UNIT_BYTES_2_OFFSET_PVP_FLAG, UNIT_BYTE2_FLAG_FFA_PVP | UNIT_BYTE2_FLAG_SANCTUARY);
@@ -4648,6 +4654,9 @@ void Player::UpdateLocalChannels(uint32 newZone)
     {
         ChatChannelsEntry const* channelEntry = sChatChannelsStore.LookupEntry(i);
         if (!channelEntry)
+            continue;
+
+        if (!(channelEntry->Flags & CHANNEL_DBC_FLAG_INITIAL))
             continue;
 
         Channel* usedChannel = nullptr;
@@ -6776,7 +6785,7 @@ void Player::ModifyCurrency(uint32 id, int32 count, bool printLog/* = true*/, bo
 
     if (uint32(newTotalCount) != oldTotalCount)
     {
-        if (currency->Flags & CURRENCY_FLAG_COUNT_SEASON_TOTAL)
+        if (currency->Flags & CURRENCY_FLAG_COUNT_SEASON_TOTAL && !isRefund)
             hasSeasonCount = true;
 
         if (itr->second.state != PLAYERCURRENCY_NEW)
@@ -8552,11 +8561,11 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
     {
         SetLootGUID(guid);
 
-        WorldPacket data(SMSG_LOOT_RESPONSE, 8 + 1  + 50 + 1 + 1);           // we guess size
-        data << uint64(guid);
-        data << uint8(loot_type);
-        data << LootView(*loot, this, permission);
-        SendDirectMessage(&data);
+        WorldPackets::Loot::LootResponse packet;
+        packet.Owner = guid;
+        packet.AcquireReason = loot_type;
+        loot->BuildLootResponse(packet, this, permission);
+        SendDirectMessage(packet.Write());
 
         // add 'this' player as one of the players that are looting 'loot'
         loot->AddLooter(GetGUID());
@@ -8570,11 +8579,11 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
 void Player::SendLootError(ObjectGuid guid, LootError error) const
 {
-    WorldPacket data(SMSG_LOOT_RESPONSE, 10);
-    data << uint64(guid);
-    data << uint8(LOOT_NONE);
-    data << uint8(error);
-    SendDirectMessage(&data);
+    WorldPackets::Loot::LootResponse lootResponse;
+    lootResponse.Owner = guid;
+    lootResponse.AcquireReason = LOOT_NONE;
+    lootResponse.FailureReason = error;
+    SendDirectMessage(lootResponse.Write());
 }
 
 void Player::SendNotifyLootMoneyRemoved() const
@@ -13075,7 +13084,7 @@ void Player::AddEnchantmentDuration(Item* item, EnchantmentSlot slot, uint32 dur
 
 void Player::ApplyReforgeEnchantment(Item* item, bool apply)
 {
-    if (!item)
+    if (!item || item->IsBroken())
         return;
 
     ItemReforgeEntry const* reforge = sItemReforgeStore.LookupEntry(item->GetEnchantmentId(REFORGE_ENCHANTMENT_SLOT));
@@ -25647,7 +25656,9 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot, GameObject* go)
         --loot->unlootedCount;
 
         if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item->itemid))
-            if (proto->GetQuality() > ITEM_QUALITY_EPIC || (proto->GetQuality() == ITEM_QUALITY_EPIC && proto->GetBaseItemLevel() >= MinNewsItemLevel[sWorld->getIntConfig(CONFIG_EXPANSION)]))
+            if ((proto->GetQuality() > ITEM_QUALITY_EPIC // always log legendary items
+                || (proto->GetQuality() == ITEM_QUALITY_EPIC && proto->GetBaseItemLevel() >= MinNewsItemLevel[sWorld->getIntConfig(CONFIG_EXPANSION)])) // log epic items when within item level range
+                && !proto->GetDuration()) // log items only when they are permanent (skipping legendary items from Kael'thas encounter for example)
                 if (Guild* guild = GetGuild())
                     guild->AddGuildNews(GUILD_NEWS_ITEM_LOOTED, GetGUID(), 0, item->itemid);
 

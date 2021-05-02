@@ -413,7 +413,7 @@ Unit::Unit(bool isWorldObject) :
     for (uint8 i = 0; i < MAX_POWERS_PER_CLASS; ++i)
         _powerFraction[i] = 0;
 
-    _regenerationTimer = GetRegenerationInterval();
+    _powerUpdateTimer = GetPowerUpdateInterval();
     _healthRegenerationTimer = UNIT_HEALTH_REGENERATION_INTERVAL;
 
     _oldFactionId = 0;
@@ -521,12 +521,6 @@ void Unit::Update(uint32 p_time)
 
     // All position info based actions have been executed, reset info
     _positionUpdateInfo.Reset();
-
-    // Update Power regeneration interval
-    if (_regenerationTimer >= int32(GetRegenerationInterval()))
-        _regenerationTimer -= (GetRegenerationInterval() - p_time);
-    else
-        _regenerationTimer += p_time;
 
     // Update Health Regeneration
     _healthRegenerationTimer -= p_time;
@@ -5594,6 +5588,9 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
     if (creature && creature->IsInEvadeMode())
         return false;
 
+    if (HasAuraType(SPELL_AURA_DISABLE_ATTACKING_EXCEPT_ABILITIES))
+        return false;
+
     // nobody can attack GM in GM-mode
     if (victim->GetTypeId() == TYPEID_PLAYER)
     {
@@ -9306,7 +9303,9 @@ void Unit::setDeathState(DeathState s)
 void Unit::AtEnterCombat()
 {
     if (Spell* spell = m_currentSpells[CURRENT_GENERIC_SPELL])
-        if (spell->getState() == SPELL_STATE_PREPARING && spell->m_spellInfo->InterruptFlags.HasFlag(SpellInterruptFlags::Combat))
+        if (spell->getState() == SPELL_STATE_PREPARING
+            && spell->m_spellInfo->HasAttribute(SPELL_ATTR0_CANT_USED_IN_COMBAT)
+            && spell->m_spellInfo->InterruptFlags.HasFlag(SpellInterruptFlags::Combat))
             InterruptNonMeleeSpells(false);
 
     RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::EnteringCombat);
@@ -10217,7 +10216,7 @@ void Unit::Regenerate(Powers powerType, uint32 diff)
     }
 
     // Players update their powers in 2 seconds intervals, creatures in 1 second ones
-    if (_regenerationTimer >= int32(GetRegenerationInterval()))
+    if (_powerUpdateTimer <= 0)
         SetPower(powerType, curValue);
     else
         UpdateUInt32Value(UNIT_FIELD_POWER1 + powerIndex, curValue);
@@ -14371,7 +14370,6 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
         return;
 
     ByteBuffer fieldBuffer;
-    UpdateMask updateMask;
 
     uint32 valCount = m_valuesCount;
 
@@ -14383,7 +14381,7 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
     else if (GetTypeId() == TYPEID_PLAYER)
         valCount = PLAYER_END_NOT_SELF;
 
-    updateMask.SetCount(valCount);
+    UpdateMaskPacketBuilder updateMask(valCount);
 
     Player* plr = GetCharmerOrOwnerPlayerOrPlayerItself();
     if (GetOwnerGUID() == target->GetGUID())
@@ -14532,7 +14530,6 @@ void Unit::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target)
         }
     }
 
-    *data << uint8(updateMask.GetBlockCount());
     updateMask.AppendToPacket(data);
     data->append(fieldBuffer);
 }
