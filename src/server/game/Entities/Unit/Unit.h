@@ -765,6 +765,9 @@ class TC_GAME_API Unit : public WorldObject
 
         virtual ~Unit();
 
+        // lfm Unit extra delay 
+        int extraDelay;
+
         UnitAI* GetAI() { return i_AI; }
         void SetAI(UnitAI* newAI) { i_AI = newAI; }
 

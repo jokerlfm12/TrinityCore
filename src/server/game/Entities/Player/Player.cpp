@@ -15019,6 +15019,13 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
     SetCanDelayTeleport(false);
 
     sScriptMgr->OnQuestStatusChange(this, quest_id);
+
+    // lfm quest reward handling
+    if (quest_id == 13188 || quest_id == 13189)
+    {
+        RemoveAurasDueToSpell(58530);
+        RemoveAurasDueToSpell(58551);
+    }
 }
 
 void Player::SetRewardedQuest(uint32 quest_id)

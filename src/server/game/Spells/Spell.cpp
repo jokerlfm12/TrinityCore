@@ -90,7 +90,9 @@ SpellDestination::SpellDestination(WorldObject const& wObj)
 {
     _transportGUID = wObj.GetTransGUID();
     _transportOffset.Relocate(wObj.GetTransOffsetX(), wObj.GetTransOffsetY(), wObj.GetTransOffsetZ(), wObj.GetTransOffsetO());
-    _position.Relocate(wObj);
+    // lfm WorldLocation relocate 
+    //_position.Relocate(wObj);
+    _position.WorldRelocate(wObj);
 }
 
 void SpellDestination::Relocate(Position const& pos)
@@ -2821,6 +2823,46 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
 
     if (!effectMask)
         return returnVal;
+
+    // lfm dk return to main city spell hit
+    if (m_spellInfo->Id == 58533 || m_spellInfo->Id == 58552)
+    {
+        if (unit->GetTypeId() == TypeID::TYPEID_UNIT)
+        {
+            uint32 targetrEntry = unit->GetEntry();
+            if (targetrEntry == 68 || targetrEntry == 14304 || targetrEntry == 1756 || targetrEntry == 3296 || targetrEntry == 1976 || targetrEntry == 2405 || targetrEntry == 2621 || targetrEntry == 20556 || targetrEntry == 7980 || targetrEntry == 12996)
+            {
+                if (unit->extraDelay < 0)
+                {
+                    unit->extraDelay = urand(10000, 15000);
+                    if (Creature* actCreature = unit->ToCreature())
+                    {
+                        actCreature->StopMoving();
+                        actCreature->SetFacingToObject(m_caster);
+                        uint32 actionType = urand(0, 100);
+                        if (actionType < 25)
+                        {
+                            actCreature->AI()->DoCast(m_caster, 58509);
+                            actCreature->AI()->Talk(2, m_caster);
+                        }
+                        else if (actionType < 50)
+                        {
+                            actCreature->AI()->DoCast(m_caster, 58513);
+                            actCreature->AI()->Talk(3, m_caster);
+                        }
+                        else if (actionType < 75)
+                        {
+                            actCreature->AI()->DoCast(m_caster, 58520);
+                            actCreature->AI()->Talk(4, m_caster);
+                        }
+                        else {
+                            actCreature->AI()->Talk(5, m_caster);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     PrepareScriptHitHandlers();
     CallScriptBeforeHitHandlers();

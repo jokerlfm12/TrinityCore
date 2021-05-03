@@ -1739,15 +1739,6 @@ class TC_GAME_API ObjectMgr
 
         MapObjectGuids _mapObjectGuidsStore;
         CreatureDataContainer _creatureDataStore;
-
-        // lfm creature_template wlk implementation
-        std::unordered_set<uint32> creatureEntrySetTBC;
-        std::unordered_set<uint32> creatureEntrySetWLK;
-        std::unordered_set<uint32> gameobjectEntrySetTBC;
-        std::unordered_set<uint32> gameobjectEntrySetWLK;
-        std::unordered_map<uint32, CreatureTemplate> ctMapWLK;
-        std::unordered_map<uint32, GameObjectTemplate> goMapWLK;
-
         CreatureTemplateContainer _creatureTemplateStore;
         CreatureModelContainer _creatureModelStore;
         CreatureAddonContainer _creatureAddonStore;

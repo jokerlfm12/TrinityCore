@@ -336,7 +336,9 @@ bool ReputationMgr::SetReputation(FactionEntry const* factionEntry, int32 standi
                 {
                     if (factionEntryCalc == factionEntry || GetRank(factionEntryCalc) > ReputationRank(factionEntryCalc->ParentFactionCap[0]))
                         continue;
-                    int32 spilloverRep = int32(spillOverRepOut * factionEntryCalc->ParentFactionCap[0]);
+                    // lfm change ParentFactionCap to ParentFactionMod from tc 3.3.5 
+                    //int32 spilloverRep = int32(spillOverRepOut * factionEntryCalc->ParentFactionCap[0]);
+                    int32 spilloverRep = int32(spillOverRepOut * factionEntryCalc->ParentFactionMod[0]);
                     if (spilloverRep != 0 || !incremental)
                         res = SetOneFactionReputation(factionEntryCalc, spilloverRep, incremental);
                 }

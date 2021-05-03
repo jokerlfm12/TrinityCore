@@ -1308,6 +1308,18 @@ void SpellMgr::LoadSpellTargetPositions()
 
     } while (result->NextRow());
 
+    // lfm spell_target_position from wlk
+    SpellTargetPosition stp58421;
+    std::pair<uint32, SpellEffIndex> key58421 = std::make_pair(58421, SpellEffIndex::EFFECT_0);
+    stp58421.target_mapId = 0;
+    stp58421.target_X = -9135.02f;
+    stp58421.target_Y = 383.6f;
+    stp58421.target_Z = 90.66f;
+    stp58421.target_Orientation = 0.64;
+    mSpellTargetPositions[key58421] = stp58421;
+    count++;
+
+
     /*
     // Check all spells
     for (uint32 i = 1; i < GetSpellInfoStoreSize; ++i)

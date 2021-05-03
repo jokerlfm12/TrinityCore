@@ -418,6 +418,9 @@ Unit::Unit(bool isWorldObject) :
 
     _oldFactionId = 0;
     _isWalkingBeforeCharm = false;
+
+    // lfm Unit extra delay
+    extraDelay = 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -528,6 +531,12 @@ void Unit::Update(uint32 p_time)
     {
         RegenerateHealth();
         _healthRegenerationTimer += UNIT_HEALTH_REGENERATION_INTERVAL;
+    }
+
+    // lfm Unit extra delay update
+    if (extraDelay >= 0)
+    {
+        extraDelay -= p_time;
     }
 }
 
