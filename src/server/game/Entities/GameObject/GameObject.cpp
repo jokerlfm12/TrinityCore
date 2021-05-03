@@ -147,6 +147,9 @@ GameObject::GameObject() : WorldObject(false), MapObject(),
 
     ResetLootMode(); // restore default loot mode
     m_stationaryPosition.Relocate(0.0f, 0.0f, 0.0f, 0.0f);
+
+    // lfm game object extra
+    trapAffectDelay = 0;
 }
 
 GameObject::~GameObject()
@@ -232,6 +235,15 @@ void GameObject::AddToWorld()
 
         EnableCollision(toggledState);
         WorldObject::AddToWorld();
+    }
+
+    // lfm game object initial
+    if (const GameObjectTemplate* got = GetGOInfo())
+    {
+        if (got->type == GameobjectTypes::GAMEOBJECT_TYPE_TRAP)
+        {
+            trapAffectDelay = got->trap.startDelay;
+        }
     }
 }
 
@@ -418,6 +430,11 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, P
 
 void GameObject::Update(uint32 diff)
 {
+    // lfm game object update extra
+    if (trapAffectDelay > 0)
+    {
+        trapAffectDelay -= diff;
+    }
     if (AI())
         AI()->UpdateAI(diff);
     else if (!AIM_Initialize())
@@ -688,32 +705,36 @@ void GameObject::Update(uint32 diff)
                     break;
                 case GAMEOBJECT_TYPE_TRAP:
                 {
-                    GameObjectTemplate const* goInfo = GetGOInfo();
-                    if (goInfo->trap.type == 2 && goInfo->trap.spellId)
+                    // lfm game object trap affect delay 
+                    if (trapAffectDelay <= 0)
                     {
-                        /// @todo nullptr target won't work for target type 1
-                        CastSpell(nullptr, goInfo->trap.spellId);
-                        SetLootState(GO_JUST_DEACTIVATED);
-                    }
-                    else if (Unit* target = ObjectAccessor::GetUnit(*this, m_lootStateUnitGUID))
-                    {
-                        // Some traps do not have a spell but should be triggered
-                        if (goInfo->trap.spellId)
-                            CastSpell(target, goInfo->trap.spellId);
-
-                        // Template value or 4 seconds
-                        m_cooldownTime = GameTime::GetGameTimeMS() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS;
-
-                        if (goInfo->trap.type == 1)
+                        GameObjectTemplate const* goInfo = GetGOInfo();
+                        if (goInfo->trap.type == 2 && goInfo->trap.spellId)
+                        {
+                            /// @todo nullptr target won't work for target type 1
+                            CastSpell(nullptr, goInfo->trap.spellId);
                             SetLootState(GO_JUST_DEACTIVATED);
-                        else if (!goInfo->trap.type)
-                            SetLootState(GO_READY);
+                        }
+                        else if (Unit* target = ObjectAccessor::GetUnit(*this, m_lootStateUnitGUID))
+                        {
+                            // Some traps do not have a spell but should be triggered
+                            if (goInfo->trap.spellId)
+                                CastSpell(target, goInfo->trap.spellId);
 
-                        // Battleground gameobjects have data2 == 0 && data5 == 3
-                        if (!goInfo->trap.diameter && goInfo->trap.cooldown == 3)
-                            if (Player* player = target->ToPlayer())
-                                if (Battleground* bg = player->GetBattleground())
-                                    bg->HandleTriggerBuff(GetGUID());
+                            // Template value or 4 seconds
+                            m_cooldownTime = GameTime::GetGameTimeMS() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS;
+
+                            if (goInfo->trap.type == 1)
+                                SetLootState(GO_JUST_DEACTIVATED);
+                            else if (!goInfo->trap.type)
+                                SetLootState(GO_READY);
+
+                            // Battleground gameobjects have data2 == 0 && data5 == 3
+                            if (!goInfo->trap.diameter && goInfo->trap.cooldown == 3)
+                                if (Player* player = target->ToPlayer())
+                                    if (Battleground* bg = player->GetBattleground())
+                                        bg->HandleTriggerBuff(GetGUID());
+                        }
                     }
                     break;
                 }
@@ -1478,7 +1499,14 @@ void GameObject::Use(Unit* user)
         {
             GameObjectTemplate const* goInfo = GetGOInfo();
             if (goInfo->trap.spellId)
+            {
+                // lfm debug
+                if (goInfo->trap.spellId == 52479)
+                {
+                    bool breakPoint = true;
+                }
                 CastSpell(user, goInfo->trap.spellId);
+            }                
 
             m_cooldownTime = GameTime::GetGameTimeMS() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS;   // template or 4 seconds
 

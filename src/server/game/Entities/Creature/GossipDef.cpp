@@ -204,8 +204,8 @@ void PlayerMenu::SendGossipMenu(uint32 titleTextId, ObjectGuid objectGUID)
     WorldPacket data(SMSG_GOSSIP_MESSAGE, 100);         // guess size
     data << uint64(objectGUID);
     data << uint32(_gossipMenu.GetMenuId());            // new 2.4.0
-    data << uint32(titleTextId);
-    data << uint32(_gossipMenu.GetMenuItemCount());     // max count 0x10
+    data << uint32(titleTextId);    
+    data << uint32(_gossipMenu.GetMenuItemCount());     // max count 0x10    
 
     for (GossipMenuItemContainer::const_iterator itr = _gossipMenu.GetMenuItems().begin(); itr != _gossipMenu.GetMenuItems().end(); ++itr)
     {
@@ -220,6 +220,7 @@ void PlayerMenu::SendGossipMenu(uint32 titleTextId, ObjectGuid objectGUID)
 
     size_t count_pos = data.wpos();
     data << uint32(0);                                  // max count 0x20
+
     uint32 count = 0;
 
     // Store this instead of checking the Singleton every loop iteration
@@ -250,8 +251,7 @@ void PlayerMenu::SendGossipMenu(uint32 titleTextId, ObjectGuid objectGUID)
             data << title;                                  // max 0x200
         }
     }
-
-    data.put<uint8>(count_pos, count);
+    data.put<uint8>(count_pos, count);    
     _session->SendPacket(&data);
 }
 

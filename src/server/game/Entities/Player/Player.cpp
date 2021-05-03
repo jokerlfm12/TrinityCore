@@ -13843,8 +13843,11 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
 
         if (Creature* creature = source->ToCreature())
         {
-            if (!(itr->second.OptionNpcFlag & npcflags))
-                continue;
+            // lfm gossip npc flag check will be ignored 
+            //if (!(itr->second.OptionNpcFlag & npcflags))
+            //{
+            //    continue;
+            //}
 
             switch (itr->second.OptionType)
             {

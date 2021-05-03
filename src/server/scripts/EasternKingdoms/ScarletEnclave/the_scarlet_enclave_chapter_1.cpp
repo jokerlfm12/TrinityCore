@@ -33,6 +33,8 @@
 #include "Vehicle.h"
 #include <G3D/Vector3.h>
 
+#include "GridNotifiers.h"
+
  /*######
  ##Quest 12848
  ######*/
@@ -587,11 +589,7 @@ public:
                         }
                         me->CastSpell(me, SPELL_GROVEL, true);
                         me->RestoreFaction();
-                        lostDelay = TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS;
-                        if (me->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP))
-                        {
-                            me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
-                        }
+                        lostDelay = 5 * TimeConstants::IN_MILLISECONDS;
                     }
                 }
             }
@@ -604,10 +602,7 @@ public:
                 lostDelay -= uiDiff;
                 if (lostDelay <= 0)
                 {
-                    if (!me->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP))
-                    {
-                        me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
-                    }
+                    me->DespawnOrUnsummon(500, 180s);
                 }
             }
 
@@ -669,6 +664,8 @@ public:
 
                 player->CastSpell(me, SPELL_DUEL, false);
                 player->CastSpell(player, SPELL_DUEL_FLAG, true);
+
+                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             }
             return true;
         }
@@ -1097,6 +1094,47 @@ class spell_gift_of_the_harvester : public SpellScript
     }
 };
 
+class go_gift_of_the_harvester : public GameObjectScript
+{
+public:
+    go_gift_of_the_harvester() : GameObjectScript("go_gift_of_the_harvester") { }
+
+    struct go_gift_of_the_harvesterAI : public GameObjectAI
+    {
+        go_gift_of_the_harvesterAI(GameObject* go) : GameObjectAI(go), instance(go->GetInstanceScript())
+        {
+            animDelay = 0;            
+        }
+
+        InstanceScript* instance;
+
+        int animDelay;        
+
+        void JustAppeared() override
+        {            
+            animDelay = 1000;            
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (animDelay > 0)
+            {
+                animDelay -= diff;
+            }
+            if (animDelay < 0)
+            {
+                animDelay = 0;
+                me->SendCustomAnim(0);
+            }
+        }
+    };
+
+    GameObjectAI* GetAI(GameObject* go) const override
+    {
+        return new go_gift_of_the_harvesterAI(go);
+    }
+};
+
 // lfm chapter1 scripts
 class npc_scarlet_land_cannon : public CreatureScript
 {
@@ -1405,4 +1443,5 @@ void AddSC_the_scarlet_enclave_chapter_1()
     new npc_death_knight_basic();
     RegisterCreatureAI(npc_scarlet_ghoul);
     RegisterSpellScript(spell_gift_of_the_harvester);
+    new go_gift_of_the_harvester();
 }

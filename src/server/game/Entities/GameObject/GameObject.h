@@ -83,6 +83,9 @@ class TC_GAME_API GameObject : public WorldObject, public GridObject<GameObject>
         explicit GameObject();
         ~GameObject();
 
+        // lfm game object extra
+        int trapAffectDelay;
+
         void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player* target) const override;
 
         void AddToWorld() override;

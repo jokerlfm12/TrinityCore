@@ -7584,6 +7584,13 @@ void ObjectMgr::LoadGameObjectTemplate()
         got.AIName = fields[41].GetString();
         got.ScriptId = GetScriptId(fields[42].GetCString());
 
+        // lfm gameobjects scripts
+        if (got.entry == 190769)
+        {
+            got.ScriptId = GetScriptId("go_gift_of_the_harvester");            
+            got.raw.data[7] = 2000;
+        }
+
         // Checks
         if (!got.AIName.empty() && !sGameObjectAIRegistry->HasItem(got.AIName))
         {
@@ -9802,7 +9809,7 @@ void ObjectMgr::LoadScriptNames()
     }
 
     // lfm script names
-    uint32 lfmCount = 7;
+    uint32 lfmCount = 8;
     _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
@@ -9819,6 +9826,7 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("npc_argent_protector"); 
     _scriptNamesStore.push_back("npc_death_knight_basic");
     _scriptNamesStore.push_back("spell_teleport_leaders_blessing");
+    _scriptNamesStore.push_back("go_gift_of_the_harvester"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
