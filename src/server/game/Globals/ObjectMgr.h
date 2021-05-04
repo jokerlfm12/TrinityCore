@@ -1552,6 +1552,12 @@ class TC_GAME_API ObjectMgr
             return _gossipMenusStore.equal_range(uiMenuId);
         }
 
+        // lfm ensure gossip menu items exists check
+        bool HasMenuItems(uint32 uiMenuId) const
+        {
+            return (_gossipMenuItemsStore.find(uiMenuId) != _gossipMenuItemsStore.end());
+        }
+
         GossipMenuItemsMapBounds GetGossipMenuItemsMapBounds(uint32 uiMenuId) const
         {
             return _gossipMenuItemsStore.equal_range(uiMenuId);

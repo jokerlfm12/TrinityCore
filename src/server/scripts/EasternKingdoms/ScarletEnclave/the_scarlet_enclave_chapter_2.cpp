@@ -157,7 +157,13 @@ public:
                 float destX = frand(baseX - 2.0f, baseX + 2.0f);
                 float destY = frand(baseY - 2.0f, baseY + 2.0f);
                 float destZ = baseZ;
-                me->SummonCreature(NPC_CRIMSON_ACOLYTE, destX, destY, destZ, 0.0f, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                if (TempSummon* acolyte = me->SummonCreature(NPC_CRIMSON_ACOLYTE, destX, destY, destZ, 0.0f, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000))
+                {
+                    if (Unit* enemy = acolyte->SelectNearestHostileUnitInAggroRange(true))
+                    {
+                        acolyte->SetInCombatWith(enemy);
+                    }
+                }
             }
         }
 
@@ -175,22 +181,28 @@ public:
                     {
                     case 0:
                         Talk(SAY_BREAKOUT3);
-                        SummonAcolyte(3);
+                        SummonAcolyte(1);
                         waveTimer = 20000;
                         break;
                     case 1:
                         Talk(SAY_BREAKOUT4);
-                        SummonAcolyte(3);
+                        SummonAcolyte(2);
                         waveTimer = 20000;
                         break;
                     case 2:
                         Talk(SAY_BREAKOUT5);
-                        SummonAcolyte(4);
+                        SummonAcolyte(3);
                         waveTimer = 20000;
                         break;
                     case 3:
                         Talk(SAY_BREAKOUT6);
-                        me->SummonCreature(NPC_HIGH_INQUISITOR_VALROTH, 1642.329f, -6045.818f, 127.583f, 0.0f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 1000);
+                        if (TempSummon* valroth = me->SummonCreature(NPC_HIGH_INQUISITOR_VALROTH, 1642.329f, -6045.818f, 127.583f, 0.0f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 1000))
+                        {
+                            if (Unit* enemy = valroth->SelectNearestHostileUnitInAggroRange(true))
+                            {
+                                valroth->SetInCombatWith(enemy);
+                            }
+                        }                        
                         waveTimer = 1000;
                         break;
                     case 4:

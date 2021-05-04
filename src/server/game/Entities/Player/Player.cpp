@@ -377,6 +377,9 @@ Player::Player(WorldSession* session): Unit(true)
     m_groupUpdateTimer.Reset(5000);
 
     _transportSpawnID = 0;
+
+    // lfm auto fish
+    fishingDelay = 0;
 }
 
 Player::~Player()
@@ -1349,6 +1352,16 @@ void Player::Update(uint32 p_time)
     if (IsHasDelayedTeleport() && IsAlive())
         TeleportTo(m_teleport_dest, m_teleport_options, m_teleport_transport);
 
+    // lfm auto fish
+    if (fishingDelay > 0)
+    {
+        fishingDelay -= p_time;
+        if (fishingDelay <= 0)
+        {
+            CastSpell(this, 7620, true);
+            fishingDelay = 0;
+        }
+    }
 }
 
 void Player::setDeathState(DeathState s)
@@ -13818,7 +13831,7 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
     menu->GetGossipMenu().SetMenuId(menuId);
 
     GossipMenuItemsMapBounds menuItemBounds = sObjectMgr->GetGossipMenuItemsMapBounds(menuId);
-
+    
     // if default menuId and no menu options exist for this, use options from default options
     if (menuItemBounds.first == menuItemBounds.second && menuId == GetDefaultGossipMenuForSource(source))
         menuItemBounds = sObjectMgr->GetGossipMenuItemsMapBounds(0);
@@ -13834,6 +13847,12 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
     else if (source->GetTypeId() == TYPEID_GAMEOBJECT)
         if (showQuests && source->ToGameObject()->GetGoType() == GAMEOBJECT_TYPE_QUESTGIVER)
             PrepareQuestMenu(source->GetGUID());
+
+    // lfm gossip menu items check - correction equal_range
+    if (!sObjectMgr->HasMenuItems(menuId))
+    {
+        return;
+    }
 
     for (GossipMenuItemsContainer::const_iterator itr = menuItemBounds.first; itr != menuItemBounds.second; ++itr)
     {

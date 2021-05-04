@@ -519,6 +519,14 @@ void GameObject::Update(uint32 diff)
         [[fallthrough]];
         case GO_READY:
         {
+            // lfm auto fish
+            if (GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE)
+            {
+                Unit* caster = GetOwner();
+                Use(caster);
+                break;
+            }
+
             if (m_respawnCompatibilityMode)
             {
                 if (m_respawnTime > 0)                          // timer on
@@ -1500,11 +1508,6 @@ void GameObject::Use(Unit* user)
             GameObjectTemplate const* goInfo = GetGOInfo();
             if (goInfo->trap.spellId)
             {
-                // lfm debug
-                if (goInfo->trap.spellId == 52479)
-                {
-                    bool breakPoint = true;
-                }
                 CastSpell(user, goInfo->trap.spellId);
             }                
 
@@ -1712,6 +1715,9 @@ void GameObject::Use(Unit* user)
 
                     int32 skill = player->GetSkillValue(SKILL_FISHING);
 
+                    // lfm zone_skill will be 50 higher
+                    zone_skill += 50;
+
                     int32 chance;
                     if (skill < zone_skill)
                     {
@@ -1765,7 +1771,14 @@ void GameObject::Use(Unit* user)
                 }
             }
 
+            // lfm auto fish
+            uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
+            for (uint32 checkSlot = 0; checkSlot < maxSlot; checkSlot++)
+            {
+                player->StoreLootItem(checkSlot, &loot);
+            }
             player->FinishSpell(CURRENT_CHANNELED_SPELL);
+            player->fishingDelay = urand(500, 1000);
             return;
         }
 

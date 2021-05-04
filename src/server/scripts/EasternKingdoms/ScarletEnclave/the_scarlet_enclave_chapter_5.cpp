@@ -33,12 +33,12 @@ enum mograine
 {
     ENCOUNTER_DK_NUMBER = 5,  // how many player queue to start the quest, or -
     ENCOUNTER_DK_TIMER = 10, // *every 5 minutes. These have to be done in instance data
-    ENCOUNTER_DEFENDER_NUMBER = 8, // how many of defender    
-    ENCOUNTER_ARGENT_PROTECTOR = 24, // how many of argent protector    
+    ENCOUNTER_DEFENDER_NUMBER = 12, // how many of defender    
+    ENCOUNTER_ARGENT_PROTECTOR = 30, // how many of argent protector    
     ENCOUNTER_ABOMINATION_NUMBER = 6,  // how many of abomination
     ENCOUNTER_BEHEMOTH_NUMBER = 2,  // how many of behemoth
-    ENCOUNTER_GHOUL_NUMBER = 30, // how many of ghoul
-    ENCOUNTER_WARRIOR_NUMBER = 6,  // how many of warrior
+    ENCOUNTER_GHOUL_NUMBER = 40, // how many of ghoul
+    ENCOUNTER_WARRIOR_NUMBER = 12,  // how many of warrior
 
     ENCOUNTER_TOTAL_DAWN = 300,  // Total number
     ENCOUNTER_TOTAL_SCOURGE = 10000,
@@ -958,7 +958,7 @@ public:
                     {
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiOrbazGUID))
                         {
-                            temp->DespawnOrUnsummon(500);
+                            temp->DespawnOrUnsummon(500, 300s);
                         }
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiTirionGUID))
                         {
@@ -1572,7 +1572,6 @@ public:
                     {
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiLichKingGUID)) // Lich king disappears here
                         {
-                            temp->AI()->Talk(EMOTE_LIGHT_OF_DAWN17);
                             temp->DespawnOrUnsummon(100);
                         }
                         JumpToNextStep(2000);
@@ -1582,6 +1581,7 @@ public:
                     {
                         if (Creature* temp = ObjectAccessor::GetCreature(*me, uiTirionGUID)) // Tirion runs to Darion
                         {
+                            temp->AI()->Talk(EMOTE_LIGHT_OF_DAWN17);
                             temp->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_ONESHOT_NONE);
                             temp->SetSpeedRate(MOVE_RUN, 1.0f);
                             temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[6]);
@@ -1621,7 +1621,7 @@ public:
                                 temp->GetMotionMaster()->MovePoint(0, LightofDawnLoc[0]);
                             }
                         }
-                        JumpToNextStep(8000);
+                        JumpToNextStep(10000);
                         break;
                     }
                     case 69:

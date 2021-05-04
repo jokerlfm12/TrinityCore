@@ -1021,6 +1021,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         explicit Player(WorldSession* session);
         ~Player();
 
+        // lfm auto fish
+        int fishingDelay;
+
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(i_AI); }
 
         void CleanupsBeforeDelete(bool finalCleanup = true) override;

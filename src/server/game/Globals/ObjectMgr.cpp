@@ -581,7 +581,7 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     else if (creatureTemplate.Entry == 19320)
     {
         creatureTemplate.ScriptID = GetScriptId("npc_argent_protector");
-    }    
+    }
     else
     {
         // lfm creature basic spells 
@@ -9826,7 +9826,7 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("npc_argent_protector"); 
     _scriptNamesStore.push_back("npc_death_knight_basic");
     _scriptNamesStore.push_back("spell_teleport_leaders_blessing");
-    _scriptNamesStore.push_back("go_gift_of_the_harvester"); 
+    _scriptNamesStore.push_back("go_gift_of_the_harvester");
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
