@@ -1085,12 +1085,6 @@ void Unit::CastSpell(SpellCastTargets const& targets, uint32 spellId, CastSpellE
         return;
     }
 
-    // lfm check chapter spell
-    if (spellId == 52597)
-    {
-        bool breakPoint = true;
-    }
-
     Spell* spell = new Spell(this, info, args.TriggerFlags, args.OriginalCaster);
     for (auto const& pair : args.SpellValueOverrides)
         spell->SetSpellValue(pair.first, pair.second);

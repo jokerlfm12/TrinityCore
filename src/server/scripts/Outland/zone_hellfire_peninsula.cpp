@@ -1244,6 +1244,71 @@ private:
     EventMap _events;
 };
 
+class npc_eye_of_grillok : public CreatureScript
+{
+public:
+    npc_eye_of_grillok() : CreatureScript("npc_eye_of_grillok") { }
+
+    struct npc_eye_of_grillokAI : public ScriptedAI
+    {
+        npc_eye_of_grillokAI(Creature* creature) : ScriptedAI(creature)
+        {
+            Initialize();
+        }
+
+        void Initialize()
+        {            
+            beamDelay = 0;
+            lineDelay = 100;
+        }
+
+        void Reset() override
+        {
+            Initialize();
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (lineDelay >= 0)
+                    {
+                        lineDelay -= diff;
+                        if (lineDelay <= 0)
+                        {
+                            Talk(0, victim);
+                            beamDelay= urand(2000, 5000);
+                            return;
+                        }
+                    }
+                    if (beamDelay > 0)
+                    {
+                        beamDelay -= diff;
+                        if (beamDelay <= 0)
+                        {
+                            DoCastVictim(35873);
+                            //DoCast(victim, 40861);                            
+                            beamDelay = urand(3000, 5000);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+    private:        
+        int beamDelay;
+        int lineDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_eye_of_grillokAI(creature);
+    }
+};
+
 void AddSC_hellfire_peninsula()
 {
     new npc_aeranas();
@@ -1256,4 +1321,7 @@ void AddSC_hellfire_peninsula()
     RegisterCreatureAI(npc_watch_commander_leonus);
     RegisterCreatureAI(npc_infernal_rain_hellfire);
     RegisterCreatureAI(npc_fear_controller);
+
+    // lfm scripts
+    new npc_eye_of_grillok();
 }

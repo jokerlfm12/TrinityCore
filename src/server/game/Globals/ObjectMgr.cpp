@@ -582,6 +582,11 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.ScriptID = GetScriptId("npc_argent_protector");
     }
+    else if (creatureTemplate.Entry == 19440)
+    {
+        creatureTemplate.AIName = "";
+        creatureTemplate.ScriptID = GetScriptId("npc_eye_of_grillok");
+    }    
     else
     {
         // lfm creature basic spells 
@@ -730,44 +735,47 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     }
 
     // lfm creature template modifier definition
-    switch (creatureTemplate.rank)
+    if (creatureTemplate.ModHealth >= 1.0f)
     {
-    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-    {
-        if (creatureTemplate.ModHealth < 1.5f)
+        switch (creatureTemplate.rank)
         {
-            creatureTemplate.ModHealth = 1.5f;
-        }
-        break;
-    }
-    case CreatureEliteType::CREATURE_ELITE_ELITE:
-    {
-        if (creatureTemplate.ModHealth < 4.0f)
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
         {
-            creatureTemplate.ModHealth = 4.0f;
+            if (creatureTemplate.ModHealth < 1.5f)
+            {
+                creatureTemplate.ModHealth = 1.5f;
+            }
+            break;
         }
-        break;
-    }
-    case CreatureEliteType::CREATURE_ELITE_RARE:
-    {
-        if (creatureTemplate.ModHealth < 3.0f)
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            creatureTemplate.ModHealth = 3.0f;
+            if (creatureTemplate.ModHealth < 4.0f)
+            {
+                creatureTemplate.ModHealth = 4.0f;
+            }
+            break;
         }
-        break;
-    }
-    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-    {
-        if (creatureTemplate.ModHealth < 5.0f)
+        case CreatureEliteType::CREATURE_ELITE_RARE:
         {
-            creatureTemplate.ModHealth = 5.0f;
+            if (creatureTemplate.ModHealth < 3.0f)
+            {
+                creatureTemplate.ModHealth = 3.0f;
+            }
+            break;
         }
-        break;
-    }
-    default:
-    {
-        break;
-    }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModHealth < 5.0f)
+            {
+                creatureTemplate.ModHealth = 5.0f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
     }
     if (creatureTemplate.minlevel > 80)
     {
@@ -9809,7 +9817,7 @@ void ObjectMgr::LoadScriptNames()
     }
 
     // lfm script names
-    uint32 lfmCount = 8;
+    uint32 lfmCount = 9;
     _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
@@ -9827,6 +9835,7 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("npc_death_knight_basic");
     _scriptNamesStore.push_back("spell_teleport_leaders_blessing");
     _scriptNamesStore.push_back("go_gift_of_the_harvester");
+    _scriptNamesStore.push_back("npc_eye_of_grillok"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 

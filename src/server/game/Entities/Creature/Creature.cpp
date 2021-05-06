@@ -2180,12 +2180,6 @@ void Creature::ForcedDespawn(uint32 timeMSToDespawn, Seconds forceRespawnTimer)
 
 void Creature::DespawnOrUnsummon(uint32 msTimeToDespawn /*= 0*/, Seconds forceRespawnTimer /*= 0*/)
 {
-    // lfm debug
-    if (GetEntry() == 29173)
-    {
-        bool breakPoint = true;
-    }
-
     if (TempSummon* summon = ToTempSummon())
         summon->UnSummon(msTimeToDespawn);
     else
