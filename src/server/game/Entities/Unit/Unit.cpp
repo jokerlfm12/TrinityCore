@@ -11028,6 +11028,14 @@ void Unit::PauseMovement(uint32 timer/* = 0*/, uint8 slot/* = 0*/, bool forced/*
         StopMoving();
 }
 
+void Unit::PauseAllMovement(uint32 timer)
+{
+    for (uint32 checkSlot = 0; checkSlot < MAX_MOTION_SLOT; checkSlot++)
+    {
+        PauseMovement(timer, checkSlot, true);
+    }
+}
+
 void Unit::ResumeMovement(uint32 timer/* = 0*/, uint8 slot/* = 0*/)
 {
     if (IsInvalidMovementSlot(slot))

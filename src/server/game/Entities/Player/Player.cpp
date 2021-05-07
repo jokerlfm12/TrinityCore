@@ -13850,7 +13850,16 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
 
     // lfm gossip menu items check - correction equal_range
     bool hasMenuItems = sObjectMgr->HasMenuItems(menuId);
-
+    // lfm gossip npc flag check will be ignored when menuid is not 0 or has menu items
+    bool checkFlag = false;
+    if (menuId == 0)
+    {
+        checkFlag = true;
+    }
+    else if (!hasMenuItems)
+    {
+        checkFlag = true;
+    }
     for (GossipMenuItemsContainer::const_iterator itr = menuItemBounds.first; itr != menuItemBounds.second; ++itr)
     {
         bool canTalk = true;
@@ -13859,16 +13868,6 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId /*= 0*/, bool 
 
         if (Creature* creature = source->ToCreature())
         {
-            // lfm gossip npc flag check will be ignored when menuid is not 0 or has menu items
-            bool checkFlag = false;
-            if (menuId == 0)
-            {
-                checkFlag = true;
-            }
-            else if (!hasMenuItems)
-            {
-                checkFlag = true;
-            }
             if (checkFlag)
             {
                 if (!(itr->second.OptionNpcFlag & npcflags))

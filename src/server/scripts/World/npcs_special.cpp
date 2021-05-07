@@ -3155,6 +3155,338 @@ private:
     bool _hit;
 };
 
+// lfm extra scripts 
+class npc_tunnel_worm : public CreatureScript
+{
+public:
+    npc_tunnel_worm() : CreatureScript("npc_tunnel_worm") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_tunnel_wormAI(creature);
+    }
+
+    struct npc_tunnel_wormAI : public ScriptedAI
+    {
+        npc_tunnel_wormAI(Creature* creature) : ScriptedAI(creature)
+        {
+            tunnelPassiveSpellID = 0;
+            poisonSpellID = 0;
+            enrageSpellID = 0;
+            inhaleSpellID = 0;
+            boreSpellID = 0;
+            boneboreLimit = 0;
+            submergeDelay = 0;
+            emergeDelay = 0;
+            boneboreDelay = 0;
+            poisonDelay = 0;
+            boreDelay = 0;
+            enrageDelay = 0;
+            inhaleDelay = 0;
+            freeMotionType = MovementGeneratorType::IDLE_MOTION_TYPE;
+            evading = false;
+
+            uint32 myEntry = me->GetEntry();
+            if (myEntry == 16968 || myEntry == 21380 || myEntry == 18979 || myEntry == 18678 || myEntry == 18980 || myEntry == 16857 || myEntry == 16844 || myEntry == 23285)
+            {
+                tunnelPassiveSpellID = 34038;
+                boneboreLimit = 1000;
+            }
+            else if (myEntry == 22482 || myEntry == 21849 || myEntry == 22466 || myEntry == 22038)
+            {
+                tunnelPassiveSpellID = 38885;
+                boneboreLimit = urand(4000, 8000);
+            }
+            else
+            {
+                tunnelPassiveSpellID = 34038;
+                boneboreLimit = 1000;
+            }
+            poisonSpellID = 31747;
+            poisonDistance = 39.0f;
+            if (myEntry == 22038)
+            {
+                poisonSpellID = 61597;                
+            }
+            if (myEntry == 16968 || myEntry == 23285)
+            {
+                enrageSpellID = 32714;
+            }
+            if (myEntry == 18979 || myEntry == 18980)
+            {
+                inhaleSpellID = 29158;
+            }
+            boreSpellID = 32738;
+            boneboreDelay = boneboreLimit;
+            freeMotionType = me->GetDefaultMovementType();
+
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            DoCastSelf(tunnelPassiveSpellID);
+            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SUBMERGED);
+            SetCombatMovement(true);
+        }
+
+        void Reset() override
+        {
+            me->SetDefaultMovementType(freeMotionType);
+            me->GetMotionMaster()->Initialize();
+            evading = false;
+        }
+
+        void JustEngagedWith(Unit* who) override
+        {
+            me->SetDefaultMovementType(MovementGeneratorType::IDLE_MOTION_TYPE);
+            me->GetMotionMaster()->Initialize();
+        }
+
+        void EnterEvadeMode(EvadeReason why) override
+        {
+            if (me->IsInEvadeMode())
+            {
+                return;
+            }
+            if (!evading)
+            {
+                _EnterEvadeMode(why);
+                Evade();
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 0)
+                {
+                    Submerge();
+                }
+                else if (data == 1)
+                {
+                    Emerge();
+                }
+            }
+            else if (type == 2)
+            {
+                if (data == 0)
+                {
+                    me->SetDefaultMovementType(MovementGeneratorType::IDLE_MOTION_TYPE);
+                    me->GetMotionMaster()->Initialize();
+                }
+                else if (data == 1)
+                {
+                    me->SetRespawnRadius(10.0f);
+                    me->SetDefaultMovementType(MovementGeneratorType::RANDOM_MOTION_TYPE);                    
+                    me->GetMotionMaster()->Clear(MovementSlot::MOTION_SLOT_ACTIVE);
+                    me->StopMoving();
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            UpdateVictim();
+            if (submergeDelay > 0)
+            {
+                submergeDelay -= diff;
+                if (submergeDelay <= 0)
+                {
+                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    DoCastSelf(tunnelPassiveSpellID);
+                    boneboreDelay = boneboreLimit;
+                    if (evading)
+                    {
+                        Reset();
+                        me->AddUnitState(UNIT_STATE_EVADE);
+                        me->GetMotionMaster()->MoveTargetedHome();
+                    }
+                }
+                return;
+            }
+            if (emergeDelay > 0)
+            {
+                emergeDelay -= diff;
+                if (emergeDelay <= 0)
+                {
+                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    poisonDelay = 0;
+                }
+                return;
+            }
+            if (me->IsInCombat())
+            {
+                Unit* victim = me->GetVictim();
+                if (!victim)
+                {
+                    victim = me->GetCombatManager().GetAnyTarget();
+                }
+                if (victim)
+                {
+                    if (boreDelay >= 0)
+                    {
+                        boreDelay -= diff;
+                    }
+                    if (enrageDelay >= 0)
+                    {
+                        enrageDelay -= diff;
+                    }
+                    if (inhaleDelay >= 0)
+                    {
+                        inhaleDelay -= diff;
+                    }
+                    AttackStart(victim);
+                    float victimeDistance = me->GetDistance(victim);
+                    if (me->HasAura(tunnelPassiveSpellID))
+                    {
+                        if (victimeDistance < poisonDistance)
+                        {
+                            if (boneboreDelay >= 0)
+                            {
+                                boneboreDelay -= diff;
+                                if (boneboreDelay < 0)
+                                {
+                                    Emerge();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (victimeDistance < poisonDistance)
+                        {
+                            if (me->IsNonMeleeSpellCast(false))
+                            {
+                                return;
+                            }
+                            if (victimeDistance < INTERACTION_DISTANCE)
+                            {
+                                DoMeleeAttackIfReady();
+                                if (boreDelay < 0)
+                                {
+                                    boreDelay = 20000;
+                                    DoCast(victim, boreSpellID);
+                                    return;
+                                }
+                                if (enrageSpellID > 0)
+                                {
+                                    if (enrageDelay < 0)
+                                    {
+                                        float healthPCT = me->GetHealthPct();
+                                        if (healthPCT < 50.0f)
+                                        {
+                                            enrageDelay = urand(10000, 15000);
+                                            DoCastSelf(enrageSpellID);
+                                            return;
+                                        }
+                                    }
+                                    if (me->HasAura(enrageSpellID))
+                                    {
+                                        return;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (inhaleSpellID > 0)
+                                {
+                                    if (inhaleDelay < 0)
+                                    {
+                                        inhaleDelay = urand(10000, 20000);
+                                        DoCast(victim, inhaleSpellID);
+                                        return;
+                                    }
+                                }
+                            }
+                            if (poisonDelay >= 0)
+                            {
+                                poisonDelay -= diff;
+                            }
+                            if (poisonDelay < 0)
+                            {
+                                poisonDelay = 2500;
+                                DoCast(victim, poisonSpellID);                               
+                            }
+                        }
+                        else
+                        {
+                            Submerge();
+                        }
+                    }
+                }
+                else
+                {
+                    Emerge();
+                }
+            }
+        }
+
+        void Emerge()
+        {
+            if (me->HasAura(tunnelPassiveSpellID))
+            {
+                me->AttackStop();
+                me->StopMoving();
+                me->RemoveAurasDueToSpell(tunnelPassiveSpellID);
+                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                me->HandleEmoteCommand(EMOTE_ONESHOT_EMERGE);
+                SetCombatMovement(false);
+                emergeDelay = 3000;
+            }
+        }
+
+        void Submerge()
+        {
+            if (!me->HasAura(tunnelPassiveSpellID))
+            {
+                me->AttackStop();
+                me->StopMoving();
+                me->HandleEmoteCommand(EMOTE_ONESHOT_SUBMERGE);
+                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SUBMERGED);
+                SetCombatMovement(true);
+                submergeDelay = 1000;
+            }
+        }
+
+        void Evade()
+        {
+            evading = true;
+            if (!me->HasAura(tunnelPassiveSpellID))
+            {
+                me->AttackStop();
+                me->StopMoving();
+                me->HandleEmoteCommand(EMOTE_ONESHOT_SUBMERGE);
+                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SUBMERGED);
+                SetCombatMovement(true);
+                submergeDelay = 1000;
+            }
+            else
+            {
+                boneboreDelay = boneboreLimit;
+                Reset();
+                me->AddUnitState(UNIT_STATE_EVADE);
+                me->GetMotionMaster()->MoveTargetedHome();
+            }
+        }
+
+        int tunnelPassiveSpellID;
+        int poisonSpellID;
+        int enrageSpellID;
+        int inhaleSpellID;
+        int boreSpellID;
+        int boneboreLimit;
+        int submergeDelay;
+        int emergeDelay;
+        int boneboreDelay;
+        int poisonDelay;
+        float poisonDistance;
+        int boreDelay;
+        int enrageDelay;
+        int inhaleDelay;
+        MovementGeneratorType freeMotionType;
+        bool evading;
+    };
+};
+
 void AddSC_npcs_special()
 {
     new npc_air_force_bots();
@@ -3185,4 +3517,7 @@ void AddSC_npcs_special()
     new npc_mage_orb();
     new npc_druid_treant();
     RegisterCreatureAI(npc_darkmoon_island_gnoll);
+
+    // lfm extra scripts
+    new npc_tunnel_worm();
 }

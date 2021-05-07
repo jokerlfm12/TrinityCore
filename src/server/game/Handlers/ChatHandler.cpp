@@ -315,33 +315,85 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 
             sender->Say(msg, Language(lang));
 
-            // lfm say debug
-            if (msg == "attacking")
+            std::vector<std::string> commandVector = sObjectMgr->SplitString(msg, " ", true);
+            std::string commandName = commandVector.at(0);
+            if (commandName == "tcast")
             {
-                if (Unit* myTarget = sender->GetSelectedUnit())
+                if (commandVector.size() > 1)
                 {
-                    if (sender->IsValidAttackTarget(myTarget))
+                    if (Unit* myTarget = sender->GetSelectedUnit())
                     {
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "valid", sender);
-                    }
-                    else
-                    {
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "invalid", sender);
+                        std::string spellIDStr = commandVector.at(1);
+                        int32 spellID = atoi(spellIDStr.c_str());
+                        myTarget->CastSpell(nullptr, spellID);
                     }
                 }
             }
-            else if (msg == "attacked")
+            else if (commandName == "tcastt")
+            {
+                if (commandVector.size() > 1)
+                {
+                    if (Unit* myTarget = sender->GetSelectedUnit())
+                    {
+                        if (Unit* targetsTarget = ObjectAccessor::GetUnit(*myTarget, myTarget->GetTarget()))
+                        {
+                            std::string spellIDStr = commandVector.at(1);
+                            int32 spellID = atoi(spellIDStr.c_str());
+                            myTarget->CastSpell(targetsTarget, spellID);
+                        }
+                    }
+                }
+            }
+            else if (commandName == "castt")
+            {
+                if (commandVector.size() > 1)
+                {
+                    if (Unit* myTarget = sender->GetSelectedUnit())
+                    {
+                        std::string spellIDStr = commandVector.at(1);
+                        int32 spellID = atoi(spellIDStr.c_str());
+                        sender->CastSpell(myTarget, spellID);
+                    }
+                }
+            }
+            else if (commandName == "emote")
+            {
+                if (commandVector.size() > 1)
+                {
+                    if (Unit* myTarget = sender->GetSelectedUnit())
+                    {
+                        std::string emoteIDStr = commandVector.at(1);
+                        int32 emoteID = atoi(emoteIDStr.c_str());
+                        myTarget->HandleEmoteCommand(emoteID);
+                    }
+                }
+            }
+            else if (commandName == "submerge")
             {
                 if (Unit* myTarget = sender->GetSelectedUnit())
                 {
-                    if (myTarget->IsValidAttackTarget(sender))
-                    {
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "valid", sender);
-                    }
-                    else
-                    {
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "invalid", sender);
-                    }
+                    myTarget->GetAI()->SetData(1, 0);
+                }
+            }
+            else if (commandName == "emerge")
+            {
+                if (Unit* myTarget = sender->GetSelectedUnit())
+                {
+                    myTarget->GetAI()->SetData(1, 1);
+                }
+            }
+            else if (commandName == "midle")
+            {
+                if (Unit* myTarget = sender->GetSelectedUnit())
+                {
+                    myTarget->GetAI()->SetData(2, 0);
+                }
+            }
+            else if (commandName == "mrandom")
+            {
+                if (Unit* myTarget = sender->GetSelectedUnit())
+                {
+                    myTarget->GetAI()->SetData(2, 1);
                 }
             }
             break;

@@ -96,6 +96,9 @@ UPDATE `smart_scripts` SET `action_param1` = '39415' WHERE (`entryorguid` = '194
 INSERT INTO `quest_template_addon` (`ID`, `MaxLevel`, `AllowableClasses`, `SourceSpellID`, `PrevQuestID`, `NextQuestID`, `ExclusiveGroup`, `BreadcrumbForQuestId`, `RewardMailTemplateID`, `RewardMailDelay`, `RequiredSkillID`, `RequiredSkillPoints`, `RequiredMinRepFaction`, `RequiredMaxRepFaction`, `RequiredMinRepValue`, `RequiredMaxRepValue`, `ProvidedItemCount`, `SpecialFlags`) VALUES ('10382', '0', '0', '0', '10163', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');
 insert into gameobject 
 select guid, id, map, zoneid, areaid, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, scriptname, verifiedbuild 
-from world_trinitycore_wlk.gameobject where id = 183123;
+from gameobject where id = 183123;
 UPDATE `gameobject_template` SET `displayId` = '0' WHERE (`entry` = '183123');
 INSERT INTO `quest_template_addon` (`ID`, `MaxLevel`, `AllowableClasses`, `SourceSpellID`, `PrevQuestID`, `NextQuestID`, `ExclusiveGroup`, `BreadcrumbForQuestId`, `RewardMailTemplateID`, `RewardMailDelay`, `RequiredSkillID`, `RequiredSkillPoints`, `RequiredMinRepFaction`, `RequiredMaxRepFaction`, `RequiredMinRepValue`, `RequiredMaxRepValue`, `ProvidedItemCount`, `SpecialFlags`) VALUES ('9543', '0', '0', '0', '9424', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');
+UPDATE `creature_model_info` SET `CombatReach` = '5' WHERE (`DisplayID` = '20746');
+UPDATE `smart_scripts` SET `action_param1` = '30093' WHERE (`entryorguid` = '16977') and (`source_type` = '0') and (`id` = '12') and (`link` = '0');
+UPDATE `creature_template` SET `npcflag` = '83' WHERE (`entry` = '21209');

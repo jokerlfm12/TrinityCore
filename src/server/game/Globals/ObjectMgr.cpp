@@ -564,22 +564,27 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     // lfm creature scripts
     if (creatureTemplate.Entry == 28850)
     {
+        creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_scarlet_land_cannon");
     }
     else if (creatureTemplate.Entry == 28856)
     {
+        creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_scarlet_fleet_guardian");
     }
     else if (creatureTemplate.Entry == 28834)
     {
+        creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_scarlet_fleet_defender");
     }
     else if (creatureTemplate.Entry == 29185)
     {
+        creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_volatile_ghoul");
     }
     else if (creatureTemplate.Entry == 19320)
     {
+        creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_argent_protector");
     }
     else if (creatureTemplate.Entry == 19440)
@@ -592,7 +597,13 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         // lfm creature basic spells 
         if (creatureTemplate.Entry == 28390 || creatureTemplate.Entry == 28391 || creatureTemplate.Entry == 28392 || creatureTemplate.Entry == 28393 || creatureTemplate.Entry == 28394 || creatureTemplate.Entry == 28934 || creatureTemplate.Entry == 30957 || creatureTemplate.Entry == 30958 || creatureTemplate.Entry == 31326 || creatureTemplate.Entry == 31327)
         {
+            creatureTemplate.AIName = "";
             creatureTemplate.ScriptID = GetScriptId("npc_death_knight_basic");
+        }
+        else if (creatureTemplate.Entry == 16968 || creatureTemplate.Entry == 21380 || creatureTemplate.Entry == 18979 || creatureTemplate.Entry == 18678 || creatureTemplate.Entry == 18980 || creatureTemplate.Entry == 16857 || creatureTemplate.Entry == 16844 || creatureTemplate.Entry == 23285 || creatureTemplate.Entry == 22482 || creatureTemplate.Entry == 21849 || creatureTemplate.Entry == 22466 || creatureTemplate.Entry == 22038)
+        {
+            creatureTemplate.AIName = "";
+            creatureTemplate.ScriptID = GetScriptId("npc_tunnel_worm");
         }
     }
 
@@ -9633,9 +9644,23 @@ Trainer::Trainer const* ObjectMgr::GetTrainer(uint32 trainerId) const
 
 uint32 ObjectMgr::GetCreatureTrainerForGossipOption(uint32 creatureId, uint32 gossipMenuId, uint32 gossipOptionIndex) const
 {
-    auto itr = _creatureDefaultTrainers.find(std::make_tuple(creatureId, gossipMenuId, gossipOptionIndex));
+    // lfm menu 0 options
+    uint32 destMenuID = gossipMenuId;
+    auto itr = _creatureDefaultTrainers.find(std::make_tuple(creatureId, destMenuID, gossipOptionIndex));
+    if (itr == _creatureDefaultTrainers.end())
+    {
+        destMenuID = 0;
+    }
+    itr = _creatureDefaultTrainers.find(std::make_tuple(creatureId, destMenuID, gossipOptionIndex));
     if (itr != _creatureDefaultTrainers.end())
+    {
         return itr->second;
+    }       
+    //auto itr = _creatureDefaultTrainers.find(std::make_tuple(creatureId, gossipMenuId, gossipOptionIndex));
+    //if (itr != _creatureDefaultTrainers.end())
+    //{
+    //    return itr->second;
+    //}        
 
     return 0;
 }
@@ -9817,7 +9842,7 @@ void ObjectMgr::LoadScriptNames()
     }
 
     // lfm script names
-    uint32 lfmCount = 9;
+    uint32 lfmCount = 10;
     _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
@@ -9835,7 +9860,8 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("npc_death_knight_basic");
     _scriptNamesStore.push_back("spell_teleport_leaders_blessing");
     _scriptNamesStore.push_back("go_gift_of_the_harvester");
-    _scriptNamesStore.push_back("npc_eye_of_grillok"); 
+    _scriptNamesStore.push_back("npc_eye_of_grillok");
+    _scriptNamesStore.push_back("npc_tunnel_worm"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
@@ -10770,4 +10796,26 @@ ByteBuffer QuestPOIWrapper::BuildQueryData() const
     }
 
     return tempBuffer;
+}
+
+// lfm string splitter
+std::vector<std::string> ObjectMgr::SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored)
+{
+    std::vector<std::string> resultStringVector;
+    std::replace_if(srcStr.begin(), srcStr.end(), [&](const char& c) {if (delimStr.find(c) != std::string::npos) { return true; } else { return false; }}/*pred*/, delimStr.at(0));
+    size_t pos = srcStr.find(delimStr.at(0));
+    std::string addedString = "";
+    while (pos != std::string::npos) {
+        addedString = srcStr.substr(0, pos);
+        if (!addedString.empty() || !repeatedCharIgnored) {
+            resultStringVector.push_back(addedString);
+        }
+        srcStr.erase(srcStr.begin(), srcStr.begin() + pos + 1);
+        pos = srcStr.find(delimStr.at(0));
+    }
+    addedString = srcStr;
+    if (!addedString.empty() || !repeatedCharIgnored) {
+        resultStringVector.push_back(addedString);
+    }
+    return resultStringVector;
 }

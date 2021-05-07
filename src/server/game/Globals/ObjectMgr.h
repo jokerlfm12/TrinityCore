@@ -980,6 +980,9 @@ class TC_GAME_API ObjectMgr
 
         static ObjectMgr* instance();
 
+        // lfm string splitter
+        std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
+
         typedef std::unordered_map<uint32, Quest> QuestContainer;
 
         typedef std::unordered_map<uint32, AreaTriggerStruct> AreaTriggerContainer;
