@@ -1309,6 +1309,120 @@ public:
     }
 };
 
+class npc_dreghood_brute : public CreatureScript
+{
+public:
+    npc_dreghood_brute() : CreatureScript("npc_dreghood_brute") { }
+
+    struct npc_dreghood_bruteAI : public ScriptedAI
+    {
+        npc_dreghood_bruteAI(Creature* creature) : ScriptedAI(creature)
+        {
+            eventDelay = 0;
+            eventID = 0;
+            fleeX = -398.0f;
+            fleeY = 4780.0f;
+            fleeZ = 19.5f + 1.0f;
+            hamstringDelay = urand(4000, 10000);            
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    Talk(0);
+                }
+            }
+            else if (type == 2)
+            {
+                if (data == 2)
+                {
+                    me->CombatStop();
+                    me->UpdateEntry(19477, nullptr, false);
+                    me->SetImmuneToAll(true);
+                    eventID = 1;
+                    eventDelay = 100;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (hamstringDelay >= 0)
+                    {
+                        hamstringDelay -= diff;                        
+                    }
+                    if (hamstringDelay < 0)
+                    {
+                        hamstringDelay = urand(4000, 10000);
+                        if (!victim->HasAura(31553))
+                        {
+                            DoCast(victim, 31553);
+                        }
+                    }
+                    DoMeleeAttackIfReady();
+                }
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        eventDelay = 10000;
+                        break;
+                    }
+                    case 1:
+                    {
+                        Talk(0);                        
+                        fleeX = frand(fleeX - 30.0f, fleeX + 30.0f);
+                        fleeY = frand(fleeY - 30.0f, fleeY + 30.0f);                        
+                        me->SetWalk(false);
+                        me->SetSpeedRate(UnitMoveType::MOVE_RUN, 1.0f);
+                        me->GetMotionMaster()->MovePoint(0, fleeX, fleeY, fleeZ);
+                        eventID = 2;
+                        eventDelay = 5000;
+                        break;
+                    }
+                    case 2:
+                    {
+                        me->DespawnOrUnsummon(500);
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+    private:
+        int eventDelay;
+        int eventID;
+        float fleeX, fleeY, fleeZ;
+        int hamstringDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_dreghood_bruteAI(creature);
+    }
+};
+
 void AddSC_hellfire_peninsula()
 {
     new npc_aeranas();
@@ -1324,4 +1438,5 @@ void AddSC_hellfire_peninsula()
 
     // lfm scripts
     new npc_eye_of_grillok();
+    new npc_dreghood_brute();
 }

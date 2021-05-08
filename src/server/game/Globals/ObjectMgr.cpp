@@ -591,7 +591,12 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.AIName = "";
         creatureTemplate.ScriptID = GetScriptId("npc_eye_of_grillok");
-    }    
+    }
+    else if (creatureTemplate.Entry == 16938)
+    {
+        creatureTemplate.AIName = "";
+        creatureTemplate.ScriptID = GetScriptId("npc_dreghood_brute");
+    }
     else
     {
         // lfm creature basic spells 
@@ -616,7 +621,11 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
     }
-    if (creatureTemplate.Entry == 28834 || creatureTemplate.Entry == 28850 || creatureTemplate.Entry == 28856)
+    else if (creatureTemplate.Entry == 16993)
+    {
+        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
+    }
+    else if (creatureTemplate.Entry == 28834 || creatureTemplate.Entry == 28850 || creatureTemplate.Entry == 28856)
     {
         if (creatureTemplate.ModHealth < 20.0f)
         {
@@ -9842,7 +9851,7 @@ void ObjectMgr::LoadScriptNames()
     }
 
     // lfm script names
-    uint32 lfmCount = 10;
+    uint32 lfmCount = 11;
     _scriptNamesStore.reserve(result->GetRowCount() + 1 + lfmCount);
 
     do
@@ -9861,7 +9870,8 @@ void ObjectMgr::LoadScriptNames()
     _scriptNamesStore.push_back("spell_teleport_leaders_blessing");
     _scriptNamesStore.push_back("go_gift_of_the_harvester");
     _scriptNamesStore.push_back("npc_eye_of_grillok");
-    _scriptNamesStore.push_back("npc_tunnel_worm"); 
+    _scriptNamesStore.push_back("npc_tunnel_worm");
+    _scriptNamesStore.push_back("npc_dreghood_brute");
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
 
