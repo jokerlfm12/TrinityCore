@@ -315,86 +315,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 
             sender->Say(msg, Language(lang));
 
-            std::vector<std::string> commandVector = sObjectMgr->SplitString(msg, " ", true);
-            std::string commandName = commandVector.at(0);
-            if (commandName == "tcast")
+            // lfm ninger 
+            if (!GetPlayer()->GetSession()->isNinger)
             {
-                if (commandVector.size() > 1)
-                {
-                    if (Unit* myTarget = sender->GetSelectedUnit())
-                    {
-                        std::string spellIDStr = commandVector.at(1);
-                        int32 spellID = atoi(spellIDStr.c_str());
-                        myTarget->CastSpell(nullptr, spellID);
-                    }
-                }
-            }
-            else if (commandName == "tcastt")
-            {
-                if (commandVector.size() > 1)
-                {
-                    if (Unit* myTarget = sender->GetSelectedUnit())
-                    {
-                        if (Unit* targetsTarget = ObjectAccessor::GetUnit(*myTarget, myTarget->GetTarget()))
-                        {
-                            std::string spellIDStr = commandVector.at(1);
-                            int32 spellID = atoi(spellIDStr.c_str());
-                            myTarget->CastSpell(targetsTarget, spellID);
-                        }
-                    }
-                }
-            }
-            else if (commandName == "castt")
-            {
-                if (commandVector.size() > 1)
-                {
-                    if (Unit* myTarget = sender->GetSelectedUnit())
-                    {
-                        std::string spellIDStr = commandVector.at(1);
-                        int32 spellID = atoi(spellIDStr.c_str());
-                        sender->CastSpell(myTarget, spellID);
-                    }
-                }
-            }
-            else if (commandName == "emote")
-            {
-                if (commandVector.size() > 1)
-                {
-                    if (Unit* myTarget = sender->GetSelectedUnit())
-                    {
-                        std::string emoteIDStr = commandVector.at(1);
-                        int32 emoteID = atoi(emoteIDStr.c_str());
-                        myTarget->HandleEmoteCommand(emoteID);
-                    }
-                }
-            }
-            else if (commandName == "submerge")
-            {
-                if (Unit* myTarget = sender->GetSelectedUnit())
-                {
-                    myTarget->GetAI()->SetData(1, 0);
-                }
-            }
-            else if (commandName == "emerge")
-            {
-                if (Unit* myTarget = sender->GetSelectedUnit())
-                {
-                    myTarget->GetAI()->SetData(1, 1);
-                }
-            }
-            else if (commandName == "midle")
-            {
-                if (Unit* myTarget = sender->GetSelectedUnit())
-                {
-                    myTarget->GetAI()->SetData(2, 0);
-                }
-            }
-            else if (commandName == "mrandom")
-            {
-                if (Unit* myTarget = sender->GetSelectedUnit())
-                {
-                    myTarget->GetAI()->SetData(2, 1);
-                }
+                sNingerManager->HandlePlayerSay(GetPlayer(), msg);
             }
             break;
         }
@@ -467,6 +391,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 sender->AddWhisperWhiteList(receiver->GetGUID());
 
             GetPlayer()->Whisper(msg, Language(lang), receiver);
+
+            // lfm ninger 
+            sNingerManager->HandleChatCommand(GetPlayer(), msg, receiver);
             break;
         }
         case CHAT_MSG_PARTY:
@@ -489,6 +416,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             WorldPacket data;
             ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
             group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+
+            // lfm ninger 
+            sNingerManager->HandleChatCommand(GetPlayer(), msg);
+
             break;
         }
         case CHAT_MSG_GUILD:
@@ -537,6 +468,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             WorldPacket data;
             ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
             group->BroadcastPacket(&data, false);
+
+            // lfm ninger 
+            sNingerManager->HandleChatCommand(GetPlayer(), msg);
+
             break;
         }
         case CHAT_MSG_RAID_WARNING:

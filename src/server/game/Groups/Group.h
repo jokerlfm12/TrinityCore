@@ -224,6 +224,10 @@ class TC_GAME_API Group
         Group();
         ~Group();
 
+        // lfm rti        
+        ObjectGuid GetOGByTargetIcon(int pmID);
+        int GetTargetIconByOG(ObjectGuid pmOG);
+
         // group manipulation methods
         bool   Create(Player* leader);
         void   LoadGroupFromDB(Field* field);

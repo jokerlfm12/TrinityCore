@@ -93,6 +93,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/algorithm/string.hpp>
 
+// lfm ninger
+#include "NingerManager.h"
+
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -2327,6 +2330,12 @@ void World::SetInitialWorldSettings()
 
     if (uint32 realmId = sConfigMgr->GetIntDefault("RealmID", 0)) // 0 reserved for auth
         sLog->SetRealmId(realmId);
+
+    // lfm ninger
+    if (sNingerConfig->StartNinger())
+    {
+        sNingerManager->InitializeManager();
+    }
 }
 
 void World::LoadAutobroadcasts()
@@ -2571,6 +2580,9 @@ void World::Update(uint32 diff)
     // Stats logger update
     sMetric->Update();
     TC_METRIC_VALUE("update_time_diff", diff);
+
+    // lfm ninger update
+    sNingerManager->UpdateNingerManager(diff);
 }
 
 void World::ForceGameEventUpdate()
@@ -3002,11 +3014,21 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
     if (IsStopped())
         return;
 
+    // lfm logout ningers 
+    sNingerManager->LogoutNingers();
+
     m_ShutdownMask = options;
     m_ExitCode = exitcode;
 
+    // lfm shutdown time will not be less than 5 seconds 
+    uint32 shutdownTimeSeconds = time;
+    if (shutdownTimeSeconds < 5)
+    {
+        shutdownTimeSeconds = 5;
+    }
+
     ///- If the shutdown time is 0, set m_stopEvent (except if shutdown is 'idle' with remaining sessions)
-    if (time == 0)
+    if (shutdownTimeSeconds == 0)
     {
         if (!(options & SHUTDOWN_MASK_IDLE) || GetActiveAndQueuedSessionCount() == 0)
             m_stopEvent = true;                             // exist code already set
@@ -3016,7 +3038,7 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std:
     ///- Else set the shutdown timer and warn users
     else
     {
-        m_ShutdownTimer = time;
+        m_ShutdownTimer = shutdownTimeSeconds;
         ShutdownMsg(true, nullptr, reason);
     }
 

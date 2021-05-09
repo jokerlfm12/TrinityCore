@@ -74,7 +74,6 @@ namespace Trainer
         uint32 GetTrainerRequirement() const { return _requirement; }
         bool IsTrainerValidForPlayer(Player const* player) const;
 
-    private:
         Spell const* GetSpell(uint32 spellId) const;
         bool CanTeachSpell(Player const* player, Spell const* trainerSpell) const;
         SpellState GetSpellState(Player const* player, Spell const* trainerSpell) const;

@@ -55,6 +55,9 @@
 #include "WorldSocket.h"
 #include <zlib.h>
 
+// lfm ninger
+#include "MovementPackets.h"
+
 namespace {
 
 std::string const DefaultPlayerName = "<none>";
@@ -152,6 +155,9 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 battlenetAccoun
 
     m_Socket[CONNECTION_TYPE_REALM] = sock;
     _instanceConnectKey.Raw = UI64LIT(0);
+
+    // lfm ninger
+    isNinger = false;
 }
 
 /// WorldSession destructor
@@ -228,6 +234,14 @@ void WorldSession::SendPacket(WorldPacket const* packet, bool forced /*= false*/
         return;
     }
 
+    // lfm ninger    
+    if (isNinger)
+    {
+        WorldPacket eachCopy(*packet);
+        sNingerManager->HandlePacket(this, eachCopy);
+        return;
+    }
+
     ServerOpcodeHandler const* handler = opcodeTable[static_cast<OpcodeServer>(packet->GetOpcode())];
 
     if (!handler)
@@ -250,12 +264,6 @@ void WorldSession::SendPacket(WorldPacket const* packet, bool forced /*= false*/
 
         conIdx = packet->GetConnection();
     }
-
-    // lfm socket index
-    //if (!m_Socket[conIdx])
-    //{
-    //    conIdx = ConnectionType::CONNECTION_TYPE_REALM;
-    //}
 
     if (!m_Socket[conIdx])
     {
@@ -340,6 +348,59 @@ void WorldSession::LogUnprocessedTail(WorldPacket const* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    // lfm ninger    
+    if (isNinger)
+    {
+        ProcessQueryCallbacks();
+        if (_player)
+        {
+            if (_player->IsBeingTeleportedNear())
+            {
+                _player->SetSemaphoreTeleportNear(false);
+                uint32 old_zone = _player->GetZoneId();
+                WorldLocation const& dest = _player->GetTeleportDest();
+                WorldPackets::Movement::MoveUpdateTeleport moveUpdateTeleport;
+                moveUpdateTeleport.Status = &_player->m_movementInfo;
+                moveUpdateTeleport.Status->pos.Relocate(dest);
+                _player->SendMessageToSet(moveUpdateTeleport.Write(), false);
+                _player->UpdatePosition(dest, true);
+                _player->SetFallInformation(0, _player->GetPositionZ());
+                uint32 newzone, newarea;
+                _player->GetZoneAndAreaId(newzone, newarea);
+                _player->UpdateZone(newzone, newarea);
+                // new zone
+                if (old_zone != newzone)
+                {
+                    // honorless target
+                    if (_player->pvpInfo.IsHostile)
+                    {
+                        _player->CastSpell(_player, 2479, true);
+                    }
+                    // in friendly area
+                    else if (_player->IsPvP() && !_player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP))
+                    {
+                        _player->UpdatePvP(false, false);
+                    }
+                }
+                // resummon pet
+                GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();
+                //lets process all delayed operations on successful teleport
+                GetPlayer()->ProcessDelayedOperations();
+            }
+            else if (_player->IsBeingTeleportedFar())
+            {
+                HandleMoveWorldportAck();
+                _player->activeAwarenessIndex = 0;
+                if (Awareness_Base* ab = _player->awarenessMap[_player->activeAwarenessIndex])
+                {
+                    ab->Report();
+                }
+            }
+        }
+
+        return true;
+    }
+
     /// Update Timeout timer.
     UpdateTimeOutTime(diff);
 

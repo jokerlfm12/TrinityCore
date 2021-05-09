@@ -756,6 +756,32 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPackets::Character::PlayerLogin&
     SendConnectToInstance(WorldPackets::Auth::ConnectToSerial::WorldAttempt1);    
 }
 
+// lfm ninger
+void WorldSession::HandlePlayerLogin(ObjectGuid ogPlayer)
+{
+    if (PlayerLoading() || GetPlayer() != nullptr)
+    {
+        TC_LOG_ERROR("network", "Player tries to login again, AccountId = %d", GetAccountId());
+        KickPlayer();
+        return;
+    }
+
+    m_playerLoading = ogPlayer;
+    
+    _legitCharacters.insert(ogPlayer);
+
+    if (!IsLegitCharacterForAccount(ogPlayer))
+    {
+        TC_LOG_ERROR("network", "Account (%u) can't login with that character (%s).", GetAccountId(), ogPlayer.ToString().c_str());
+        KickPlayer();
+        return;
+    }
+
+    HandleContinuePlayerLogin();
+
+    SendConnectToInstance(WorldPackets::Auth::ConnectToSerial::WorldAttempt1);
+}
+
 void WorldSession::HandleContinuePlayerLogin()
 {
     if (!PlayerLoading() || GetPlayer())
@@ -1148,6 +1174,33 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     TC_METRIC_EVENT("player_events", "Login", pCurrChar->GetName());
 
     sBattlenetServer.SendChangeToonOnlineState(GetBattlenetAccountId(), GetAccountId(), _player->GetGUID(), _player->GetName(), true);
+
+    // lfm ninger
+    if (!sCharacterCache->HasCharacterCacheEntry(pCurrChar->GetGUID()))
+    {
+        sCharacterCache->AddCharacterCacheEntry(pCurrChar->GetGUID(), GetAccountId(), pCurrChar->GetName(), pCurrChar->getGender(), pCurrChar->getRace(), pCurrChar->getClass(), 0);
+    }
+    Awareness_Base* ab = new Awareness_Base(pCurrChar);
+    pCurrChar->awarenessMap[0] = ab;
+    pCurrChar->activeAwarenessIndex = 0;
+    if (isNinger)
+    {
+        std::ostringstream loginNoticeStream;
+        loginNoticeStream << pCurrChar->GetName() << " logged in";        
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, loginNoticeStream.str().c_str());
+        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, loginNoticeStream.str().c_str());
+    }
+    else
+    {
+        for (std::unordered_map<uint32, Awareness_Base*>::iterator aiIT = pCurrChar->awarenessMap.begin(); aiIT != pCurrChar->awarenessMap.end(); aiIT++)
+        {
+            if (Awareness_Base* eachAI = aiIT->second)
+            {
+                eachAI->sb->Initialize();
+                eachAI->Reset();
+            }
+        }
+    }
 }
 
 void WorldSession::HandleSetFactionAtWar(WorldPacket& recvData)

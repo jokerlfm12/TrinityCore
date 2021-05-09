@@ -380,6 +380,10 @@ Player::Player(WorldSession* session): Unit(true)
 
     // lfm auto fish
     fishingDelay = 0;
+    // lfm ninger
+    groupRole = 0;
+    awarenessMap.clear();
+    activeAwarenessIndex = 0;
 }
 
 Player::~Player()
@@ -1361,6 +1365,12 @@ void Player::Update(uint32 p_time)
             CastSpell(this, 7620, true);
             fishingDelay = 0;
         }
+    }
+
+    // lfm ninger updates 
+    if (awarenessMap.find(activeAwarenessIndex) != awarenessMap.end())
+    {
+        awarenessMap[activeAwarenessIndex]->Update(p_time);
     }
 }
 
@@ -28362,4 +28372,44 @@ void Player::SendTamePetFailure(PetTameFailureReason reason)
     WorldPacket data(SMSG_PET_TAME_FAILURE, 1);
     data << uint8(reason);
     SendDirectMessage(&data);
+}
+
+// lfm ninger 
+uint32 Player::GetMaxTalentCountTab()
+{
+    std::unordered_map<uint32, uint32> tabCountMap;
+    PlayerTalentMap* activeTalents = _talentMgr->SpecInfo[_talentMgr->ActiveSpec].Talents;
+    for (std::unordered_map<uint32, PlayerTalent*>::iterator ptIT = activeTalents->begin(); ptIT != activeTalents->end(); ptIT++)
+    {
+        for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
+        {
+            if (TalentEntry const* te = sTalentStore.LookupEntry(i))
+            {
+                if (TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(te->TabID))
+                {
+                    if ((getClassMask() & talentTabInfo->ClassMask) != 0)
+                    {
+                        for (int8 rank = MAX_TALENT_RANK - 1; rank >= 0; --rank)
+                        {
+                            if (te->SpellRank[rank] == ptIT->first)
+                            {
+                                tabCountMap[talentTabInfo->OrderIndex] += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    uint32 maxValue = 0;
+    uint32 result = 0;
+    for (std::unordered_map<uint32, uint32>::iterator tcIT = tabCountMap.begin(); tcIT != tabCountMap.end(); tcIT++)
+    {
+        if (tcIT->second > maxValue)
+        {
+            maxValue = tcIT->second;
+            result = tcIT->first;
+        }
+    }
+    return result;
 }

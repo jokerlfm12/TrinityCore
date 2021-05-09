@@ -146,6 +146,38 @@ void WorldSession::HandlePartyInviteOpcode(WorldPackets::Party::PartyInviteClien
             invitedPlayer->SendDirectMessage(partyInvite.Write());
         }
 
+        // lfm ninger group recheck
+        if (invitedPlayer->GetSession()->isNinger)
+        {
+            if (Group* checkGroup = invitedPlayer->GetGroup())
+            {
+                if (Player* leader = ObjectAccessor::FindPlayer(checkGroup->GetLeaderGUID()))
+                {
+                    if (leader->GetSession()->isNinger)
+                    {
+                        invitedPlayer->RemoveFromGroup();
+                    }
+                }
+                else
+                {
+                    invitedPlayer->RemoveFromGroup();
+                }
+            }
+            else if (Group* groupInvite = invitedPlayer->GetGroupInvite())
+            {
+                if (Player* leader = ObjectAccessor::FindPlayer(groupInvite->GetLeaderGUID()))
+                {
+                    if (leader->GetSession()->isNinger)
+                    {
+                        invitedPlayer->RemoveFromGroup();
+                    }
+                }
+                else
+                {
+                    invitedPlayer->RemoveFromGroup();
+                }
+            }
+        }
         return;
     }
 
@@ -209,6 +241,73 @@ void WorldSession::HandlePartyInviteResponseOpcode(WorldPackets::Party::PartyInv
         return;
 
     if (packet.Accept)
+    {
+        // Remove player from invitees in any case
+        group->RemoveInvite(GetPlayer());
+
+        if (group->GetLeaderGUID() == GetPlayer()->GetGUID())
+        {
+            TC_LOG_ERROR("network", "HandleGroupAcceptOpcode: player %s(%d) tried to accept an invite to his own group", GetPlayer()->GetName().c_str(), GetPlayer()->GetGUID().GetCounter());
+            return;
+        }
+
+        // Group is full
+        if (group->IsFull())
+        {
+            SendPartyResult(PARTY_OP_INVITE, "", ERR_GROUP_FULL);
+            return;
+        }
+
+        Player* leader = ObjectAccessor::FindPlayer(group->GetLeaderGUID());
+
+        // Forming a new group, create it
+        if (!group->IsCreated())
+        {
+            // This can happen if the leader is zoning. To be removed once delayed actions for zoning are implemented
+            if (!leader)
+            {
+                group->RemoveAllInvites();
+                return;
+            }
+
+            // If we're about to create a group there really should be a leader present
+            ASSERT(leader);
+            group->RemoveInvite(leader);
+            group->Create(leader);
+            sGroupMgr->AddGroup(group);
+        }
+
+        // Everything is fine, do it, PLAYER'S GROUP IS SET IN ADDMEMBER!!!
+        if (!group->AddMember(GetPlayer()))
+            return;
+
+        group->BroadcastGroupUpdate();
+    }
+    else
+    {
+        // Remember leader if online (group pointer will be invalid if group gets disbanded)
+        Player* leader = ObjectAccessor::FindConnectedPlayer(group->GetLeaderGUID());
+
+        // uninvite, group can be deleted
+        GetPlayer()->UninviteFromGroup();
+
+        if (!leader || !leader->GetSession())
+            return;
+
+        // report
+        WorldPackets::Party::GroupDecline decline(GetPlayer()->GetName());
+        leader->SendDirectMessage(decline.Write());
+    }
+}
+
+void WorldSession::HandlePartyInviteResponse(bool pmAccept)
+{
+    Group* group = GetPlayer()->GetGroupInvite();
+
+    if (!group)
+        return;
+
+    if (pmAccept)
     {
         // Remove player from invitees in any case
         group->RemoveInvite(GetPlayer());

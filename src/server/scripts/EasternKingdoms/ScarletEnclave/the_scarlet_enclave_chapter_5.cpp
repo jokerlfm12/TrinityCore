@@ -1951,13 +1951,16 @@ public:
                 Trinity::AnyPlayerInObjectRangeCheck checker(temp, VISIBILITY_DISTANCE_TINY);
                 Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(temp, players, checker);
                 Cell::VisitWorldObjects(temp, searcher, VISIBILITY_DISTANCE_TINY);
-                for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
+                if (!players.empty())
                 {
-                    if (Player* eachPlayer = *itr)
+                    for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
                     {
-                        if (temp->IsValidAttackTarget(eachPlayer))
+                        if (Player* eachPlayer = *itr)
                         {
-                            hostileTargetsMap[hostileTargetsMap.size()] = eachPlayer;
+                            if (temp->IsValidAttackTarget(eachPlayer))
+                            {
+                                hostileTargetsMap[hostileTargetsMap.size()] = eachPlayer;
+                            }
                         }
                     }
                 }

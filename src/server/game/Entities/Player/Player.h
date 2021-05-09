@@ -32,6 +32,9 @@
 #include "QuestDef.h"
 #include <queue>
 
+// lfm ninger
+#include "Awareness_Base.h"
+
 struct AccessRequirement;
 struct AchievementEntry;
 struct AreaTableEntry;
@@ -1023,6 +1026,13 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         // lfm auto fish
         int fishingDelay;
+
+        // lfm ninger
+        std::unordered_map<uint32, Awareness_Base*> awarenessMap;
+        uint32 activeAwarenessIndex;
+        // 0 dps, 1 tank, 2 healer
+        uint32 groupRole;
+        uint32 GetMaxTalentCountTab();
 
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(i_AI); }
 

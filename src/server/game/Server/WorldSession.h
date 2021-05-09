@@ -349,7 +349,7 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-    protected:
+    public:
         /// User specified variables
         std::string Name;
         uint8 Race       = 0;
@@ -411,6 +411,9 @@ class TC_GAME_API WorldSession
     public:
         WorldSession(uint32 id, std::string&& name, uint32 battlenetAccountId, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter);
         ~WorldSession();
+
+        // lfm ninger
+        bool isNinger;
 
         bool PlayerLoading() const { return !m_playerLoading.IsEmpty(); }
         bool PlayerLogout() const { return m_playerLogout; }
@@ -608,6 +611,9 @@ class TC_GAME_API WorldSession
         void HandleCharCreateOpcode(WorldPacket& recvPacket);
         void HandlePlayerLoginOpcode(WorldPackets::Character::PlayerLogin& packet);
 
+        // lfm ninger
+        void HandlePlayerLogin(ObjectGuid ogPlayer);
+
         void SendConnectToInstance(WorldPackets::Auth::ConnectToSerial serial);
         void HandleContinuePlayerLogin();
         void AbortLogin(WorldPackets::Character::LoginFailureReason reason);
@@ -754,6 +760,10 @@ class TC_GAME_API WorldSession
 
         void HandlePartyInviteOpcode(WorldPackets::Party::PartyInviteClient& packet);
         //void HandleGroupCancelOpcode(WorldPacket& recvPacket);
+
+        // lfm ninger 
+        void HandlePartyInviteResponse(bool pmAccept);
+
         void HandlePartyInviteResponseOpcode(WorldPackets::Party::PartyInviteResponse& packet);
         void HandleGroupClearMarker(WorldPacket& recvPacket);
         void HandleGroupUninviteOpcode(WorldPacket& recvPacket);

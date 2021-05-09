@@ -127,6 +127,9 @@ bool Group::Create(Player* leader)
     m_dungeonDifficulty = DUNGEON_DIFFICULTY_NORMAL;
     m_raidDifficulty = RAID_DIFFICULTY_10MAN_NORMAL;
 
+    // lfm free loot
+    m_lootMethod = FREE_FOR_ALL;
+
     if (!isBGGroup() && !isBFGroup())
     {
         m_dungeonDifficulty = leader->GetDungeonDifficulty();
@@ -2888,4 +2891,26 @@ void Group::SetEveryoneIsAssistant(bool apply)
         ToggleGroupMemberFlag(itr, MEMBER_FLAG_ASSISTANT, apply);
 
     SendUpdate();
+}
+
+// lfm rti
+ObjectGuid Group::GetOGByTargetIcon(int pmID)
+{
+    if (pmID >= 0 && pmID < TARGETICONCOUNT)
+    {
+        return m_targetIcons[pmID];
+    }
+    return ObjectGuid();
+}
+
+int Group::GetTargetIconByOG(ObjectGuid pmOG)
+{
+    for (int i = 0; i < TARGETICONCOUNT; ++i)
+    {
+        if (m_targetIcons[i] == pmOG)
+        {
+            return i;
+        }
+    }
+    return -1;
 }
