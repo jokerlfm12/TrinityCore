@@ -131,7 +131,6 @@ bool Script_Paladin::Cure(Unit* pmTarget)
                             {
                                 if (CastSpell(pmTarget, "Purify"))
                                 {
-                                    cureDelay = 0;
                                     return true;
                                 }
                             }
@@ -141,7 +140,6 @@ bool Script_Paladin::Cure(Unit* pmTarget)
                                 {
                                     if (CastSpell(pmTarget, "Cleanse"))
                                     {
-                                        cureDelay = 0;
                                         return true;
                                     }
                                 }

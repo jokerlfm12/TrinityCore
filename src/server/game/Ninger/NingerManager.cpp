@@ -151,6 +151,63 @@ void NingerManager::InitializeManager()
         spellNameEntryMap[pS->SpellName].insert(pS->Id);
     }
 
+    characterTalentLearningMap.clear();
+    std::unordered_set<uint32> rogueTalentSet_combat0;
+    rogueTalentSet_combat0.insert(13732);
+    rogueTalentSet_combat0.insert(13705);
+    rogueTalentSet_combat0.insert(79007);
+    rogueTalentSet_combat0.insert(18427);
+    rogueTalentSet_combat0.insert(14165);
+    rogueTalentSet_combat0.insert(13754);
+    rogueTalentSet_combat0.insert(84617);
+    rogueTalentSet_combat0.insert(13712);
+    rogueTalentSet_combat0.insert(35541);
+    rogueTalentSet_combat0.insert(31124);
+    rogueTalentSet_combat0.insert(13750);
+    rogueTalentSet_combat0.insert(51682);
+    rogueTalentSet_combat0.insert(84652);
+    rogueTalentSet_combat0.insert(51690);
+    std::unordered_map<uint32, std::unordered_set<uint32>> rogueTalentMap_combat;
+    rogueTalentMap_combat[rogueTalentMap_combat.size()] = rogueTalentSet_combat0;
+    std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>> rogueTalentMap;
+    // combat 
+    rogueTalentMap[1] = rogueTalentMap_combat;
+    characterTalentLearningMap[Classes::CLASS_ROGUE] = rogueTalentMap;
+    std::unordered_set<uint32> priestTalentSet_discipline0;
+    priestTalentSet_discipline0.insert(14748);
+    priestTalentSet_discipline0.insert(47586);
+    priestTalentSet_discipline0.insert(14520);
+    priestTalentSet_discipline0.insert(63574);
+    priestTalentSet_discipline0.insert(14747);
+    priestTalentSet_discipline0.insert(89485);
+    priestTalentSet_discipline0.insert(10060);
+    priestTalentSet_discipline0.insert(57470);
+    priestTalentSet_discipline0.insert(47535);
+    priestTalentSet_discipline0.insert(52795);
+    priestTalentSet_discipline0.insert(33206);
+    priestTalentSet_discipline0.insert(89488);
+    priestTalentSet_discipline0.insert(47509);
+    priestTalentSet_discipline0.insert(47516);
+    priestTalentSet_discipline0.insert(62618);
+    std::unordered_map<uint32, std::unordered_set<uint32>> priestTalentMap_discipline;
+    priestTalentMap_discipline[priestTalentMap_discipline.size()] = priestTalentSet_discipline0;
+    std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>> priestTalentMap;
+    // discipline 
+    priestTalentMap[0] = priestTalentMap_discipline;
+    characterTalentLearningMap[Classes::CLASS_PRIEST] = priestTalentMap;
+
+    instantPoisonEntryMap.clear();
+    instantPoisonEntryMap[10] = 6947;
+    instantPoisonEntryMap[28] = 6949;
+    instantPoisonEntryMap[36] = 6950;
+    instantPoisonEntryMap[44] = 8926;
+    instantPoisonEntryMap[52] = 8927;
+    instantPoisonEntryMap[60] = 8928;
+    instantPoisonEntryMap[68] = 21927;
+    instantPoisonEntryMap[73] = 43230;
+    instantPoisonEntryMap[79] = 43231;
+
+
     QueryResult ningerQR = CharacterDatabase.Query("SELECT ninger_id, account_name, character_id, target_level FROM ninger order by rand()");
     if (ningerQR)
     {
@@ -211,34 +268,7 @@ void NingerManager::UpdateNingerManager(uint32 pmDiff)
                 }
             }
         }
-        std::unordered_set<uint32> toOnlineLevelSet;
         for (std::unordered_set<uint32>::iterator levelIT = onlinePlayerLevelSet.begin(); levelIT != onlinePlayerLevelSet.end(); levelIT++)
-        {
-            uint32 eachLevel = *levelIT;
-            bool levelOnline = false;
-            for (std::unordered_map<std::string, NingerEntity*>::iterator reIT = ningerEntityMap.begin(); reIT != ningerEntityMap.end(); reIT++)
-            {
-                if (NingerEntity* eachRE = reIT->second)
-                {
-                    if (eachRE->entityState == NingerEntityState::NingerEntityState_Online)
-                    {
-                        if (eachRE->target_level == eachLevel)
-                        {
-                            levelOnline = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!levelOnline)
-            {
-                if (toOnlineLevelSet.find(eachLevel) == toOnlineLevelSet.end())
-                {
-                    toOnlineLevelSet.insert(eachLevel);
-                }
-            }
-        }
-        for (std::unordered_set<uint32>::iterator levelIT = toOnlineLevelSet.begin(); levelIT != toOnlineLevelSet.end(); levelIT++)
         {
             uint32 eachLevel = *levelIT;
             LoginNingers(eachLevel);
@@ -385,7 +415,7 @@ uint32 NingerManager::CreateNingerCharacter(uint32 pmAccountID)
     }
     else
     {
-        targetClass = Classes::CLASS_PALADIN;
+        targetClass = Classes::CLASS_PRIEST;
     }
     uint32 raceIndex = 0;
     uint32 targetRace = 0;
@@ -573,6 +603,25 @@ bool NingerManager::LoginNingers(uint32 pmLevel, uint32 pmCount)
                 toAdd--;
             }
         }
+        uint32 onlineCount = 0;
+        for (std::unordered_map<std::string, NingerEntity*>::iterator reIT = ningerEntityMap.begin(); reIT != ningerEntityMap.end(); reIT++)
+        {
+            if (NingerEntity* eachRE = reIT->second)
+            {
+                if (eachRE->target_level == pmLevel)
+                {
+                    if (eachRE->entityState != NingerEntityState::NingerEntityState_OffLine && eachRE->entityState != NingerEntityState::NingerEntityState_None)
+                    {
+                        onlineCount++;
+                    }
+                }
+            }
+        }
+        uint32 toOnline = 0;
+        if (totalCount > onlineCount)
+        {
+            toOnline = totalCount - onlineCount;
+        }
         QueryResult toOnLineQR = CharacterDatabase.PQuery("SELECT ninger_id, account_name, character_id FROM ninger where target_level = %d", pmLevel);
         if (toOnLineQR)
         {
@@ -586,12 +635,20 @@ bool NingerManager::LoginNingers(uint32 pmLevel, uint32 pmCount)
                 {
                     if (ningerEntityMap[account_name]->entityState == NingerEntityState::NingerEntityState_OffLine)
                     {
-                        ningerEntityMap[account_name]->entityState = NingerEntityState::NingerEntityState_Enter;
-                        uint32 onlineWaiting = urand(5, 20);
-                        ningerEntityMap[account_name]->checkDelay = onlineWaiting * TimeConstants::IN_MILLISECONDS;
-                        std::ostringstream replyStream;
-                        replyStream << "ninger " << account_name << " ready to go online";
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
+                        if (toOnline > 0)
+                        {
+                            ningerEntityMap[account_name]->entityState = NingerEntityState::NingerEntityState_Enter;
+                            uint32 onlineWaiting = urand(5, 20);
+                            ningerEntityMap[account_name]->checkDelay = onlineWaiting * TimeConstants::IN_MILLISECONDS;
+                            std::ostringstream replyStream;
+                            replyStream << "ninger " << account_name << " ready to go online";
+                            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
+                            toOnline--;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                 }
                 else
@@ -1390,6 +1447,51 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
             }
         }
     }
+    else if (commandName == "poison")
+    {
+        if (Awareness_Base* ab = pmPlayer->awarenessMap[pmPlayer->activeAwarenessIndex])
+        {
+            if (Script_Base* sb = ab->sb)
+            {
+                uint32 maxInstancePoisonLevel = 0;
+                for (std::unordered_map<uint32, uint32>::iterator ipIT = sNingerManager->instantPoisonEntryMap.begin(); ipIT != sNingerManager->instantPoisonEntryMap.end(); ipIT++)
+                {
+                    if (ipIT->first <= pmPlayer->getLevel())
+                    {
+                        if (ipIT->first > maxInstancePoisonLevel)
+                        {
+                            maxInstancePoisonLevel = ipIT->first;
+                        }
+                    }
+                }
+                if (maxInstancePoisonLevel > 0)
+                {
+                    uint32 instancePoisonEntry = sNingerManager->instantPoisonEntryMap[maxInstancePoisonLevel];
+                    if (!pmPlayer->HasItemCount(instancePoisonEntry, 1))
+                    {
+                        pmPlayer->StoreNewItemInBestSlots(instancePoisonEntry, 20);
+                    }
+                    Item* instancePoison = sb->GetItemInInventory(instancePoisonEntry);
+                    if (instancePoison && !instancePoison->IsInTrade())
+                    {
+                        if (Item* weapon_mh = pmPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
+                        {
+                            if (sb->UseItem(instancePoison, weapon_mh))
+                            {
+                                if (Item* weapon_oh = pmPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
+                                {
+                                    if (sb->UseItem(instancePoison, weapon_oh))
+                                    {
+                                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Added instance poison to weapons", pmPlayer);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool NingerManager::StringEndWith(const std::string& str, const std::string& tail)
@@ -1469,13 +1571,11 @@ void NingerManager::HandlePacket(WorldSession* pmSession, WorldPacket pmPacket)
                     {
                         break;
                     }
-                    WorldPacket p;
-                    uint32 roles_mask = 0;
-                    p << roles_mask;
                     me->GetSession()->HandlePartyInviteResponse(true);
                     std::ostringstream replyStream_Talent;
                     if (Awareness_Base* ningerAI = me->awarenessMap[me->activeAwarenessIndex])
                     {
+                        ningerAI->Reset();
                         if (Script_Base* sb = ningerAI->sb)
                         {
                             replyStream_Talent << "My talent category is " << characterTalentTabNameMap[me->getClass()][sb->maxTalentTab];
@@ -2041,6 +2141,12 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                             pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
                             pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
                             pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                            pmReceiver->AttackStop();
+                            if (Script_Base* sb = receiverAI->sb)
+                            {
+                                sb->ClearTarget();
+                            }
+                            receiverAI->moveDelay = 2000;
                             replyStream << "Stopped";
                         }
                         else
@@ -2743,7 +2849,7 @@ bool NingerManager::LearnPlayerTalents(Player* pmTargetPlayer)
         }
         else if (targetClass == Classes::CLASS_PRIEST)
         {
-            specialty = 1;
+            specialty = 0;
         }
         else if (targetClass == Classes::CLASS_WARLOCK)
         {
@@ -2761,77 +2867,70 @@ bool NingerManager::LearnPlayerTalents(Player* pmTargetPlayer)
         {
             specialty = 1;
         }
-        uint32 classMask = pmTargetPlayer->getClassMask();
-        std::map<uint32, std::vector<TalentEntry const*> > talentsMap;
-        for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
+        std::unordered_map<uint32, std::unordered_set<uint32>> targetTalentSpecialtyMap = characterTalentLearningMap[pmTargetPlayer->getClass()][specialty];
+        for (std::unordered_map<uint32, std::unordered_set<uint32>>::iterator talentSpecialtyMapIT = targetTalentSpecialtyMap.begin(); talentSpecialtyMapIT != targetTalentSpecialtyMap.end(); talentSpecialtyMapIT++)
         {
-            TalentEntry const* talentInfo = sTalentStore.LookupEntry(i);
-            if (!talentInfo)
+            std::unordered_set<uint32> talentSet = talentSpecialtyMapIT->second;
+            std::map<uint32, std::vector<TalentEntry const*> > talentsMap;
+            for (uint32 i = 0; i < sTalentStore.GetNumRows(); ++i)
             {
-                continue;
-            }
-            if (TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID))
-            {
-                if ((classMask & talentTabInfo->ClassMask) == 0)
+                TalentEntry const* talentInfo = sTalentStore.LookupEntry(i);
+                if (talentInfo)
                 {
-                    continue;
-                }
-                talentsMap[talentInfo->TierID].push_back(talentInfo);
-            }
-        }
-        for (std::map<uint32, std::vector<TalentEntry const*> >::iterator i = talentsMap.begin(); i != talentsMap.end(); ++i)
-        {
-            std::vector<TalentEntry const*> eachRowTalents = i->second;
-            if (eachRowTalents.empty())
-            {
-                sLog->outMessage("ninger", LogLevel::LOG_LEVEL_ERROR, "%s: No spells for talent row %d", pmTargetPlayer->GetName(), i->first);
-                continue;
-            }
-            for (std::vector<TalentEntry const*>::iterator it = eachRowTalents.begin(); it != eachRowTalents.end(); it++)
-            {
-                freePoints = pmTargetPlayer->GetFreeTalentPoints();
-                if (freePoints > 0)
-                {
-                    if (const TalentEntry* eachTE = *it)
+                    if (TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TabID))
                     {
-                        if (TalentTabEntry const* eachTETabEntry = sTalentTabStore.LookupEntry(eachTE->TabID))
+                        if (pmTargetPlayer->getClassMask() & talentTabInfo->ClassMask)
                         {
-                            if (eachTETabEntry->OrderIndex != specialty)
+                            if (talentSet.find(talentInfo->SpellRank[0]) != talentSet.end())
                             {
-                                continue;
-                            }
+                                talentsMap[talentInfo->TierID].push_back(talentInfo);
+                            }                            
                         }
-                        uint8 maxRank = 4;
-                        if (eachTE->SpellRank[4] > 0)
-                        {
-                            maxRank = 4;
-                        }
-                        else if (eachTE->SpellRank[3] > 0)
-                        {
-                            maxRank = 3;
-                        }
-                        else if (eachTE->SpellRank[2] > 0)
-                        {
-                            maxRank = 2;
-                        }
-                        else if (eachTE->SpellRank[1] > 0)
-                        {
-                            maxRank = 1;
-                        }
-                        else
-                        {
-                            maxRank = 0;
-                        }
-                        if (maxRank > freePoints - 1)
-                        {
-                            maxRank = freePoints - 1;
-                        }
-                        pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
                     }
                 }
-                else
+            }
+            for (std::map<uint32, std::vector<TalentEntry const*> >::iterator i = talentsMap.begin(); i != talentsMap.end(); ++i)
+            {
+                std::vector<TalentEntry const*> eachRowTalents = i->second;
+                for (std::vector<TalentEntry const*>::iterator it = eachRowTalents.begin(); it != eachRowTalents.end(); it++)
                 {
-                    break;
+                    freePoints = pmTargetPlayer->GetFreeTalentPoints();
+                    if (freePoints > 0)
+                    {
+                        if (const TalentEntry* eachTE = *it)
+                        {
+                            uint8 maxRank = 4;
+                            if (eachTE->SpellRank[4] > 0)
+                            {
+                                maxRank = 4;
+                            }
+                            else if (eachTE->SpellRank[3] > 0)
+                            {
+                                maxRank = 3;
+                            }
+                            else if (eachTE->SpellRank[2] > 0)
+                            {
+                                maxRank = 2;
+                            }
+                            else if (eachTE->SpellRank[1] > 0)
+                            {
+                                maxRank = 1;
+                            }
+                            else
+                            {
+                                maxRank = 0;
+                            }
+                            if (maxRank > freePoints - 1)
+                            {
+                                maxRank = freePoints - 1;
+                            }
+                            pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -3390,9 +3489,10 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
                     bool hasIT = false;
                     for (uint32 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
                     {
-                        if (proto->GetItemStatType(i) == ItemModType::ITEM_MOD_INTELLECT)
+                        if (proto->GetItemStatType(i) == ItemModType::ITEM_MOD_SPELL_POWER)
                         {
                             hasIT = true;
+                            break;
                         }
                     }
                     if (!hasIT)
@@ -3467,7 +3567,7 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
                 {
                     if (eachPlayer->getLevel() == pmTargetPlayer->getLevel())
                     {
-                        if (pmTargetPlayer->IsValidAttackTarget(eachPlayer))
+                        if (pmTargetPlayer->IsHostileTo(eachPlayer))
                         {
                             if (!eachPlayer->IsBeingTeleported())
                             {
@@ -3514,7 +3614,7 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
     if (destPlayer)
     {
         float angle = frand(0, 2 * M_PI);
-        float distance = frand(100.0f, 400.0f);
+        float distance = frand(100.0f, 300.0f);
         float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
         destPlayer->GetNearPoint(destPlayer, destX, destY, destZ, distance, angle);
         pmTargetPlayer->TeleportTo(destPlayer->GetMapId(), destX, destY, destZ, 0.0f);

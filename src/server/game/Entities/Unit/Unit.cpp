@@ -1093,6 +1093,26 @@ void Unit::CastSpell(SpellCastTargets const& targets, uint32 spellId, CastSpellE
     spell->prepare(targets, args.TriggeringAura);
 }
 
+// lfm cast spell 
+SpellCastResult Unit::CastSpell(Unit* pmTarget, const SpellInfo* pS)
+{
+    SpellCastResult scr = SpellCastResult::SPELL_CAST_OK;
+
+    SpellCastTargets targets;
+    if (pmTarget)
+    {
+        targets.SetUnitTarget(pmTarget);
+    }
+    CastSpellExtraArgs csea;
+    Spell* pSpellInstance = new Spell(this, pS, csea.TriggerFlags, csea.OriginalCaster);
+    MountResult mountResult = MountResult::Ok;
+    uint32 param1 = 0, param2 = 0;
+    scr = pSpellInstance->CheckCast(true, &param1, &param2, &mountResult);
+    pSpellInstance->prepare(targets, csea.TriggeringAura);
+
+    return scr;
+}
+
 void Unit::CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args)
 {
     SpellCastTargets targets;
@@ -9257,7 +9277,9 @@ void Unit::setDeathState(DeathState s)
     if (s != ALIVE && s != JUST_RESPAWNED)
     {
         CombatStop();
-        ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
+
+        // lfm combo points will not lose at targets death 
+        //ClearComboPointHolders();
 
         if (IsNonMeleeSpellCast(false))
             InterruptNonMeleeSpells(false);

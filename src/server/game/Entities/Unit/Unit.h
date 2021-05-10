@@ -1113,6 +1113,9 @@ class TC_GAME_API Unit : public WorldObject
         void CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args = { });
         void CastSpell(Position const& dest, uint32 spellId, CastSpellExtraArgs const& args = { });
 
+        // lfm cast spell
+        SpellCastResult CastSpell(Unit* pmTarget, const SpellInfo* pS);
+
         Aura* AddAura(uint32 spellId, Unit* target);
         Aura* AddAura(SpellInfo const* spellInfo, uint8 effMask, Unit* target);
         void SetAuraStack(uint32 spellId, Unit* target, uint32 stack);

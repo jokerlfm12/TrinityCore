@@ -356,31 +356,29 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         {
             if (_player->IsBeingTeleportedNear())
             {
-                _player->SetSemaphoreTeleportNear(false);
-                uint32 old_zone = _player->GetZoneId();
-                WorldLocation const& dest = _player->GetTeleportDest();
+                Player* plMover = _player->m_unitMovedByMe->ToPlayer();
+                plMover->SetSemaphoreTeleportNear(false);
+                uint32 old_zone = plMover->GetZoneId();
+                WorldLocation const& dest = plMover->GetTeleportDest();
                 WorldPackets::Movement::MoveUpdateTeleport moveUpdateTeleport;
-                moveUpdateTeleport.Status = &_player->m_movementInfo;
+                moveUpdateTeleport.Status = &plMover->m_movementInfo;
                 moveUpdateTeleport.Status->pos.Relocate(dest);
-                _player->SendMessageToSet(moveUpdateTeleport.Write(), false);
-                _player->UpdatePosition(dest, true);
-                _player->SetFallInformation(0, _player->GetPositionZ());
+                plMover->SendMessageToSet(moveUpdateTeleport.Write(), false);
+                plMover->UpdatePosition(dest, true);
+                plMover->SetFallInformation(0, plMover->GetPositionZ());
                 uint32 newzone, newarea;
-                _player->GetZoneAndAreaId(newzone, newarea);
-                _player->UpdateZone(newzone, newarea);
+                plMover->GetZoneAndAreaId(newzone, newarea);
+                plMover->UpdateZone(newzone, newarea);
                 // new zone
                 if (old_zone != newzone)
                 {
                     // honorless target
-                    if (_player->pvpInfo.IsHostile)
-                    {
-                        _player->CastSpell(_player, 2479, true);
-                    }
+                    if (plMover->pvpInfo.IsHostile)
+                        plMover->CastSpell(plMover, 2479, true);
+
                     // in friendly area
-                    else if (_player->IsPvP() && !_player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP))
-                    {
-                        _player->UpdatePvP(false, false);
-                    }
+                    else if (plMover->IsPvP() && !plMover->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP))
+                        plMover->UpdatePvP(false, false);
                 }
                 // resummon pet
                 GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();

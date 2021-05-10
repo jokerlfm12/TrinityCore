@@ -121,11 +121,15 @@ void Awareness_Base::Report()
 
 void Awareness_Base::Reset()
 {
-    randomTeleportDelay = 0;
+    groupRole = GroupRole::GroupRole_DPS;
+    engageTarget = NULL;
+    randomTeleportDelay = urand(10 * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::IN_MILLISECONDS);
     reviveDelay = 0;
     engageDelay = 0;
+    moveDelay = 0;
     combatTime = 0;
     teleportAssembleDelay = 0;
+    resurrectDelay = 0;
     eatDelay = 0;
     drinkDelay = 0;
     readyCheckDelay = 0;
@@ -213,6 +217,10 @@ void Awareness_Base::Update(uint32 pmDiff)
         if (mySesson->isNinger)
         {
             sb->Update(pmDiff);
+            if (me->IsNonMeleeSpellCast(false))
+            {
+                return;
+            }
             if (Group* myGroup = me->GetGroup())
             {
                 if (readyCheckDelay > 0)

@@ -1,42 +1,70 @@
 #include "Script_Rogue.h"
 #include "Group.h"
+#include "Spell.h"
 
 Script_Rogue::Script_Rogue(Player* pmMe) :Script_Base(pmMe)
 {
-	kickDelay = 0;
-	ruptureDelay = 0;
-	sliceDelay = 0;
-	feintDelay = 0;
+    poisonStatus = 0;
+    poisonDelay = 0;
+    kickDelay = 0;
+    sliceDelay = 0;
+    adrenalineRushDelay = 0;
+    dismantleDelay = 0;
+    killingSpreeDelay = 0;
+    evasionDelay = 0;
+    sprintDelay = 0;
+    revealingStrikeDelay = 0;
+    recuperateDelay = 0;
 }
 
 void Script_Rogue::Update(uint32 pmDiff)
 {
 	Script_Base::Update(pmDiff);
+    if (poisonDelay >= 0)
+    {
+        poisonDelay -= pmDiff;
+    }
 	if (kickDelay >= 0)
 	{
 		kickDelay -= pmDiff;
 	}
-	if (ruptureDelay >= 0)
-	{
-		ruptureDelay -= pmDiff;
-	}
-	if (sliceDelay >= 0)
-	{
-		sliceDelay -= pmDiff;
-	}
-	if (feintDelay >= 0)
-	{
-		feintDelay -= pmDiff;
-	}
+    if (sliceDelay >= 0)
+    {
+        sliceDelay -= pmDiff;
+    }
+    if (adrenalineRushDelay >= 0)
+    {
+        adrenalineRushDelay -= pmDiff;
+    }
+    if (dismantleDelay >= 0)
+    {
+        dismantleDelay -= pmDiff;
+    }
+    if (killingSpreeDelay >= 0)
+    {
+        killingSpreeDelay -= pmDiff;
+    }
+    if (evasionDelay >= 0)
+    {
+        evasionDelay -= pmDiff;
+    }
+    if (sprintDelay >= 0)
+    {
+        sprintDelay -= pmDiff;
+    }
+    if (revealingStrikeDelay >= 0)
+    {
+        revealingStrikeDelay -= pmDiff;
+    }
+    if (recuperateDelay >= 0)
+    {
+        recuperateDelay -= pmDiff;
+    }
 }
 
 void Script_Rogue::Reset()
 {
 	Script_Base::Reset();
-	kickDelay = 0;
-	ruptureDelay = 0;
-	sliceDelay = 0;
-	feintDelay = 0;
 }
 
 bool Script_Rogue::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax)
@@ -50,6 +78,30 @@ bool Script_Rogue::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, fl
 		return false;
 	}
 	bool dpsResult = false;
+
+    if (recuperateDelay < 0)
+    {
+        recuperateDelay = 1000;
+        uint32 comboPoints = me->GetComboPoints();
+        uint32 energy = me->GetPower(Powers::POWER_ENERGY);
+        if (comboPoints > 0)
+        {
+            if (energy > 30)
+            {
+                if (Unit* comboTarget = ObjectAccessor::GetUnit(*me, me->GetComboTarget()))
+                {
+                    if (!comboTarget->IsAlive())
+                    {
+                        if (CastSpell(me, "Recuperate"))
+                        {
+                            recuperateDelay = comboPoints * 5 * TimeConstants::IN_MILLISECONDS;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
 	switch (maxTalentTab)
 	{
 	case 0:
@@ -84,14 +136,17 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
 	{
 		return false;
 	}
+
+    uint32 comboPoints = me->GetComboPoints();
+    uint32 energy = me->GetPower(Powers::POWER_ENERGY);
+
 	if (pmTarget)
 	{
 		if (me->IsValidAttackTarget(pmTarget))
-		{
+		{            
 			float targetDistance = me->GetDistance(pmTarget);
 			if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
-			{
-				uint32 myLevel = me->getLevel();
+			{				
 				if (pmChase)
 				{
 					if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
@@ -107,72 +162,164 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
 					}
 				}
 				me->Attack(pmTarget, true);
-				if (targetDistance < INTERACTION_DISTANCE)
+                if (targetDistance > INTERACTION_DISTANCE)
+                {
+                    if (sprintDelay < 0)
+                    {
+                        sprintDelay = 1000;
+                        if (CastSpell(me, "Sprint"))
+                        {
+                            sprintDelay = 61000;
+                            return true;
+                        }
+                    }
+                }
+				else
 				{
-					if (kickDelay < 0)
-					{
-						kickDelay = 1000;
-						if (pmTarget->IsNonMeleeSpellCast(false))
-						{
-							if (CastSpell(pmTarget, "Kick"))
-							{
-								kickDelay = 11000;
-								return true;
-							}
-						}
-					}
-					uint32 energy = me->GetPower(Powers::POWER_ENERGY);
-					uint32 comboPoints = me->GetComboPoints();
+                    if (energy > 15)
+                    {
+                        if (kickDelay < 0)
+                        {
+                            kickDelay = 1000;
+                            if (pmTarget->IsNonMeleeSpellCast(false))
+                            {
+                                if (CastSpell(pmTarget, "Kick"))
+                                {
+                                    kickDelay = 11000;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
 					if (energy > 25)
 					{
-						if (comboPoints >= 1)
-						{
-							if (sliceDelay < 0)
-							{
-								sliceDelay = 1000;
-								if (CastSpell(pmTarget, "Slice and Dice"))
-								{
-									sliceDelay = 9000;
-									return true;
-								}
-							}
-							if (ruptureDelay < 0)
-							{
-								ruptureDelay = 1000;
-								if (CastSpell(pmTarget, "Rupture", true))
-								{
-									ruptureDelay = 8000;
-									return true;
-								}
-							}
-						}
+                        if (dismantleDelay < 0)
+                        {
+                            dismantleDelay = 1000;
+                            bool hasWeapon = true;
+                            if (pmTarget->GetTypeId() == TYPEID_PLAYER)
+                            {
+                                if (Player const* targetPlayer = pmTarget->ToPlayer())
+                                {
+                                    if (!targetPlayer->GetWeaponForAttack(BASE_ATTACK) || !targetPlayer->IsUseEquipedWeapon(true))
+                                    {
+                                        hasWeapon = false;
+                                    }
+                                }
+                            }
+                            else if (!pmTarget->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                            {
+                                hasWeapon = false;
+                            }
+                            if (hasWeapon)
+                            {
+                                if (CastSpell(pmTarget, "Dismantle"))
+                                {
+                                    dismantleDelay = 61000;
+                                    return true;
+                                }
+                            }
+                        }
 					}
-					if (comboPoints >= 2)
-					{
-						if (energy > 35)
-						{
-							if (CastSpell(pmTarget, "Eviscerate"))
-							{
-								return true;
-							}
-						}
-					}
-					if (energy > 45)
+                    if (killingSpreeDelay < 0)
+                    {
+                        killingSpreeDelay = 1000;
+                        if (CastSpell(pmTarget, "Killing Spree"))
+                        {
+                            killingSpreeDelay = 121000;
+                            return true;
+                        }
+                    }
+                    if (evasionDelay < 0)
+                    {
+                        evasionDelay = 1000;
+                        std::set<Unit*> const& myAttackers = me->getAttackers();
+                        for (Unit* eachAttacker : myAttackers)
+                        {
+                            if (eachAttacker->GetTarget() == me->GetGUID())
+                            {
+                                float attackerDistance = me->GetDistance(eachAttacker);
+                                if (attackerDistance < INTERACTION_DISTANCE)
+                                {
+                                    if (CastSpell(me, "Evasion"))
+                                    {
+                                        evasionDelay = 181000;
+                                        return true;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (adrenalineRushDelay < 0)
+                    {
+                        adrenalineRushDelay = 1000;
+                        if (CastSpell(me, "Adrenaline Rush"))
+                        {
+                            adrenalineRushDelay = 181000;
+                            return true;
+                        }
+                    }
+                    if (energy > 25)
+                    {
+                        if (comboPoints >= 1)
+                        {
+                            if (sliceDelay < 0)
+                            {
+                                sliceDelay = 1000;
+                                if (CastSpell(pmTarget, "Slice and Dice"))
+                                {
+                                    sliceDelay = 14000;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    if (energy > 40)
+                    {
+                        if (revealingStrikeDelay < 0)
+                        {
+                            revealingStrikeDelay = 1000;
+                            if (CastSpell(pmTarget, "Revealing Strike", true))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    if (energy > 35)
+                    {
+                        bool eviscerate = false;
+                        if (comboPoints >= 5)
+                        {
+                            eviscerate = true;
+                        }
+                        else if (comboPoints >= 4)
+                        {
+                            if (urand(0, 100) < 80)
+                            {
+                                eviscerate = true;
+                            }
+                        }
+                        else if (comboPoints >= 3)
+                        {
+                            if (urand(0, 100) < 50)
+                            {
+                                eviscerate = true;
+                            }
+                        }
+                        if (eviscerate)
+                        {
+                            if (CastSpell(pmTarget, "Eviscerate"))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+					if (energy > 39)
 					{
 						if (CastSpell(pmTarget, "Sinister Strike"))
 						{
 							return true;
-						}
-					}
-					if (energy > 20)
-					{
-						if (feintDelay < 0)
-						{
-							feintDelay = 11000;
-							if (CastSpell(pmTarget, "Feint"))
-							{
-								return true;
-							}
 						}
 					}
 				}
@@ -237,6 +384,13 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
 						}
 					}
 				}
+                if (Unit* myTarget = me->GetSelectedUnit())
+                {
+                    if (DPS_Combat(myTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                    {
+                        return true;
+                    }
+                }
 				std::set<Unit*> const& myAttackers = me->getAttackers();
 				for (Unit* eachAttacker : myAttackers)
 				{
@@ -268,4 +422,121 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
 	}
 
 	return false;
+}
+
+bool Script_Rogue::Buff(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (pmTarget)
+    {        
+        if (pmTarget->GetGUID() == me->GetGUID())
+        {
+            if (recuperateDelay < 0)
+            {
+                recuperateDelay = 1000;
+                uint32 comboPoints = me->GetComboPoints();
+                uint32 energy = me->GetPower(Powers::POWER_ENERGY);
+                if (comboPoints > 0)
+                {
+                    if (energy > 30)
+                    {
+                        if (Unit* comboTarget = ObjectAccessor::GetUnit(*me, me->GetComboTarget()))
+                        {
+                            if (!comboTarget->IsAlive())
+                            {
+                                if (CastSpell(me, "Recuperate"))
+                                {
+                                    recuperateDelay = comboPoints * 5 * TimeConstants::IN_MILLISECONDS;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (poisonDelay < 0)
+            {
+                poisonDelay = 1000;
+                uint32 maxInstancePoisonLevel = 0;
+                for (std::unordered_map<uint32, uint32>::iterator ipIT = sNingerManager->instantPoisonEntryMap.begin(); ipIT != sNingerManager->instantPoisonEntryMap.end(); ipIT++)
+                {
+                    if (ipIT->first <= me->getLevel())
+                    {
+                        if (ipIT->first > maxInstancePoisonLevel)
+                        {
+                            maxInstancePoisonLevel = ipIT->first;
+                        }
+                    }
+                }
+                if (maxInstancePoisonLevel > 0)
+                {
+                    uint32 instancePoisonEntry = sNingerManager->instantPoisonEntryMap[maxInstancePoisonLevel];
+                    if (!me->HasItemCount(instancePoisonEntry, 1))
+                    {
+                        me->StoreNewItemInBestSlots(instancePoisonEntry, 20);
+                    }
+                    Item* instancePoison = GetItemInInventory(instancePoisonEntry);
+                    if (instancePoison && !instancePoison->IsInTrade())
+                    {
+                        if (poisonStatus == 0)
+                        {
+                            if (Item* weapon_mh = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
+                            {
+                                if (UseItem(instancePoison, weapon_mh))
+                                {
+                                    poisonStatus = 1;
+                                    poisonDelay = 4000;
+                                }
+                            }
+                        }
+                        else if (poisonStatus == 1)
+                        {
+                            if (Item* weapon_oh = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
+                            {
+                                if (UseItem(instancePoison, weapon_oh))
+                                {
+                                    poisonStatus = 0;
+                                    poisonDelay = 3601000;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    poisonDelay = 3601000;
+                }
+            }
+            return true;
+        }
+    }
+    else
+    {
+        if (buffDelay < 0)
+        {
+            buffDelay = 2000;
+            if (Group* myGroup = me->GetGroup())
+            {
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (Buff(member))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
 }

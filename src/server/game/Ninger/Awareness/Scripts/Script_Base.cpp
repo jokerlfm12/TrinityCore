@@ -100,7 +100,26 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
     {
         me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
     }
-    if (unitTargetDistance >= chaseDistanceMin && unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
+    bool distanceValid = false;
+    if (unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
+    {
+        if (chaseDistanceMin > MELEE_MIN_DISTANCE)
+        {
+            if (unitTargetDistance >= chaseDistanceMin)
+            {
+                distanceValid = true;
+            }
+            else
+            {
+                distanceValid = false;
+            }
+        }
+        else
+        {
+            distanceValid = true;
+        }
+    }
+    if (distanceValid)
     {
         if (me->IsWithinLOSInMap(chaseTarget))
         {
@@ -121,7 +140,7 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
         }
         float chaseAngle = chaseTarget->GetAngle(me);
         chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
-        chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseAngle);
+        chaseTarget->GetNearPoint(chaseTarget, nearX, nearY, nearZ, distanceInRange, chaseAngle);
         MoveTargetPosition(nearX, nearY, nearZ);
     }
     return true;
@@ -312,7 +331,7 @@ void NingerMovement::Update(uint32 pmDiff)
             }
             float chaseAngle = chaseTarget->GetAngle(me);
             chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
-            chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseAngle);
+            chaseTarget->GetNearPoint(chaseTarget, nearX, nearY, nearZ, distanceInRange, chaseAngle);
             MoveTargetPosition(nearX, nearY, nearZ);
         }
         break;
@@ -504,6 +523,31 @@ bool Script_Base::UseItem(Item* pmItem, Unit* pmTarget)
     return false;
 }
 
+bool Script_Base::UseItem(Item* pmItem, Item* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (me->CanUseItem(pmItem) != EQUIP_ERR_OK)
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(true))
+    {
+        return false;
+    }
+    if (const ItemTemplate* proto = pmItem->GetTemplate())
+    {
+        SpellCastTargets targets;
+        targets.SetItemTarget(pmTarget);
+        me->CastItemUseSpell(pmItem, targets, 1, 0);
+        return true;
+    }
+
+    return false;
+}
+
 bool Script_Base::Follow(Unit* pmTarget, float pmDistance)
 {
     if (!me)
@@ -644,7 +688,11 @@ bool Script_Base::CastSpell(Unit* pmTarget, std::string pmSpellName, bool pmChec
     {
         me->SetStandState(UNIT_STAND_STATE_STAND);
     }
-    me->CastSpell(pmTarget, pS->Id);
+    SpellCastResult scr = me->CastSpell(pmTarget, pS);
+    if (scr == SpellCastResult::SPELL_CAST_OK)
+    {
+        return true;
+    }
 
     return false;
 }
@@ -792,9 +840,13 @@ bool Script_Base::Eat(bool pmForce)
     {
         uint32 foodEntry = 0;
         uint32 myLevel = me->getLevel();
-        if (myLevel >= 80)
+        if (myLevel >= 85)
         {
-            foodEntry = 35950;
+            foodEntry = 58261;
+        }
+        else if (myLevel >= 80)
+        {
+            foodEntry = 58260;
         }
         else if (myLevel >= 75)
         {
@@ -802,31 +854,35 @@ bool Script_Base::Eat(bool pmForce)
         }
         else if (myLevel >= 65)
         {
-            foodEntry = 33451;
+            foodEntry = 33449;
         }
         else if (myLevel >= 55)
         {
-            foodEntry = 27854;
+            foodEntry = 27855;
         }
         else if (myLevel >= 45)
         {
-            foodEntry = 8932;
+            foodEntry = 8950;
         }
         else if (myLevel >= 35)
         {
-            foodEntry = 3927;
+            foodEntry = 4601;
         }
         else if (myLevel >= 25)
         {
-            foodEntry = 1707;
+            foodEntry = 4544;
         }
         else if (myLevel >= 15)
         {
-            foodEntry = 422;
+            foodEntry = 4542;
+        }
+        else if (myLevel >= 5)
+        {
+            foodEntry = 4541;
         }
         else
         {
-            result = false;
+            foodEntry = 4540;
         }
         if (result)
         {
@@ -878,9 +934,13 @@ bool Script_Base::Drink()
     }
     uint32 drinkEntry = 0;
     uint32 myLevel = me->getLevel();
-    if (myLevel >= 80)
+    if (myLevel >= 85)
     {
-        drinkEntry = 33445;
+        drinkEntry = 58257;
+    }
+    else if (myLevel >= 80)
+    {
+        drinkEntry = 58256;
     }
     else if (myLevel >= 75)
     {
@@ -890,17 +950,9 @@ bool Script_Base::Drink()
     {
         drinkEntry = 33444;
     }
-    else if (myLevel >= 65)
-    {
-        drinkEntry = 35954;
-    }
     else if (myLevel >= 60)
     {
         drinkEntry = 28399;
-    }
-    else if (myLevel >= 45)
-    {
-        drinkEntry = 8766;
     }
     else if (myLevel >= 45)
     {
@@ -918,9 +970,13 @@ bool Script_Base::Drink()
     {
         drinkEntry = 1205;
     }
+    else if (myLevel >= 5)
+    {
+        drinkEntry = 1179;
+    }
     else
     {
-        return false;
+        drinkEntry = 159;
     }
 
     if (!me->HasItemCount(drinkEntry, 1))

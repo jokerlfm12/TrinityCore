@@ -60,6 +60,7 @@ public:
 
     Item* GetItemInInventory(uint32 pmEntry);
     bool UseItem(Item* pmItem, Unit* pmTarget);
+    bool UseItem(Item* pmItem, Item* pmTarget);
     bool UseHealingPotion();
     bool UseManaPotion();
     uint32 FindSpellID(std::string pmSpellName);

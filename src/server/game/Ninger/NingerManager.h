@@ -40,11 +40,11 @@
 #endif
 
 #ifndef MELEE_MIN_DISTANCE
-# define MELEE_MIN_DISTANCE 0.1f
+# define MELEE_MIN_DISTANCE 0.0f
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
-# define MELEE_MAX_DISTANCE 2.0f
+# define MELEE_MAX_DISTANCE 1.5f
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
@@ -137,6 +137,10 @@ public:
 
 	std::unordered_map<uint32, uint32> tamableBeastEntryMap;
 	std::unordered_map<std::string, std::set<uint32>> spellNameEntryMap;
+
+    std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>>> characterTalentLearningMap;
+
+    std::unordered_map<uint32, uint32> instantPoisonEntryMap;
 
 	int onlineCheckDelay;
 	int offlineCheckDelay;

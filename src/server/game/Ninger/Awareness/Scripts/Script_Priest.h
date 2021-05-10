@@ -13,6 +13,18 @@ public:
     bool Buff(Unit* pmTarget);
     bool Revive(Player* pmTarget);
     bool Heal(Unit* pmTarget);
-    bool Heal_Holy(Unit* pmTarget);
+    bool Heal_Discipline(Unit* pmTarget);
+
+    int manaCheckDelay;
+    int powerWordShieldDelay;
+    int powerWordBarrierDelay;
+    int fearWardDelay;
+    int painSuppressionDelay;
+    int penanceDelay;
+    int innerFocusDelay;
+    int powerInfusionDelay;
+    int hymnOfHopeDelay;
+    int prayerOfMendingDelay;
+    int shadowfiendDelay;
 };
 #endif
