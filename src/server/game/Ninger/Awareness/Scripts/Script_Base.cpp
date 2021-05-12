@@ -12,18 +12,18 @@
 NingerMovement::NingerMovement(Player* pmMe)
 {
     me = pmMe;
-    chaseTarget = NULL;
+    ogChaseTarget = ObjectGuid::Empty;
     activeMovementType = NingerMovementType::NingerMovementType_None;
-    chaseDistanceMin = CONTACT_DISTANCE;
-    chaseDistanceMax = VISIBILITY_DISTANCE_NORMAL;
+    chaseDistanceMin = MELEE_MIN_DISTANCE;
+    chaseDistanceMax = MELEE_MAX_DISTANCE;
 }
 
 void NingerMovement::ResetMovement()
 {
-    chaseTarget = NULL;
+    ogChaseTarget = ObjectGuid::Empty;
     activeMovementType = NingerMovementType::NingerMovementType_None;
-    chaseDistanceMin = CONTACT_DISTANCE;
-    chaseDistanceMax = VISIBILITY_DISTANCE_NORMAL;
+    chaseDistanceMin = MELEE_MIN_DISTANCE;
+    chaseDistanceMax = MELEE_MAX_DISTANCE;
     if (me)
     {
         me->StopMoving();
@@ -80,32 +80,24 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
     chaseDistanceMax = pmChaseDistanceMax;
     if (activeMovementType == NingerMovementType::NingerMovementType_Chase)
     {
-        if (chaseTarget)
+        if (ogChaseTarget == pmChaseTarget->GetGUID())
         {
-            if (chaseTarget->GetGUID() == pmChaseTarget->GetGUID())
-            {
-                return true;
-            }
+            return true;
         }
     }
-    if (me->isMoving())
-    {
-        me->StopMoving();
-        me->GetMotionMaster()->Initialize();
-    }
-    chaseTarget = pmChaseTarget;
+    ResetMovement();
+    ogChaseTarget = pmChaseTarget->GetGUID();
     activeMovementType = NingerMovementType::NingerMovementType_Chase;
-
     if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
     {
         me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
     }
     bool distanceValid = false;
-    if (unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
+    if (unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
     {
         if (chaseDistanceMin > MELEE_MIN_DISTANCE)
         {
-            if (unitTargetDistance >= chaseDistanceMin)
+            if (unitTargetDistance > chaseDistanceMin)
             {
                 distanceValid = true;
             }
@@ -121,11 +113,11 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
     }
     if (distanceValid)
     {
-        if (me->IsWithinLOSInMap(chaseTarget))
+        if (me->IsWithinLOSInMap(pmChaseTarget))
         {
-            if (!me->isInFront(chaseTarget, M_PI / 4))
+            if (!me->isInFront(pmChaseTarget, M_PI / 4))
             {
-                me->SetFacingToObject(chaseTarget);
+                me->SetFacingToObject(pmChaseTarget);
             }
         }
     }
@@ -138,9 +130,9 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
         {
             dynamicAngle = M_PI / 8;
         }
-        float chaseAngle = chaseTarget->GetAngle(me);
+        float chaseAngle = pmChaseTarget->GetAngle(me);
         chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
-        chaseTarget->GetNearPoint(chaseTarget, nearX, nearY, nearZ, distanceInRange, chaseAngle);
+        pmChaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseAngle);
         MoveTargetPosition(nearX, nearY, nearZ);
     }
     return true;
@@ -261,78 +253,80 @@ void NingerMovement::Update(uint32 pmDiff)
     }
     case NingerMovementType::NingerMovementType_Chase:
     {
-        if (!chaseTarget)
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
         {
-            ResetMovement();
-            break;
-        }
-        if (me->GetMapId() != chaseTarget->GetMapId())
-        {
-            ResetMovement();
-            break;
-        }
-        if (chaseTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
-        {
-            if (Player* targetPlayer = chaseTarget->ToPlayer())
+            if (me->GetMapId() != chaseTarget->GetMapId())
             {
-                if (!targetPlayer->IsInWorld())
+                ResetMovement();
+                break;
+            }
+            if (chaseTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
+            {
+                if (Player* targetPlayer = chaseTarget->ToPlayer())
                 {
-                    ResetMovement();
-                    break;
-                }
-                else if (targetPlayer->IsBeingTeleported())
-                {
-                    ResetMovement();
-                    break;
+                    if (!targetPlayer->IsInWorld())
+                    {
+                        ResetMovement();
+                        break;
+                    }
+                    else if (targetPlayer->IsBeingTeleported())
+                    {
+                        ResetMovement();
+                        break;
+                    }
                 }
             }
-        }
-        float unitTargetDistance = me->GetDistance(chaseTarget);
-        if (unitTargetDistance > VISIBILITY_DISTANCE_LARGE)
-        {
-            ResetMovement();
-            break;
-        }
-        bool ok = false;
-        if (unitTargetDistance >= chaseDistanceMin && unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
-        {
-            if (me->IsWithinLOSInMap(chaseTarget))
+            float unitTargetDistance = me->GetDistance(chaseTarget);
+            if (unitTargetDistance > VISIBILITY_DISTANCE_LARGE)
+            {
+                ResetMovement();
+                break;
+            }
+            bool ok = false;
+            if (unitTargetDistance >= chaseDistanceMin && unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
+            {
+                if (me->IsWithinLOSInMap(chaseTarget))
+                {
+                    if (me->isMoving())
+                    {
+                        me->StopMoving();
+                    }
+                    if (!me->isInFront(chaseTarget, M_PI / 4))
+                    {
+                        me->SetFacingToObject(chaseTarget);
+                    }
+                    ok = true;
+                }
+            }
+            if (!ok)
             {
                 if (me->isMoving())
                 {
-                    me->StopMoving();
+                    ok = true;
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 4))
+            }
+            if (!ok)
+            {
+                if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
                 {
-                    me->SetFacingToObject(chaseTarget);
+                    me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
                 }
-                ok = true;
+                float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
+                float nearX = 0, nearY = 0, nearZ = 0;
+                float dynamicAngle = M_PI / 16;
+                if (distanceInRange < INTERACTION_DISTANCE)
+                {
+                    dynamicAngle = M_PI / 8;
+                }
+                float chaseAngle = chaseTarget->GetAngle(me);
+                chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
+                chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, distanceInRange, chaseAngle);
+                MoveTargetPosition(nearX, nearY, nearZ);
             }
         }
-        if (!ok)
+        else
         {
-            if (me->isMoving())
-            {
-                ok = true;
-            }
-        }
-        if (!ok)
-        {
-            if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-            {
-                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-            }
-            float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
-            float nearX = 0, nearY = 0, nearZ = 0;
-            float dynamicAngle = M_PI / 16;
-            if (distanceInRange < INTERACTION_DISTANCE)
-            {
-                dynamicAngle = M_PI / 8;
-            }
-            float chaseAngle = chaseTarget->GetAngle(me);
-            chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
-            chaseTarget->GetNearPoint(chaseTarget, nearX, nearY, nearZ, distanceInRange, chaseAngle);
-            MoveTargetPosition(nearX, nearY, nearZ);
+            ResetMovement();
         }
         break;
     }
@@ -353,6 +347,7 @@ Script_Base::Script_Base(Player* pmMe)
     healDelay = 0;
     cureDelay = 0;
     potionDelay = 0;
+    aoeCheckDelay = 0;
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
 
@@ -368,10 +363,13 @@ void Script_Base::Initialize()
         const SpellInfo* pS = sSpellMgr->GetSpellInfo(it->first);
         if (pS)
         {
-            std::string checkNameStr = std::string(pS->SpellName);
-            if (spellIDMap.find(checkNameStr) == spellIDMap.end())
+            if (!pS->IsPassive())
             {
-                spellIDMap[checkNameStr] = it->first;
+                std::string checkNameStr = std::string(pS->SpellName);
+                if (spellIDMap.find(checkNameStr) == spellIDMap.end())
+                {
+                    spellIDMap[checkNameStr] = it->first;
+                }
             }
         }
     }
@@ -393,6 +391,7 @@ void Script_Base::Reset()
     healDelay = 0;
     cureDelay = 0;
     potionDelay = 0;
+    aoeCheckDelay = 0;
 }
 
 bool Script_Base::Revive(Player* pmTarget)
@@ -417,6 +416,10 @@ void Script_Base::Update(uint32 pmDiff)
     if (potionDelay >= 0)
     {
         potionDelay -= pmDiff;
+    }
+    if (aoeCheckDelay >= 0)
+    {
+        aoeCheckDelay -= pmDiff;
     }
     rm->Update(pmDiff);
     return;
@@ -514,6 +517,8 @@ bool Script_Base::UseItem(Item* pmItem, Unit* pmTarget)
 
     if (const ItemTemplate* proto = pmItem->GetTemplate())
     {
+        me->SetSelection(pmTarget->GetGUID());
+        me->SetTarget(pmTarget->GetGUID());
         SpellCastTargets targets;
         targets.Update(pmTarget);
         me->CastItemUseSpell(pmItem, targets, 1, 0);
@@ -597,6 +602,19 @@ uint32 Script_Base::FindSpellID(std::string pmSpellName)
     {
         return spellIDMap[pmSpellName];
     }
+    //for (std::unordered_map<std::string, uint32>::iterator sIT = spellIDMap.begin(); sIT != spellIDMap.end(); sIT++)
+    //{
+    //    if (sIT->first == pmSpellName)
+    //    {
+    //        if (const SpellInfo* pS = sSpellMgr->GetSpellInfo(sIT->second))
+    //        {
+    //            if (!pS->IsPassive())
+    //            {
+    //                return sIT->second;
+    //            }
+    //        }
+    //    }
+    //}
 
     return 0;
 }

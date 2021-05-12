@@ -108,6 +108,7 @@ class boss_broggok : public CreatureScript
                     case ACTION_ACTIVATE_BROGGOK:
                         me->SetReactState(REACT_AGGRESSIVE);
                         me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                         me->SetImmuneToAll(false);
                         events.ScheduleEvent(EVENT_SLIME_SPRAY, 10000);
                         events.ScheduleEvent(EVENT_POISON_BOLT, 7000);

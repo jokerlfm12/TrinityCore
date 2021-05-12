@@ -9,7 +9,7 @@ enum NingerEntityState :uint32
     NingerEntityState_CheckAccount,
     NingerEntityState_CreateAccount,
     NingerEntityState_CheckCharacter,
-    NingerEntityState_CreateCharacter,    
+    NingerEntityState_CreateCharacter,
     NingerEntityState_CheckLogin,
     NingerEntityState_DoLogin,
     NingerEntityState_Initialize,
@@ -17,6 +17,8 @@ enum NingerEntityState :uint32
     NingerEntityState_Exit,
     NingerEntityState_CheckLogoff,
     NingerEntityState_DoLogoff,
+    NingerEntityState_RedoLogin,
+    NingerEntityState_CheckRedoLogin,
 };
 
 class NingerEntity

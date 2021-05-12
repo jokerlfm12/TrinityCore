@@ -32,7 +32,7 @@ public:
 
 public:
     Player* me;
-    Unit* chaseTarget;
+    ObjectGuid ogChaseTarget;
     Position positionTarget;
     uint32 activeMovementType;
     float chaseDistanceMin;
@@ -90,6 +90,7 @@ public:
     int healDelay;
     int cureDelay;
     int potionDelay;
+    int aoeCheckDelay;
 
 };
 #endif

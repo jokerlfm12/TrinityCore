@@ -146,7 +146,7 @@ void NingerEntity::Update(uint32 pmDiff)
 			{
                 if (sNingerManager->InitializeCharacter(me, target_level))
                 {
-                    entityState = NingerEntityState::NingerEntityState_DoLogoff;
+                    entityState = NingerEntityState::NingerEntityState_RedoLogin;
                 }
                 else
                 {
@@ -197,7 +197,7 @@ void NingerEntity::Update(uint32 pmDiff)
 			sNingerManager->LogoutNinger(character_id);
 			entityState = NingerEntityState::NingerEntityState_CheckLogoff;
 			break;
-		}
+		}        
 		case NingerEntityState::NingerEntityState_CheckLogoff:
 		{
 			ObjectGuid guid = ObjectGuid(HighGuid::Player, character_id);
@@ -210,6 +210,24 @@ void NingerEntity::Update(uint32 pmDiff)
 			entityState = NingerEntityState::NingerEntityState_OffLine;
 			break;
 		}
+        case NingerEntityState::NingerEntityState_RedoLogin:
+        {
+            sNingerManager->LogoutNinger(character_id);
+            entityState = NingerEntityState::NingerEntityState_CheckRedoLogin;
+            break;
+        }
+        case NingerEntityState::NingerEntityState_CheckRedoLogin:
+        {
+            ObjectGuid guid = ObjectGuid(HighGuid::Player, character_id);
+            if (Player* me = ObjectAccessor::FindPlayer(guid))
+            {
+                sLog->outMessage("ninger", LogLevel::LOG_LEVEL_ERROR, "Log out ninger %s failed", me->GetName());
+                entityState = NingerEntityState::NingerEntityState_None;
+                break;
+            }
+            entityState = NingerEntityState::NingerEntityState_DoLogin;
+            break;
+        }
 		default:
 		{
 			checkDelay = urand(5 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 10 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);

@@ -52,14 +52,16 @@ Awareness_Base::Awareness_Base(Player* pmMe)
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMax = FOLLOW_FAR_DISTANCE;
         sb = new Script_Hunter(me);
         break;
     }
     case Classes::CLASS_SHAMAN:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         sb = new Script_Shaman(me);
         break;
     }
@@ -71,13 +73,15 @@ Awareness_Base::Awareness_Base(Player* pmMe)
     }
     case Classes::CLASS_WARLOCK:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         sb = new Script_Warlock(me);
         break;
     }
     case Classes::CLASS_PRIEST:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         sb = new Script_Priest(me);
         break;
     }
@@ -88,7 +92,8 @@ Awareness_Base::Awareness_Base(Player* pmMe)
     }
     case Classes::CLASS_MAGE:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         sb = new Script_Mage(me);
         break;
     }
@@ -153,13 +158,15 @@ void Awareness_Base::Reset()
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMax = FOLLOW_FAR_DISTANCE;
         break;
     }
     case Classes::CLASS_SHAMAN:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         break;
     }
     case Classes::CLASS_PALADIN:
@@ -169,12 +176,14 @@ void Awareness_Base::Reset()
     }
     case Classes::CLASS_WARLOCK:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         break;
     }
     case Classes::CLASS_PRIEST:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         break;
     }
     case Classes::CLASS_ROGUE:
@@ -183,7 +192,8 @@ void Awareness_Base::Reset()
     }
     case Classes::CLASS_MAGE:
     {
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMax = RANGE_DPS_DISTANCE;
         break;
     }
     case Classes::CLASS_DRUID:
@@ -217,7 +227,7 @@ void Awareness_Base::Update(uint32 pmDiff)
         if (mySesson->isNinger)
         {
             sb->Update(pmDiff);
-            if (me->IsNonMeleeSpellCast(false))
+            if (me->IsNonMeleeSpellCast(false, false, true))
             {
                 return;
             }
@@ -289,18 +299,18 @@ void Awareness_Base::Update(uint32 pmDiff)
                             {
                                 if (leaderPlayer->IsInWorld())
                                 {
-                                    for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
-                                    {
-                                        Player::BoundInstancesMap& binds = me->GetBoundInstances(Difficulty(i));
-                                        for (Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end(); itr++)
-                                        {
-                                            InstanceSave* save = itr->second.save;
-                                            if (itr->first != me->GetMapId())
-                                            {
-                                                me->UnbindInstance(itr, Difficulty(i));
-                                            }
-                                        }
-                                    }
+                                    //for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
+                                    //{
+                                    //    Player::BoundInstancesMap& binds = me->GetBoundInstances(Difficulty(i));
+                                    //    for (Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end(); itr++)
+                                    //    {
+                                    //        InstanceSave* save = itr->second.save;
+                                    //        if (itr->first != me->GetMapId())
+                                    //        {
+                                    //            me->UnbindInstance(itr, Difficulty(i));
+                                    //        }
+                                    //    }
+                                    //}
                                     if (me->TeleportTo(leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ(), leaderPlayer->GetOrientation()))
                                     {
                                         if (me->IsAlive())
@@ -604,10 +614,24 @@ void Awareness_Base::Update(uint32 pmDiff)
                 else
                 {
                     combatTime = 0;
+                    if (randomTeleportDelay > 0)
+                    {
+                        randomTeleportDelay -= pmDiff;
+                        if (randomTeleportDelay <= 0)
+                        {
+                            randomTeleportDelay = urand(10 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                            sNingerManager->RandomTeleport(me);
+                            return;
+                        }
+                    }
+                    if (!me->IsAlive())
+                    {
+                        return;
+                    }
                     if (moveDelay > 0)
                     {
                         moveDelay -= pmDiff;
-                        if (moveDelay < 0)
+                        if (moveDelay <= 0)
                         {
                             moveDelay = 0;
                         }
@@ -631,16 +655,6 @@ void Awareness_Base::Update(uint32 pmDiff)
                             engageTarget = NULL;
                             engageDelay = 0;
                         }
-                        return;
-                    }
-                    if (randomTeleportDelay >= 0)
-                    {
-                        randomTeleportDelay -= pmDiff;
-                    }
-                    if (randomTeleportDelay < 0)
-                    {
-                        randomTeleportDelay = urand(10 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
-                        sNingerManager->RandomTeleport(me);
                         return;
                     }
                     if (eatDelay > 0)

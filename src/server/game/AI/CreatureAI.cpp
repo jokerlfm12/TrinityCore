@@ -261,26 +261,28 @@ bool CreatureAI::UpdateVictim()
 
 void CreatureAI::EngagementStart(Unit* who)
 {
-    if (_isEngaged)
+    if (!_isEngaged)
     {
-        TC_LOG_ERROR("scripts.ai", "CreatureAI::EngagementStart called even though creature is already engaged.");
-        return;
+        _isEngaged = true;
+        me->AtEngage(who);
     }
-    _isEngaged = true;
-
-    me->AtEngage(who);
+    else
+    {
+        //TC_LOG_ERROR("scripts.ai", "CreatureAI::EngagementStart called even though creature is already engaged.");
+    }
 }
 
 void CreatureAI::EngagementOver()
 {
-    if (!_isEngaged)
+    if (_isEngaged)
     {
-        TC_LOG_ERROR("scripts.ai", "CreatureAI::EngagementOver called even though creature is not currently engaged.");
-        return;
+        _isEngaged = false;
+        me->AtDisengage();
     }
-    _isEngaged = false;
-
-    me->AtDisengage();
+    else
+    {
+        //TC_LOG_ERROR("scripts.ai", "CreatureAI::EngagementOver called even though creature is not currently engaged.");
+    }
 }
 
 bool CreatureAI::_EnterEvadeMode(EvadeReason /*why*/)

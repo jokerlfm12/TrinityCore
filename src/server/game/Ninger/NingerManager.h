@@ -8,7 +8,7 @@
 #endif
 
 #ifndef AOE_TARGETS_RANGE
-# define AOE_TARGETS_RANGE 5.0f
+# define AOE_TARGETS_RANGE 4.0f
 #endif
 
 #ifndef MID_RANGE
@@ -44,7 +44,7 @@
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
-# define MELEE_MAX_DISTANCE 1.5f
+# define MELEE_MAX_DISTANCE 1.0f
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
@@ -52,7 +52,7 @@
 #endif
 
 #ifndef RANGE_DPS_DISTANCE
-# define RANGE_DPS_DISTANCE 28.0f
+# define RANGE_DPS_DISTANCE 38.0f
 #endif
 
 #ifndef RANGE_HEAL_DISTANCE

@@ -889,6 +889,7 @@ void Spell::EffectApplyAura(SpellEffIndex effIndex)
     if (!m_spellAura || !unitTarget)
         return;
     ASSERT(unitTarget == m_spellAura->GetOwner());
+
     m_spellAura->_ApplyEffectForTargets(effIndex);
 }
 

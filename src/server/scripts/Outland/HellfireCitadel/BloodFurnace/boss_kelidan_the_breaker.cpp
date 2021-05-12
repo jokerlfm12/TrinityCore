@@ -141,6 +141,7 @@ class boss_kelidan_the_breaker : public CreatureScript
                 }
                 me->SetReactState(REACT_AGGRESSIVE);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 me->SetImmuneToAll(false);
                 if (killer)
                     AttackStart(killer);
@@ -188,12 +189,17 @@ class boss_kelidan_the_breaker : public CreatureScript
                 {
                     if (check_Timer <= diff)
                     {
-                        if (!me->IsNonMeleeSpellCast(false))
-                            DoCast(me, SPELL_EVOCATION);
-                        check_Timer = 5000;
+                        if (me->IsNonMeleeSpellCast(false))
+                        {
+                            me->InterruptNonMeleeSpells(false);
+                        }
+                        DoCastSelf(SPELL_EVOCATION);
+                        check_Timer = 60000;
                     }
                     else
+                    {
                         check_Timer -= diff;
+                    }                        
                     return;
                 }
 
@@ -201,8 +207,9 @@ class boss_kelidan_the_breaker : public CreatureScript
                 {
                     if (Firenova_Timer <= diff)
                     {
-                        DoCast(me, SPELL_FIRE_NOVA, true);
+                        DoCastSelf(SPELL_FIRE_NOVA, true);
                         Firenova = false;
+                        SetCombatMovement(true);
                         ShadowVolley_Timer = 2000;
                     }
                     else
@@ -213,7 +220,7 @@ class boss_kelidan_the_breaker : public CreatureScript
 
                 if (ShadowVolley_Timer <= diff)
                 {
-                    DoCast(me, SPELL_SHADOW_BOLT_VOLLEY);
+                    DoCastSelf(SPELL_SHADOW_BOLT_VOLLEY);
                     ShadowVolley_Timer = 5000 + rand32() % 8000;
                 }
                 else
@@ -221,7 +228,7 @@ class boss_kelidan_the_breaker : public CreatureScript
 
                 if (Corruption_Timer <= diff)
                 {
-                    DoCast(me, SPELL_CORRUPTION);
+                    DoCastSelf(SPELL_CORRUPTION);
                     Corruption_Timer = 30000 + rand32() % 20000;
                 }
                 else
@@ -235,7 +242,8 @@ class boss_kelidan_the_breaker : public CreatureScript
                     Talk(SAY_NOVA);
 
                     me->AddAura(SPELL_BURNING_NOVA, me);
-
+                    me->StopMoving();
+                    SetCombatMovement(false);
                     if (IsHeroic())
                         DoTeleportAll(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
 

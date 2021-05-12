@@ -286,6 +286,7 @@ class instance_blood_furnace : public InstanceMapScript
                     if (Creature* prisoner = instance->GetCreature(*i))
                     {
                         prisoner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                        prisoner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                         prisoner->SetImmuneToAll(false);
                         prisoner->SetInCombatWithZone();
                     }

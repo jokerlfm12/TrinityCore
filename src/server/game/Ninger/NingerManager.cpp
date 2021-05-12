@@ -195,6 +195,29 @@ void NingerManager::InitializeManager()
     // discipline 
     priestTalentMap[0] = priestTalentMap_discipline;
     characterTalentLearningMap[Classes::CLASS_PRIEST] = priestTalentMap;
+    std::unordered_set<uint32> warlockTalentSet_destruction0;
+    warlockTalentSet_destruction0.insert(17788);
+    warlockTalentSet_destruction0.insert(17793);
+    warlockTalentSet_destruction0.insert(17815);
+    warlockTalentSet_destruction0.insert(17954);
+    warlockTalentSet_destruction0.insert(17877);
+    warlockTalentSet_destruction0.insert(47258);
+    warlockTalentSet_destruction0.insert(18119);
+    warlockTalentSet_destruction0.insert(91713);
+    warlockTalentSet_destruction0.insert(30293);
+    warlockTalentSet_destruction0.insert(91986);
+    warlockTalentSet_destruction0.insert(30283);
+    warlockTalentSet_destruction0.insert(47266);
+    warlockTalentSet_destruction0.insert(30299);
+    warlockTalentSet_destruction0.insert(80240);
+    warlockTalentSet_destruction0.insert(47220);
+    warlockTalentSet_destruction0.insert(50796);
+    std::unordered_map<uint32, std::unordered_set<uint32>> warlockTalentMap_destruction;
+    warlockTalentMap_destruction[warlockTalentMap_destruction.size()] = warlockTalentSet_destruction0;
+    std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>> warlockTalentMap;
+    // destruction 
+    warlockTalentMap[2] = warlockTalentMap_destruction;
+    characterTalentLearningMap[Classes::CLASS_WARLOCK] = warlockTalentMap;
 
     instantPoisonEntryMap.clear();
     instantPoisonEntryMap[10] = 6947;
@@ -250,6 +273,7 @@ void NingerManager::UpdateNingerManager(uint32 pmDiff)
     {
         onlineCheckDelay = sNingerConfig->OnlineCheckDelay;
         std::unordered_set<uint32> onlinePlayerLevelSet;
+        onlinePlayerLevelSet.clear();
         std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
         for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
         {
@@ -283,6 +307,7 @@ void NingerManager::UpdateNingerManager(uint32 pmDiff)
     {
         offlineCheckDelay = sNingerConfig->OfflineCheckDelay;
         std::unordered_set<uint32> onlinePlayerLevelSet;
+        onlinePlayerLevelSet.clear();
         std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
         for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
         {
@@ -407,11 +432,15 @@ uint32 NingerManager::GetCharacterRace(uint32 pmCharacterID)
 
 uint32 NingerManager::CreateNingerCharacter(uint32 pmAccountID)
 {
-    uint32  targetClass = Classes::CLASS_PALADIN;
+    uint32  targetClass = Classes::CLASS_ROGUE;
     uint32 classRandom = urand(0, 100);
-    if (classRandom < 70)
+    if (classRandom < 40)
     {
         targetClass = Classes::CLASS_ROGUE;
+    }
+    else if (classRandom < 75)
+    {
+        targetClass = Classes::CLASS_WARLOCK;
     }
     else
     {
@@ -542,9 +571,7 @@ bool NingerManager::LoginNinger(uint32 pmAccountID, uint32 pmCharacterID)
         loginSession = new WorldSession(pmAccountID, "ninger", 0, NULL, SEC_PLAYER, 3, 0, LOCALE_enUS, 0, false);
         sWorld->AddSession(loginSession);
     }
-    loginSession->isNinger = true;
-    WorldPacket p;
-    p << playerGuid;
+    loginSession->isNinger = true;    
     loginSession->HandlePlayerLogin(playerGuid);
     sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Log in character %d %d", pmAccountID, pmCharacterID);
 
@@ -724,124 +751,114 @@ bool NingerManager::PrepareNinger(Player* pmNinger)
     {
         return false;
     }
-
     InitializeEquipments(pmNinger, false);
-
     pmNinger->DurabilityRepairAll(false, 0, false);
-    if (pmNinger->getClass() == Classes::CLASS_HUNTER)
-    {
-        uint32 ammoEntry = 0;
-        Item* weapon = pmNinger->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
-        if (weapon)
-        {
-            if (const ItemTemplate* it = weapon->GetTemplate())
-            {
-                uint32 subClass = it->GetSubClass();
-                uint8 playerLevel = pmNinger->getLevel();
-                if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW || subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW)
-                {
-                    if (playerLevel >= 40)
-                    {
-                        ammoEntry = 11285;
-                    }
-                    else if (playerLevel >= 25)
-                    {
-                        ammoEntry = 3030;
-                    }
-                    else
-                    {
-                        ammoEntry = 2515;
-                    }
-                }
-                else if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN)
-                {
-                    if (playerLevel >= 40)
-                    {
-                        ammoEntry = 11284;
-                    }
-                    else if (playerLevel >= 25)
-                    {
-                        ammoEntry = 3033;
-                    }
-                    else
-                    {
-                        ammoEntry = 2519;
-                    }
-                }
-                if (ammoEntry > 0)
-                {
-                    if (!pmNinger->HasItemCount(ammoEntry, 100))
-                    {
-                        pmNinger->StoreNewItemInBestSlots(ammoEntry, 1000);
-                    }
-                }
-            }
-        }
-    }
-    else if (pmNinger->getClass() == Classes::CLASS_SHAMAN)
-    {
-        if (!pmNinger->HasItemCount(5175))
-        {
-            pmNinger->StoreNewItemInBestSlots(5175, 1);
-        }
-        if (!pmNinger->HasItemCount(5176))
-        {
-            pmNinger->StoreNewItemInBestSlots(5176, 1);
-        }
-    }
-    Pet* checkPet = pmNinger->GetPet();
-    if (checkPet)
-    {
-        checkPet->SetReactState(REACT_DEFENSIVE);
-        std::unordered_map<uint32, PetSpell> petSpellMap = checkPet->m_spells;
-        for (std::unordered_map<uint32, PetSpell>::iterator it = petSpellMap.begin(); it != petSpellMap.end(); it++)
-        {
-            if (it->second.active == ACT_DISABLED || it->second.active == ACT_ENABLED)
-            {
-                const SpellInfo* pS = sSpellMgr->GetSpellInfo(it->first);
-                if (pS)
-                {
-                    std::string checkNameStr = std::string(pS->SpellName);
-                    if (checkNameStr == "Prowl")
-                    {
-                        checkPet->ToggleAutocast(pS, false);
-                    }
-                    else if (checkNameStr == "Phase Shift")
-                    {
-                        checkPet->ToggleAutocast(pS, false);
-                    }
-                    else if (checkNameStr == "Cower")
-                    {
-                        checkPet->ToggleAutocast(pS, false);
-                    }
-                    else if (checkNameStr == "Growl")
-                    {
-                        if (pmNinger->GetGroup())
-                        {
-                            checkPet->ToggleAutocast(pS, false);
-                        }
-                        else
-                        {
-                            checkPet->ToggleAutocast(pS, true);
-                        }
-                    }
-                    else
-                    {
-                        checkPet->ToggleAutocast(pS, true);
-                    }
-                }
-            }
-        }
-    }
 
-    uint32 characterMaxTalentTab = pmNinger->GetMaxTalentCountTab();
-    if (Awareness_Base* activeAwareness = pmNinger->awarenessMap[pmNinger->activeAwarenessIndex])
-    {
-        if (Script_Base* sb = activeAwareness->sb)
-        {
-            sb->maxTalentTab = characterMaxTalentTab;
-        }
-    }
+    //if (pmNinger->getClass() == Classes::CLASS_HUNTER)
+    //{
+    //    uint32 ammoEntry = 0;
+    //    Item* weapon = pmNinger->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
+    //    if (weapon)
+    //    {
+    //        if (const ItemTemplate* it = weapon->GetTemplate())
+    //        {
+    //            uint32 subClass = it->GetSubClass();
+    //            uint8 playerLevel = pmNinger->getLevel();
+    //            if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW || subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW)
+    //            {
+    //                if (playerLevel >= 40)
+    //                {
+    //                    ammoEntry = 11285;
+    //                }
+    //                else if (playerLevel >= 25)
+    //                {
+    //                    ammoEntry = 3030;
+    //                }
+    //                else
+    //                {
+    //                    ammoEntry = 2515;
+    //                }
+    //            }
+    //            else if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN)
+    //            {
+    //                if (playerLevel >= 40)
+    //                {
+    //                    ammoEntry = 11284;
+    //                }
+    //                else if (playerLevel >= 25)
+    //                {
+    //                    ammoEntry = 3033;
+    //                }
+    //                else
+    //                {
+    //                    ammoEntry = 2519;
+    //                }
+    //            }
+    //            if (ammoEntry > 0)
+    //            {
+    //                if (!pmNinger->HasItemCount(ammoEntry, 100))
+    //                {
+    //                    pmNinger->StoreNewItemInBestSlots(ammoEntry, 1000);
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+    //else if (pmNinger->getClass() == Classes::CLASS_SHAMAN)
+    //{
+    //    if (!pmNinger->HasItemCount(5175))
+    //    {
+    //        pmNinger->StoreNewItemInBestSlots(5175, 1);
+    //    }
+    //    if (!pmNinger->HasItemCount(5176))
+    //    {
+    //        pmNinger->StoreNewItemInBestSlots(5176, 1);
+    //    }
+    //}
+    //Pet* checkPet = pmNinger->GetPet();
+    //if (checkPet)
+    //{
+    //    checkPet->SetReactState(REACT_DEFENSIVE);
+    //    std::unordered_map<uint32, PetSpell> petSpellMap = checkPet->m_spells;
+    //    for (std::unordered_map<uint32, PetSpell>::iterator it = petSpellMap.begin(); it != petSpellMap.end(); it++)
+    //    {
+    //        if (it->second.active == ACT_DISABLED || it->second.active == ACT_ENABLED)
+    //        {
+    //            const SpellInfo* pS = sSpellMgr->GetSpellInfo(it->first);
+    //            if (pS)
+    //            {
+    //                std::string checkNameStr = std::string(pS->SpellName);
+    //                if (checkNameStr == "Prowl")
+    //                {
+    //                    checkPet->ToggleAutocast(pS, false);
+    //                }
+    //                else if (checkNameStr == "Phase Shift")
+    //                {
+    //                    checkPet->ToggleAutocast(pS, false);
+    //                }
+    //                else if (checkNameStr == "Cower")
+    //                {
+    //                    checkPet->ToggleAutocast(pS, false);
+    //                }
+    //                else if (checkNameStr == "Growl")
+    //                {
+    //                    if (pmNinger->GetGroup())
+    //                    {
+    //                        checkPet->ToggleAutocast(pS, false);
+    //                    }
+    //                    else
+    //                    {
+    //                        checkPet->ToggleAutocast(pS, true);
+    //                    }
+    //                }
+    //                else
+    //                {
+    //                    checkPet->ToggleAutocast(pS, true);
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
 
     pmNinger->Say("Ready", Language::LANG_UNIVERSAL);
 
@@ -1070,8 +1087,7 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                         }
                         if (Awareness_Base* memberAwareness = member->awarenessMap[member->activeAwarenessIndex])
                         {
-                            memberAwareness->Report();
-                            memberAwareness->groupRole = GroupRole::GroupRole_DPS;
+                            memberAwareness->Reset();
                             if (Script_Base* sb = memberAwareness->sb)
                             {
                                 switch (member->getClass())
@@ -1106,7 +1122,6 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                     break;
                                 }
                                 }
-                                memberAwareness->Reset();
                                 if (member->getClass() == Classes::CLASS_PALADIN)
                                 {
                                     if (Script_Paladin* sp = (Script_Paladin*)sb)
@@ -1230,11 +1245,12 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                                         }
                                         else
                                         {
-                                            swl->curseType = WarlockCurseType::WarlockCurseType_Agony;
+                                            swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
                                         }
                                     }
                                 }
                             }
+                            memberAwareness->Report();
                         }
                     }
                 }
@@ -1488,6 +1504,36 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+    else if (commandName == "aura")
+    {
+        Unit* checkTarget = pmPlayer->GetSelectedUnit();
+        if (commandVector.size() > 1)
+        {
+            std::string checkType = commandVector.at(1);
+            if (checkType == "has")
+            {
+                if (commandVector.size() > 2)
+                {
+                    std::string spellIDStr = commandVector.at(2);
+                    uint32 spellID = atoi(spellIDStr.c_str());
+                    if (!checkTarget)
+                    {
+                        checkTarget = pmPlayer;
+                    }
+                    std::ostringstream replyStream;
+                    if (checkTarget->HasAura(spellID))
+                    {
+                        replyStream << "has aura " << spellID;
+                    }
+                    else
+                    {
+                        replyStream << "no aura " << spellID;
+                    }
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
                 }
             }
         }
@@ -2144,6 +2190,7 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                             pmReceiver->AttackStop();
                             if (Script_Base* sb = receiverAI->sb)
                             {
+                                sb->PetStop();
                                 sb->ClearTarget();
                             }
                             receiverAI->moveDelay = 2000;
@@ -2673,10 +2720,6 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                                     {
                                         swl->curseType = WarlockCurseType::WarlockCurseType_Element;
                                     }
-                                    else if (curseName == "agony")
-                                    {
-                                        swl->curseType = WarlockCurseType::WarlockCurseType_Agony;
-                                    }
                                     else if (curseName == "weakness")
                                     {
                                         swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
@@ -2700,11 +2743,6 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                                 case WarlockCurseType::WarlockCurseType_Element:
                                 {
                                     replyStream << "element";
-                                    break;
-                                }
-                                case WarlockCurseType::WarlockCurseType_Agony:
-                                {
-                                    replyStream << "agony";
                                     break;
                                 }
                                 case WarlockCurseType::WarlockCurseType_Weakness:
@@ -3537,7 +3575,7 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
 }
 
 void NingerManager::RandomTeleport(Player* pmTargetPlayer)
-{
+{    
     if (!pmTargetPlayer)
     {
         return;
@@ -3551,7 +3589,6 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
         pmTargetPlayer->ResurrectPlayer(1.0f);
         pmTargetPlayer->SpawnCorpseBones();
     }
-    pmTargetPlayer->RemoveAllAttackers();
     pmTargetPlayer->ClearInCombat();
     pmTargetPlayer->StopMoving();
     pmTargetPlayer->GetMotionMaster()->Initialize();

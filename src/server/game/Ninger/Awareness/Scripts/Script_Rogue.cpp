@@ -1,6 +1,7 @@
 #include "Script_Rogue.h"
 #include "Group.h"
 #include "Spell.h"
+#include "GridNotifiers.h"
 
 Script_Rogue::Script_Rogue(Player* pmMe) :Script_Base(pmMe)
 {
@@ -174,8 +175,8 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
                         }
                     }
                 }
-				else
-				{
+                else
+                {
                     if (energy > 15)
                     {
                         if (kickDelay < 0)
@@ -191,8 +192,8 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
                             }
                         }
                     }
-					if (energy > 25)
-					{
+                    if (energy > 25)
+                    {
                         if (dismantleDelay < 0)
                         {
                             dismantleDelay = 1000;
@@ -220,7 +221,43 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
                                 }
                             }
                         }
-					}
+                    }
+                    if (pmAOE)
+                    {
+                        if (aoeCheckDelay < 0)
+                        {
+                            aoeCheckDelay = 1000;
+                            uint32 targetsCount = 0;
+                            std::list<Unit*> unitList;
+                            Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
+                            Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                            Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
+                            if (!unitList.empty())
+                            {
+                                for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                {
+                                    if (Unit* eachUnit = *uIT)
+                                    {
+                                        if (me->IsValidAttackTarget(eachUnit))
+                                        {
+                                            targetsCount++;
+                                        }
+                                    }
+                                }
+                            }
+                            if (targetsCount > 1)
+                            {
+                                if (CastSpell(me, "Blade Flurry", true))
+                                {
+                                    return true;
+                                }
+                            }
+                            else
+                            {
+                                CancelAura("Blade Flurry");
+                            }
+                        }
+                    }
                     if (killingSpreeDelay < 0)
                     {
                         killingSpreeDelay = 1000;
@@ -262,16 +299,42 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
                     }
                     if (energy > 25)
                     {
-                        if (comboPoints >= 1)
+                        if (sliceDelay < 0)
                         {
-                            if (sliceDelay < 0)
+                            sliceDelay = 1000;
+                            if (CastSpell(pmTarget, "Slice and Dice"))
                             {
-                                sliceDelay = 1000;
-                                if (CastSpell(pmTarget, "Slice and Dice"))
-                                {
-                                    sliceDelay = 14000;
-                                    return true;
-                                }
+                                sliceDelay = 14000;
+                                return true;
+                            }
+                        }
+                    }
+                    if (energy > 35)
+                    {
+                        bool finish = false;
+                        if (comboPoints >= 5)
+                        {
+                            finish = true;
+                        }
+                        else if (comboPoints >= 4)
+                        {
+                            if (urand(0, 100) < 80)
+                            {
+                                finish = true;
+                            }
+                        }
+                        else if (comboPoints >= 2)
+                        {
+                            if (urand(0, 100) < 50)
+                            {
+                                finish = true;
+                            }
+                        }
+                        if (finish)
+                        {
+                            if (CastSpell(pmTarget, "Eviscerate"))
+                            {
+                                return true;
                             }
                         }
                     }
@@ -282,47 +345,16 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
                             revealingStrikeDelay = 1000;
                             if (CastSpell(pmTarget, "Revealing Strike", true))
                             {
+                                revealingStrikeDelay = 10000;
                                 return true;
                             }
                         }
-                    }
-                    if (energy > 35)
-                    {
-                        bool eviscerate = false;
-                        if (comboPoints >= 5)
+                        if (CastSpell(pmTarget, "Sinister Strike"))
                         {
-                            eviscerate = true;
-                        }
-                        else if (comboPoints >= 4)
-                        {
-                            if (urand(0, 100) < 80)
-                            {
-                                eviscerate = true;
-                            }
-                        }
-                        else if (comboPoints >= 3)
-                        {
-                            if (urand(0, 100) < 50)
-                            {
-                                eviscerate = true;
-                            }
-                        }
-                        if (eviscerate)
-                        {
-                            if (CastSpell(pmTarget, "Eviscerate"))
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
-					if (energy > 39)
-					{
-						if (CastSpell(pmTarget, "Sinister Strike"))
-						{
-							return true;
-						}
-					}
-				}
+                }
 				return true;
 			}
 		}

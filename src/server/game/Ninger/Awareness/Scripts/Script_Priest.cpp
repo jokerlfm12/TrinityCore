@@ -74,7 +74,64 @@ void Script_Priest::Reset()
 
 bool Script_Priest::Revive(Player* pmTarget)
 {
-    return false;
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false))
+    {
+        return true;
+    }
+    if (pmTarget)
+    {
+        if (!pmTarget->IsAlive())
+        {
+            if (!pmTarget->IsResurrectRequested())
+            {
+                float targetDistance = me->GetDistance(pmTarget);
+                if (targetDistance < RANGE_HEAL_DISTANCE)
+                {
+                    if (CastSpell(pmTarget, "Resurrection"))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        if (ogReviveTarget.IsEmpty())
+        {
+            if (Group* myGroup = me->GetGroup())
+            {
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (Revive(member))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            Player* targetPlayer = ObjectAccessor::FindPlayer(ogReviveTarget);
+            if (Revive(targetPlayer))
+            {
+                return true;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool Script_Priest::Cure(Unit* pmTarget)
@@ -100,20 +157,23 @@ bool Script_Priest::Cure(Unit* pmTarget)
                     for (auto auraIT = auraList.begin(), end = auraList.end(); auraIT != end; ++auraIT)
                     {
                         const SpellInfo* pST = (*auraIT)->GetSpellInfo();
-                        if (!pST->IsPositive())
+                        if (!pST->IsPassive())
                         {
-                            if (pST->Dispel == DispelType::DISPEL_MAGIC)
+                            if (!pST->IsPositive())
                             {
-                                if (CastSpell(pmTarget, "Dispel Magic"))
+                                if (pST->Dispel == DispelType::DISPEL_MAGIC)
                                 {
-                                    return true;
+                                    if (CastSpell(pmTarget, "Dispel Magic"))
+                                    {
+                                        return true;
+                                    }
                                 }
-                            }
-                            else if (pST->Dispel == DispelType::DISPEL_DISEASE)
-                            {
-                                if (CastSpell(pmTarget, "Cure Disease"))
+                                else if (pST->Dispel == DispelType::DISPEL_DISEASE)
                                 {
-                                    return true;
+                                    if (CastSpell(pmTarget, "Cure Disease"))
+                                    {
+                                        return true;
+                                    }
                                 }
                             }
                         }
@@ -162,7 +222,7 @@ bool Script_Priest::Heal(Unit* pmTarget)
     {
         manaCheckDelay = 1000;
         int manaPCT = me->GetPower(Powers::POWER_MANA) * 100 / me->GetMaxPower(Powers::POWER_MANA);
-        if (manaPCT < 10)
+        if (manaPCT < 20)
         {
             if (hymnOfHopeDelay < 0)
             {
@@ -246,138 +306,141 @@ bool Script_Priest::Heal_Discipline(Unit* pmTarget)
         if (pmTarget->IsAlive())
         {
             float healthPCT = pmTarget->GetHealthPct();
-            if (powerWordShieldDelay < 0)
+
+            if (pmTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
             {
-                powerWordShieldDelay = 500;
-                if (pmTarget->IsInCombat())
+                if (Player* targetPlayer = pmTarget->ToPlayer())
                 {
-                    if (!sNingerManager->HasAura(pmTarget, "Weakened Soul"))
+                    if (Awareness_Base* ab = targetPlayer->awarenessMap[targetPlayer->activeAwarenessIndex])
                     {
-                        if (CastSpell(pmTarget, "Power Word: Shield"))
+                        if (ab->groupRole == GroupRole::GroupRole_Tank)
                         {
-                            return true;
+                            if (pmTarget->IsInCombat())
+                            {
+                                if (powerWordShieldDelay < 0)
+                                {
+                                    powerWordShieldDelay = 1000;
+                                    if (!sNingerManager->HasAura(pmTarget, "Weakened Soul"))
+                                    {
+                                        if (CastSpell(pmTarget, "Power Word: Shield"))
+                                        {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (prayerOfMendingDelay < 0)
+                            {
+                                prayerOfMendingDelay = 1000;
+                                if (CastSpell(pmTarget, "Prayer of Mending", true))
+                                {
+                                    prayerOfMendingDelay = 11000;
+                                    return true;
+                                }
+                            }
+                            if (healthPCT < 95.0f)
+                            {
+                                if (CastSpell(pmTarget, "Renew", true, true))
+                                {
+                                    return true;
+                                }
+                            }
+                            if (healthPCT > 70.0f && healthPCT < 90.0f)
+                            {
+                                if (CastSpell(pmTarget, "Heal"))
+                                {
+                                    return true;
+                                }
+                            }
+                            if (healthPCT < 70.0f)
+                            {
+                                if (penanceDelay < 0)
+                                {
+                                    penanceDelay = 1000;
+                                    if (CastSpell(pmTarget, "Penance"))
+                                    {
+                                        penanceDelay = 13000;
+                                        return true;
+                                    }
+                                }
+                            }
+                            if (pmTarget->IsInCombat())
+                            {
+                                if (healthPCT > 40.0f && healthPCT < 70.0f)
+                                {
+                                    if (powerInfusionDelay < 0)
+                                    {
+                                        powerInfusionDelay = 1000;
+                                        if (!sNingerManager->HasAura(me, "Inner Focus"))
+                                        {
+                                            if (CastSpell(me, "Power Infusion"))
+                                            {
+                                                powerInfusionDelay = 121000;
+                                            }
+                                        }
+                                    }
+                                    else if (innerFocusDelay < 0)
+                                    {
+                                        innerFocusDelay = 1000;
+                                        if (!sNingerManager->HasAura(me, "Power Infusion"))
+                                        {
+                                            if (CastSpell(me, "Inner Focus"))
+                                            {
+                                                innerFocusDelay = 46000;
+                                            }
+                                        }
+                                    }
+                                    if (CastSpell(pmTarget, "Greater Heal"))
+                                    {
+                                        return true;
+                                    }
+                                }
+                                if (healthPCT < 40.0f)
+                                {
+                                    if (powerWordBarrierDelay < 0)
+                                    {
+                                        powerWordBarrierDelay = 1000;
+                                        if (!sNingerManager->HasAura(pmTarget, "Pain Suppression"))
+                                        {
+                                            if (CastSpell(pmTarget, "Power Word: Barrier"))
+                                            {
+                                                powerWordBarrierDelay = 181000;
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    else if (painSuppressionDelay < 0)
+                                    {
+                                        painSuppressionDelay = 1000;
+                                        if (!sNingerManager->HasAura(pmTarget, "Power Word: Barrier"))
+                                        {
+                                            if (CastSpell(pmTarget, "Pain Suppression"))
+                                            {
+                                                painSuppressionDelay = 181000;
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (CastSpell(pmTarget, "Flash Heal"))
+                                {
+                                    return true;
+                                }
+                            }
                         }
                     }
                 }
             }
-            if (prayerOfMendingDelay < 0)
-            {
-                prayerOfMendingDelay = 1000;
-                if (CastSpell(pmTarget, "Prayer of Mending", true))
-                {
-                    prayerOfMendingDelay = 11000;
-                    return true;
-                }
-            }
-            if (healthPCT < 90.0f)
+            if (healthPCT < 80.0f)
             {
                 if (CastSpell(pmTarget, "Renew", true, true))
                 {
                     return true;
                 }
-            }
-            if (healthPCT > 70.0f && healthPCT < 90.0f)
-            {
                 if (CastSpell(pmTarget, "Heal"))
                 {
                     return true;
                 }
-            }
-            if (healthPCT < 70.0f)
-            {
-                if (penanceDelay < 0)
-                {
-                    penanceDelay = 1000;
-                    if (CastSpell(pmTarget, "Penance"))
-                    {
-                        penanceDelay = 13000;
-                        return true;
-                    }
-                }
-            }
-            if (healthPCT > 40.0f && healthPCT < 70.0f)
-            {
-                if (pmTarget->IsInCombat())
-                {
-                    if (powerInfusionDelay < 0)
-                    {
-                        powerInfusionDelay = 1000;
-                        if (CastSpell(me, "Power Infusion"))
-                        {
-                            powerInfusionDelay = 121000;
-                            return true;
-                        }
-                    }
-                    else if (innerFocusDelay < 0)
-                    {
-                        innerFocusDelay = 1000;
-                        if (CastSpell(me, "Inner Focus"))
-                        {
-                            innerFocusDelay = 46000;
-                            return true;
-                        }
-                    }
-                }
-                if (CastSpell(pmTarget, "Greater Heal"))
-                {
-                    return true;
-                }
-            }
-            if (pmTarget->IsInCombat())
-            {
-                if (healthPCT < 40.0f)
-                {
-                    if (powerWordBarrierDelay < 0)
-                    {
-                        powerWordBarrierDelay = 1000;
-                        if (pmTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
-                        {
-                            if (Player* targetPlayer = pmTarget->ToPlayer())
-                            {
-                                if (Awareness_Base* ab = targetPlayer->awarenessMap[targetPlayer->activeAwarenessIndex])
-                                {
-                                    if (ab->groupRole == GroupRole::GroupRole_Tank)
-                                    {
-                                        if (CastSpell(targetPlayer, "Power Word: Barrier"))
-                                        {
-                                            powerWordBarrierDelay = 181000;
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else if (painSuppressionDelay < 0)
-                    {
-                        painSuppressionDelay = 1000;
-                        if (pmTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
-                        {
-                            if (Player* targetPlayer = pmTarget->ToPlayer())
-                            {
-                                if (Awareness_Base* ab = targetPlayer->awarenessMap[targetPlayer->activeAwarenessIndex])
-                                {
-                                    if (ab->groupRole == GroupRole::GroupRole_Tank)
-                                    {
-                                        if (CastSpell(targetPlayer, "Pain Suppression"))
-                                        {
-                                            painSuppressionDelay = 181000;
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (CastSpell(pmTarget, "Flash Heal"))
-                    {
-                        return true;
-                    }
-                }
-            }
-            if (CastSpell(pmTarget, "Heal"))
-            {
-                return true;
             }
         }
     }

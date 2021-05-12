@@ -105,7 +105,12 @@ enum WarlockSpells
     SPELL_WARLOCK_SOUL_SWAP_MOD_COST                = 92794,
     SPELL_WARLOCK_SOUL_SWAP_DOT_MARKER              = 92795,
     SPELL_WARLOCK_UNSTABLE_AFFLICTION               = 30108,
-    SPELL_WARLOCK_UNSTABLE_AFFLICTION_DISPEL        = 31117
+    SPELL_WARLOCK_UNSTABLE_AFFLICTION_DISPEL        = 31117,
+
+    // lfm spell scripts
+    SPELL_WARLOCK_BANE_OF_HAVOC = 80240,
+    SPELL_WARLOCK_BANE_OF_HAVOC_DAMAGE = 85455,
+    SPELL_WARLOCK_BANE_OF_HAVOC_TRACK = 85466
 };
 
 enum WarlockSpellIcons
@@ -1921,6 +1926,99 @@ private:
     uint32 _debuffSpellId = 0;
 };
 
+
+class spell_warl_bane_of_havoc : public SpellScriptLoader
+{
+public:
+    spell_warl_bane_of_havoc() : SpellScriptLoader("spell_warl_bane_of_havoc") { }
+
+    class spell_warl_bane_of_havoc_AuraScript : public AuraScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo(
+                {
+                    SPELL_WARLOCK_BANE_OF_HAVOC,
+                });
+        }
+
+        void OnApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            if (Unit* caster = GetCaster())
+            {
+                caster->CastSpell(caster, SPELL_WARLOCK_BANE_OF_HAVOC_TRACK, true);
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectApply.Register(&spell_warl_bane_of_havoc_AuraScript::OnApply, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);            
+        }
+    };
+
+    AuraScript* GetAuraScript() const
+    {
+        return new spell_warl_bane_of_havoc_AuraScript();
+    }
+};
+
+class spell_warl_bane_of_havoc_track : public SpellScriptLoader
+{
+public:
+    spell_warl_bane_of_havoc_track() : SpellScriptLoader("spell_warl_bane_of_havoc_track") { }
+
+    class spell_warl_bane_of_havoc_track_AuraScript : public AuraScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo(
+                {
+                    SPELL_WARLOCK_BANE_OF_HAVOC_TRACK,
+                });
+        }
+
+        void OnProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
+        {
+            PreventDefaultAction();
+
+            int32 damage = int32(eventInfo.GetDamageInfo()->GetDamage()) * 0.15f;
+
+            if (Unit* caster = GetCaster())
+            {
+                Unit::AuraList& scAuras = caster->GetLimitedCastAuras(SPELL_WARLOCK_BANE_OF_HAVOC);
+
+                for (Unit::AuraList::iterator itr = scAuras.begin(); itr != scAuras.end(); ++itr)
+                {
+                    if ((*itr)->GetSpellInfo()->Id == SPELL_WARLOCK_BANE_OF_HAVOC)
+                    {
+                        if (Unit* target = (*itr)->GetUnitOwner())
+                        {
+                            if (caster->GetDistance2d(target) < 40.0f && target != eventInfo.GetActionTarget())
+                            {
+                                CastSpellExtraArgs csea;
+                                csea.AddSpellMod(SpellValueMod::SPELLVALUE_BASE_POINT0, damage);
+                                caster->CastSpell(target, SPELL_WARLOCK_BANE_OF_HAVOC_DAMAGE, csea);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectProc.Register(&spell_warl_bane_of_havoc_track_AuraScript::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_warl_bane_of_havoc_track_AuraScript();
+    }
+};
+
+
 void AddSC_warlock_spell_scripts()
 {
     RegisterSpellScript(spell_warl_aftermath);
@@ -1966,4 +2064,8 @@ void AddSC_warlock_spell_scripts()
     new spell_warl_soul_swap_override();
     new spell_warl_soulshatter();
     new spell_warl_unstable_affliction();
+
+    // lfm spell scripts  
+    new spell_warl_bane_of_havoc();
+    new spell_warl_bane_of_havoc_track();
 }
