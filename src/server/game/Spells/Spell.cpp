@@ -5463,7 +5463,7 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGoT
     uint8 eff = m_spellInfo->Effects[i].Effect;
 
     TC_LOG_DEBUG("spells", "Spell: %u Effect : %u", m_spellInfo->Id, eff);
-
+    
     damage = CalculateDamage(i, unitTarget);
 
     bool preventDefault = CallScriptEffectHandlers((SpellEffIndex)i, mode);

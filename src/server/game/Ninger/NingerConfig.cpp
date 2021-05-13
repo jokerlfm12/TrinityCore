@@ -170,6 +170,8 @@ bool NingerConfig::StartNinger()
     OnlineCheckDelay = GetIntDefault("OnlineCheckDelay", 60000);
     OfflineCheckDelay = GetIntDefault("OfflineCheckDelay", 3600000);
     NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);
+    NingerRandomTeleportMinRange = GetFloatDefault("NingerRandomTeleportMinRange", 200.0f);
+    NingerRandomTeleportMaxRange = GetFloatDefault("NingerRandomTeleportMinRange", 400.0f);
 
     if (Enable == 0)
     {

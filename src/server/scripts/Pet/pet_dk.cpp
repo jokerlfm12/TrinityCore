@@ -137,6 +137,125 @@ class npc_pet_dk_guardian : public CreatureScript
         }
 };
 
+// lfm dk ghoul 
+class npc_dk_ghoul : public CreatureScript
+{
+public:
+    npc_dk_ghoul() : CreatureScript("npc_dk_ghoul") { }
+
+    struct npc_dk_ghoulAI : public AggressorAI
+    {
+        npc_dk_ghoulAI(Creature* creature) : AggressorAI(creature)
+        {
+            clawDelay = 0;
+            gnawDelay = 0;
+            leapDelay = 0;
+            huddleDelay = 0;
+        }
+
+        bool CanAIAttack(Unit const* target) const override
+        {
+            if (!target)
+            {
+                return false;
+            }
+            if (Unit* owner = me->GetOwner())
+            {
+                if (owner && !target->IsInCombatWith(owner))
+                {
+                    return false;
+                }
+            }
+            return AggressorAI::CanAIAttack(target);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (clawDelay >= 0)
+            {
+                clawDelay -= diff;
+            }
+            if (gnawDelay >= 0)
+            {
+                gnawDelay -= diff;
+            }
+            if (leapDelay >= 0)
+            {
+                leapDelay -= diff;
+            }
+            if (huddleDelay >= 0)
+            {
+                huddleDelay -= diff;
+            }
+            if (me->IsNonMeleeSpellCast(false))
+            {
+                return;
+            }
+            if (!UpdateVictim())
+            {
+                return;
+            }
+            if (Unit* victim = me->SelectVictim())
+            {
+                float victimDistance = me->GetDistance(victim);
+                if (leapDelay < 0)
+                {
+                    leapDelay = 1000;
+                    if (victimDistance > 5.0f && victimDistance < 30.0f)
+                    {
+                        DoCastVictim(47482);
+                        leapDelay = 21000;
+                        return;
+                    }
+                }
+                if (gnawDelay < 0)
+                {
+                    gnawDelay = 1000;
+                    if (me->IsWithinMeleeRange(victim))
+                    {
+                        DoCastVictim(47481);
+                        gnawDelay = 61000;
+                        return;
+                    }
+                }
+                if (huddleDelay < 0)
+                {
+                    huddleDelay = 1000;
+                    float healthPCT = me->GetHealthPct();
+                    if (healthPCT < 20.0f)
+                    {
+                        DoCastSelf(47484);
+                        huddleDelay = 46000;
+                        return;
+                    }
+                }
+                if (clawDelay < 0)
+                {
+                    clawDelay = 1000;
+                    if (me->IsWithinMeleeRange(victim))
+                    {
+                        DoCastVictim(47468);
+                        clawDelay = 2000;
+                        return;
+                    }
+                }
+            }
+
+            DoMeleeAttackIfReady();
+        }
+
+        int clawDelay;
+        int gnawDelay;
+        int leapDelay;
+        int huddleDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_dk_ghoulAI(creature);
+    }
+};
+
 enum GhoulSpells
 {
     // Dark Transformation
@@ -297,6 +416,10 @@ void AddSC_deathknight_pet_scripts()
 {
     new npc_pet_dk_ebon_gargoyle();
     new npc_pet_dk_guardian();
+
+    // lfm dk spells
+    new npc_dk_ghoul();
+
     RegisterCreatureAI(npc_pet_dk_army_of_the_dead_ghoul);
     RegisterSpellScript(spell_pet_ghoul_dummy_ability);
 }

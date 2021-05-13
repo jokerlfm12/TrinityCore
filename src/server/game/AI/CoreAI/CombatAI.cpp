@@ -31,7 +31,7 @@
 // AggressorAI
 /////////////////
 
-int32 AggressorAI::Permissible(Creature const* creature)
+int AggressorAI::Permissible(Creature const* creature)
 {
     // have some hostile factions, it will be selected by IsHostileTo check at MoveInLineOfSight
     if (!creature->IsCivilian() && !creature->IsNeutralToAll())
@@ -40,13 +40,14 @@ int32 AggressorAI::Permissible(Creature const* creature)
     return PERMIT_BASE_NO;
 }
 
-void AggressorAI::UpdateAI(uint32 /*diff*/)
-{
-    if (!UpdateVictim())
-        return;
-
-    DoMeleeAttackIfReady();
-}
+//void AggressorAI::UpdateAI(uint32 diff)
+//{
+//    if (!UpdateVictim())
+//    {
+//        return;
+//    }        
+//    DoMeleeAttackIfReady();
+//}
 
 /////////////////
 // CombatAI

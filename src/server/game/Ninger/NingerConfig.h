@@ -49,6 +49,8 @@ public:
     uint32 OnlineCheckDelay;
     uint32 OfflineCheckDelay;
     uint32 NingerCountEachLevel;
+    float NingerRandomTeleportMinRange;
+    float NingerRandomTeleportMaxRange;
 };
 
 #define sNingerConfig NingerConfig::instance()

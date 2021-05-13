@@ -22,15 +22,6 @@
 
 class Creature;
 
-class TC_GAME_API AggressorAI : public CreatureAI
-{
-    public:
-        explicit AggressorAI(Creature* c) : CreatureAI(c) { }
-
-        void UpdateAI(uint32) override;
-        static int32 Permissible(Creature const* creature);
-};
-
 typedef std::vector<uint32> SpellVct;
 
 class TC_GAME_API CombatAI : public CreatureAI
@@ -50,6 +41,16 @@ class TC_GAME_API CombatAI : public CreatureAI
     protected:
         EventMap events;
         SpellVct spells;
+};
+
+// lfm AggressorAI will inherit CombatAI
+class TC_GAME_API AggressorAI : public CombatAI
+{
+public:
+    explicit AggressorAI(Creature* c) : CombatAI(c) { }
+
+    //void UpdateAI(uint32) override;
+    static int Permissible(Creature const* creature);
 };
 
 class TC_GAME_API CasterAI : public CombatAI

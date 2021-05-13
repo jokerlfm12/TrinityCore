@@ -12,7 +12,6 @@
 #include "NingerManager.h"
 #include "Group.h"
 #include "MotionMaster.h"
-#include "GridNotifiers.h"
 #include "Map.h"
 #include "Pet.h"
 #include "MapManager.h"
@@ -21,7 +20,7 @@ Awareness_Base::Awareness_Base(Player* pmMe)
 {
     me = pmMe;
     groupRole = GroupRole::GroupRole_DPS;
-    engageTarget = NULL;
+    ogEngageTarget = ObjectGuid::Empty;
     randomTeleportDelay = urand(10 * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::IN_MILLISECONDS);
     reviveDelay = 0;
     engageDelay = 0;
@@ -32,6 +31,7 @@ Awareness_Base::Awareness_Base(Player* pmMe)
     eatDelay = 0;
     drinkDelay = 0;
     readyCheckDelay = 0;
+    hostilePVPCheckDelay = 0;
     staying = false;
     holding = false;
     following = true;
@@ -127,7 +127,7 @@ void Awareness_Base::Report()
 void Awareness_Base::Reset()
 {
     groupRole = GroupRole::GroupRole_DPS;
-    engageTarget = NULL;
+    ogEngageTarget = ObjectGuid::Empty;
     randomTeleportDelay = urand(10 * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::IN_MILLISECONDS);
     reviveDelay = 0;
     engageDelay = 0;
@@ -138,6 +138,7 @@ void Awareness_Base::Reset()
     eatDelay = 0;
     drinkDelay = 0;
     readyCheckDelay = 0;
+    hostilePVPCheckDelay = 0;
     staying = false;
     holding = false;
     following = true;
@@ -384,6 +385,10 @@ void Awareness_Base::Update(uint32 pmDiff)
                 {
                     return;
                 }
+                if (!me->IsAlive())
+                {
+                    return;
+                }
                 bool groupInCombat = GroupInCombat();
                 if (groupInCombat)
                 {
@@ -404,7 +409,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                         sb->ClearTarget();
                         return;
                     }
-                    if (me->IsAlive())
+                    if (Unit* engageTarget = ObjectAccessor::GetUnit(*me, ogEngageTarget))
                     {
                         switch (groupRole)
                         {
@@ -606,7 +611,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                     {
                         return;
                     }
-                    if (DPS())
+                    if (DPS(false))
                     {
                         return;
                     }
@@ -628,15 +633,6 @@ void Awareness_Base::Update(uint32 pmDiff)
                     {
                         return;
                     }
-                    if (moveDelay > 0)
-                    {
-                        moveDelay -= pmDiff;
-                        if (moveDelay <= 0)
-                        {
-                            moveDelay = 0;
-                        }
-                        return;
-                    }
                     if (engageDelay > 0)
                     {
                         engageDelay -= pmDiff;
@@ -646,14 +642,44 @@ void Awareness_Base::Update(uint32 pmDiff)
                             sb->ClearTarget();
                             return;
                         }
-                        if (sb->DPS(engageTarget, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+                        if (Unit* engageTarget = ObjectAccessor::GetUnit(*me, ogEngageTarget))
                         {
-                            return;
+                            if (sb->DPS(engageTarget, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+                            {
+                                return;
+                            }
+                            else
+                            {
+                                engageTarget = NULL;
+                                engageDelay = 0;
+                            }
                         }
-                        else
+                        return;
+                    }
+                    // hostile pvp check
+                    if (hostilePVPCheckDelay > 0)
+                    {
+                        hostilePVPCheckDelay -= pmDiff;
+                        if (hostilePVPCheckDelay < 0)
                         {
-                            engageTarget = NULL;
-                            engageDelay = 0;
+                            hostilePVPCheckDelay = 1000;
+                            if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me))
+                            {
+                                if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+                                {
+                                    ogEngageTarget = enemyPlayer->GetGUID();
+                                    engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    if (moveDelay > 0)
+                    {
+                        moveDelay -= pmDiff;
+                        if (moveDelay <= 0)
+                        {
+                            moveDelay = 0;
                         }
                         return;
                     }
@@ -764,14 +790,17 @@ bool Awareness_Base::Engage(Unit* pmTarget)
     return false;
 }
 
-bool Awareness_Base::DPS()
+bool Awareness_Base::DPS(bool pmDelay)
 {
-    if (combatTime > dpsDelay)
+    if (pmDelay)
     {
-        return sb->DPS(nullptr, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax);
+        if (combatTime < dpsDelay)
+        {
+            return false;
+        }
     }
 
-    return false;
+    return sb->DPS(nullptr, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax);
 }
 
 bool Awareness_Base::Tank()
@@ -959,49 +988,15 @@ bool Awareness_Base::Wander()
     uint32 wanderRate = urand(0, 100);
     if (wanderRate < 25)
     {
-        std::list<Player*> players;
-        Trinity::AnyPlayerInObjectRangeCheck checker(me, VISIBILITY_DISTANCE_NORMAL);
-        Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(me, players, checker);
-        Cell::VisitWorldObjects(me, searcher, VISIBILITY_DISTANCE_NORMAL);
-        if (!players.empty())
+        if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
         {
-            for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
+            if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
             {
-                if (Player* eachPlayer = *itr)
-                {
-                    if (me->IsValidAttackTarget(eachPlayer))
-                    {
-                        if (sb->DPS(eachPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-                        {
-                            engageDelay = 20 * TimeConstants::IN_MILLISECONDS;
-                            return true;
-                        }
-                    }
-                }
+                ogEngageTarget = enemyPlayer->GetGUID();
+                engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
+                return true;
             }
         }
-
-        //std::list<Unit*> unitList;
-        //Trinity::AnyUnitInObjectRangeCheck go_check(me, VISIBILITY_DISTANCE_NORMAL);
-        //Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
-        //Cell::VisitGridObjects(me, go_search, VISIBILITY_DISTANCE_NORMAL);
-        //if (!unitList.empty())
-        //{
-        //    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
-        //    {
-        //        if (Unit* eachUnit = *uIT)
-        //        {
-        //            if (me->IsValidAttackTarget(eachUnit))
-        //            {
-        //                if (sb->DPS(eachUnit, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-        //                {
-        //                    engageDelay = 20 * TimeConstants::IN_MILLISECONDS;
-        //                    return true;
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
     }
     else if (wanderRate < 50)
     {

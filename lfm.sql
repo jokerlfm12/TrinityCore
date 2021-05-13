@@ -128,3 +128,7 @@ INSERT INTO `quest_template_addon` (`ID`, `MaxLevel`, `AllowableClasses`, `Sourc
 UPDATE `areatrigger_involvedrelation` SET `quest` = '29539' WHERE (`id` = '4200');
 UPDATE `creature_template` SET `unit_flags` = '0' WHERE (`entry` = '17398');
 INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('17381', '73200', '0', '100', '1', '0', '1', '1', '1', '1');
+UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '7396') and (`OptionIndex` = '0');
+UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '10437') and (`OptionIndex` = '1');
+UPDATE `creature_template` SET `unit_flags` = '0' WHERE (`entry` = '19733');
+UPDATE `creature_template` SET `ScriptName` = 'npc_dk_ghoul' WHERE (`entry` = '26125');

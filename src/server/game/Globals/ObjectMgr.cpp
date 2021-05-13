@@ -799,6 +799,45 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     }
     if (creatureTemplate.minlevel > 80)
     {
+        switch (creatureTemplate.rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            if (creatureTemplate.ModDamage < 4.0f)
+            {
+                creatureTemplate.ModDamage = 4.0f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            if (creatureTemplate.ModDamage < 7.5f)
+            {
+                creatureTemplate.ModDamage = 7.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            if (creatureTemplate.ModDamage < 6.5f)
+            {
+                creatureTemplate.ModDamage = 6.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            if (creatureTemplate.ModDamage < 8.5f)
+            {
+                creatureTemplate.ModDamage = 8.5f;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
     }
     else if (creatureTemplate.minlevel > 70)
     {

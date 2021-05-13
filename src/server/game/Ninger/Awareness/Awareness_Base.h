@@ -20,7 +20,7 @@ public:
     virtual void Reset();
     virtual void Update(uint32 pmDiff);
     virtual bool Engage(Unit* pmTarget);
-    virtual bool DPS();
+    virtual bool DPS(bool pmDelay = true);
     virtual bool Tank();
     virtual bool Tank(Unit* pmTarget);
     virtual bool Rest();
@@ -41,7 +41,7 @@ public:
     Script_Base* sb;
     uint32 groupRole;
 
-    Unit* engageTarget;
+    ObjectGuid ogEngageTarget;
 
     float chaseDistanceMin;
     float chaseDistanceMax;
@@ -68,5 +68,6 @@ public:
     int assistDelay;
     int reviveDelay;
     int moveDelay;
+    int hostilePVPCheckDelay;
 };
 #endif

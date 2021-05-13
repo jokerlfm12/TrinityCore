@@ -12,6 +12,7 @@
 #include "MotionMaster.h"
 #include "Map.h"
 #include "Pet.h"
+#include "GridNotifiers.h"
 
 NingerManager::NingerManager()
 {
@@ -1769,7 +1770,7 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                                         myGroup->SetTargetIcon(7, pmSender->GetGUID(), target->GetGUID());
                                     }
                                 }
-                                receiverAI->engageTarget = target;
+                                receiverAI->ogEngageTarget = target->GetGUID();
                                 int engageDelay = 5000;
                                 if (commandVector.size() > 1)
                                 {
@@ -1799,7 +1800,7 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                                         }
                                     }
                                     receiverAI->staying = false;
-                                    receiverAI->engageTarget = target;
+                                    receiverAI->ogEngageTarget = target->GetGUID();
                                     int engageDelay = 5000;
                                     if (commandVector.size() > 1)
                                     {
@@ -3575,7 +3576,7 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
 }
 
 void NingerManager::RandomTeleport(Player* pmTargetPlayer)
-{    
+{
     if (!pmTargetPlayer)
     {
         return;
@@ -3604,30 +3605,27 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
                 {
                     if (eachPlayer->getLevel() == pmTargetPlayer->getLevel())
                     {
-                        if (pmTargetPlayer->IsHostileTo(eachPlayer))
+                        if (!eachPlayer->IsBeingTeleported())
                         {
-                            if (!eachPlayer->IsBeingTeleported())
+                            if (Map* eachMap = eachPlayer->GetMap())
                             {
-                                if (Map* eachMap = eachPlayer->GetMap())
+                                if (!eachMap->Instanceable())
                                 {
-                                    if (!eachMap->Instanceable())
+                                    if (AreaTableEntry const* zone = sAreaTableStore.LookupEntry(eachPlayer->GetAreaId()))
                                     {
-                                        if (AreaTableEntry const* zone = sAreaTableStore.LookupEntry(eachPlayer->GetAreaId()))
+                                        FactionTemplateEntry const* factionTemplate = eachPlayer->GetFactionTemplateEntry();
+                                        if (!factionTemplate || factionTemplate->FriendGroup & zone->FactionGroupMask)
                                         {
-                                            FactionTemplateEntry const* factionTemplate = eachPlayer->GetFactionTemplateEntry();
-                                            if (!factionTemplate || factionTemplate->FriendGroup & zone->FactionGroupMask)
-                                            {
-                                                // friendly realm
-                                            }
-                                            else if (factionTemplate->EnemyGroup & zone->FactionGroupMask)
-                                            {
-                                                // hostile realm 
-                                            }
-                                            else
-                                            {
-                                                // neutral realm
-                                                sameLevelPlayerOGMap[sameLevelPlayerOGMap.size()] = eachPlayer->GetGUID();
-                                            }
+                                            // friendly realm
+                                        }
+                                        else if (factionTemplate->EnemyGroup & zone->FactionGroupMask)
+                                        {
+                                            // hostile realm 
+                                        }
+                                        else
+                                        {
+                                            // neutral realm
+                                            sameLevelPlayerOGMap[sameLevelPlayerOGMap.size()] = eachPlayer->GetGUID();
                                         }
                                     }
                                 }
@@ -3650,10 +3648,19 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
     }
     if (destPlayer)
     {
-        float angle = frand(0, 2 * M_PI);
-        float distance = frand(100.0f, 300.0f);
         float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-        destPlayer->GetNearPoint(destPlayer, destX, destY, destZ, distance, angle);
+        if (Unit* nearbyUnit = GetAnyUnitInRange(destPlayer, sNingerConfig->NingerRandomTeleportMinRange, sNingerConfig->NingerRandomTeleportMaxRange))
+        {
+            destX = nearbyUnit->GetPositionX();
+            destY = nearbyUnit->GetPositionY();
+            destZ = nearbyUnit->GetPositionZ();
+        }
+        else
+        {
+            float angle = frand(0, 2 * M_PI);
+            float distance = frand(sNingerConfig->NingerRandomTeleportMinRange, sNingerConfig->NingerRandomTeleportMaxRange);
+            destPlayer->GetNearPoint(destPlayer, destX, destY, destZ, distance, angle);
+        }
         pmTargetPlayer->TeleportTo(destPlayer->GetMapId(), destX, destY, destZ, 0.0f);
         sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
     }
@@ -3781,4 +3788,61 @@ uint32 NingerManager::GetAuraStack(Unit* pmTarget, std::string pmSpellName, Unit
     }
 
     return auraStack;
+}
+
+Player* NingerManager::GetNearbyHostilePlayer(Player* pmSearcher, float pmRange)
+{
+    std::list<Player*> players;
+    Trinity::AnyPlayerInObjectRangeCheck checker(pmSearcher, pmRange);
+    Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(pmSearcher, players, checker);
+    Cell::VisitWorldObjects(pmSearcher, searcher, pmRange);
+    if (!players.empty())
+    {
+        for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
+        {
+            if (Player* eachPlayer = *itr)
+            {
+                if (eachPlayer->IsAlive())
+                {
+                    if (pmSearcher->IsValidAttackTarget(eachPlayer))
+                    {
+                        return eachPlayer;
+                    }
+                }
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+Unit* NingerManager::GetAnyUnitInRange(Player* pmSearcher, float pmMinRange, float pmMaxRange)
+{
+    std::list<Unit*> unitList;
+    Trinity::AnyUnitInObjectRangeCheck go_check(pmSearcher, pmMaxRange);
+    Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(pmSearcher, unitList, go_check);
+    Cell::VisitGridObjects(pmSearcher, go_search, pmMaxRange);
+    if (!unitList.empty())
+    {
+        std::unordered_map<uint32, Unit*> unitsMap;
+        unitsMap.clear();
+        for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+        {
+            if (Unit* eachUnit = *uIT)
+            {
+                float eachDistance = pmSearcher->GetDistance(eachUnit);
+                if (eachDistance > pmMinRange)
+                {
+                    unitsMap[unitsMap.size()] = eachUnit;
+                }
+            }
+        }
+        if (unitsMap.size() > 0)
+        {
+            uint32 targetIndex = urand(0, unitsMap.size() - 1);
+            return unitsMap[targetIndex];
+        }
+    }
+
+    return nullptr;
 }

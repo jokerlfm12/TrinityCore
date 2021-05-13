@@ -2667,25 +2667,51 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
 
     bool normalized = false;
     float weaponDamagePercentMod = 1.0f;
-    for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
+
+    switch (m_spellInfo->Effects[effIndex].Effect)
     {
-        switch (m_spellInfo->Effects[j].Effect)
-        {
-            case SPELL_EFFECT_WEAPON_DAMAGE:
-            case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
-                fixed_bonus += damage;
-                break;
-            case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
-                fixed_bonus += damage;
-                normalized = true;
-                break;
-            case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
-                ApplyPct(weaponDamagePercentMod, damage);
-                break;
-            default:
-                break;                                      // not weapon damage effect, just skip
-        }
+    case SPELL_EFFECT_WEAPON_DAMAGE:
+    case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+        fixed_bonus += damage;
+        break;
+    case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+        fixed_bonus += damage;
+        normalized = true;
+        break;
+    case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+    {
+        // lfm weapon damage percent spell effect fix
+        weaponDamagePercentMod = (float)damage;
+        weaponDamagePercentMod = weaponDamagePercentMod / 100.0f;
+        break;
     }
+    default:
+        break;                                      // not weapon damage effect, just skip
+    }
+
+    //for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
+    //{
+    //    switch (m_spellInfo->Effects[j].Effect)
+    //    {
+    //    case SPELL_EFFECT_WEAPON_DAMAGE:
+    //    case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
+    //        fixed_bonus += damage;
+    //        break;
+    //    case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+    //        fixed_bonus += damage;
+    //        normalized = true;
+    //        break;
+    //    case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
+    //    {
+    //        // lfm weapon damage percent spell effect fix
+    //        weaponDamagePercentMod = (float)damage;
+    //        weaponDamagePercentMod = weaponDamagePercentMod / 100.0f;
+    //        break;
+    //    }
+    //    default:
+    //        break;                                      // not weapon damage effect, just skip
+    //    }
+    //}
 
     if (useWeaponDamage)
     {

@@ -121,6 +121,9 @@ public:
 	uint32 GetAuraDuration(Unit* pmTarget, std::string pmSpellName, Unit* pmCaster = NULL);
 	uint32 GetAuraStack(Unit* pmTarget, std::string pmSpellName, Unit* pmCaster = NULL);
 
+    Player* GetNearbyHostilePlayer(Player* pmSearcher, float pmRange = RANGE_HEAL_DISTANCE);
+    Unit* GetAnyUnitInRange(Player* pmSearcher, float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
+
 public:
 	std::unordered_map<uint32, std::unordered_map<uint32, uint32>> allianceRaces;
 	std::unordered_map<uint32, std::unordered_map<uint32, uint32>> hordeRaces;

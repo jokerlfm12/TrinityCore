@@ -282,6 +282,11 @@ void NingerMovement::Update(uint32 pmDiff)
                 ResetMovement();
                 break;
             }
+            if (me->GetTarget() != ogChaseTarget)
+            {
+                me->SetSelection(ogChaseTarget);
+                me->SetTarget(ogChaseTarget);
+            }
             bool ok = false;
             if (unitTargetDistance >= chaseDistanceMin && unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
             {
@@ -588,7 +593,7 @@ bool Script_Base::Chase(Unit* pmTarget, float pmMinDistance, float pmMaxDistance
     {
         return false;
     }
-    else if (rm->Chase(pmTarget, pmMinDistance, pmMaxDistance))
+    if (rm->Chase(pmTarget, pmMinDistance, pmMaxDistance))
     {
         ChooseTarget(pmTarget);
         return true;
