@@ -511,28 +511,28 @@ void Map::ScriptsProcess()
                             step.script->GetDebugInfo().c_str(), source->GetTypeId(), source->GetEntry(), source->GetGUID().GetCounter());
                         break;
                     }
-                    worldObject = dynamic_cast<WorldObject*>(source);
+worldObject = dynamic_cast<WorldObject*>(source);
                 }
                 else
                 {
-                    player = source->ToPlayer();
-                    if (player)
+                player = source->ToPlayer();
+                if (player)
+                {
+                    if (target->GetTypeId() != TYPEID_UNIT && target->GetTypeId() != TYPEID_GAMEOBJECT && target->GetTypeId() != TYPEID_PLAYER)
                     {
-                        if (target->GetTypeId() != TYPEID_UNIT && target->GetTypeId() != TYPEID_GAMEOBJECT && target->GetTypeId() != TYPEID_PLAYER)
-                        {
-                            TC_LOG_ERROR("scripts", "%s target is not unit, gameobject or player (TypeId: %u, Entry: %u, GUID: %u), skipping.",
-                                step.script->GetDebugInfo().c_str(), target->GetTypeId(), target->GetEntry(), target->GetGUID().GetCounter());
-                            break;
-                        }
-                        worldObject = dynamic_cast<WorldObject*>(target);
-                    }
-                    else
-                    {
-                        TC_LOG_ERROR("scripts", "%s neither source nor target is player (source: TypeId: %u, Entry: %u, GUID: %u; target: TypeId: %u, Entry: %u, GUID: %u), skipping.",
-                            step.script->GetDebugInfo().c_str(), source->GetTypeId(), source->GetEntry(), source->GetGUID().GetCounter(),
-                            target->GetTypeId(), target->GetEntry(), target->GetGUID().GetCounter());
+                        TC_LOG_ERROR("scripts", "%s target is not unit, gameobject or player (TypeId: %u, Entry: %u, GUID: %u), skipping.",
+                            step.script->GetDebugInfo().c_str(), target->GetTypeId(), target->GetEntry(), target->GetGUID().GetCounter());
                         break;
                     }
+                    worldObject = dynamic_cast<WorldObject*>(target);
+                }
+                else
+                {
+                    TC_LOG_ERROR("scripts", "%s neither source nor target is player (source: TypeId: %u, Entry: %u, GUID: %u; target: TypeId: %u, Entry: %u, GUID: %u), skipping.",
+                        step.script->GetDebugInfo().c_str(), source->GetTypeId(), source->GetEntry(), source->GetGUID().GetCounter(),
+                        target->GetTypeId(), target->GetEntry(), target->GetGUID().GetCounter());
+                    break;
+                }
                 }
 
                 // quest id and flags checked at script loading
@@ -574,8 +574,8 @@ void Map::ScriptsProcess()
                     }
 
                     if (pGO->GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE ||
-                        pGO->GetGoType() == GAMEOBJECT_TYPE_DOOR        ||
-                        pGO->GetGoType() == GAMEOBJECT_TYPE_BUTTON      ||
+                        pGO->GetGoType() == GAMEOBJECT_TYPE_DOOR ||
+                        pGO->GetGoType() == GAMEOBJECT_TYPE_BUTTON ||
                         pGO->GetGoType() == GAMEOBJECT_TYPE_TRAP)
                     {
                         TC_LOG_ERROR("scripts", "%s can not be used with gameobject of type %u (guid: %u).",
@@ -609,8 +609,15 @@ void Map::ScriptsProcess()
                         float z = step.script->TempSummonCreature.PosZ;
                         float o = step.script->TempSummonCreature.Orientation;
 
-                        if (!pSummoner->SummonCreature(step.script->TempSummonCreature.CreatureEntry, x, y, z, o, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, step.script->TempSummonCreature.DespawnDelay))
+                        // lfm script command summon will use dataint 
+                        if (TempSummon* ts = pSummoner->SummonCreature(step.script->TempSummonCreature.CreatureEntry, x, y, z, o, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, step.script->TempSummonCreature.DespawnDelay))
+                        {
+                            ts->AI()->SetData(1, step.script->TempSummonCreature.Unused1);
+                        }
+                        else
+                        {
                             TC_LOG_ERROR("scripts", "%s creature was not spawned (entry: %u).", step.script->GetDebugInfo().c_str(), step.script->TempSummonCreature.CreatureEntry);
+                        }
                     }
                 }
                 break;

@@ -132,3 +132,38 @@ UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '7396') and
 UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '10437') and (`OptionIndex` = '1');
 UPDATE `creature_template` SET `unit_flags` = '0' WHERE (`entry` = '19733');
 UPDATE `creature_template` SET `ScriptName` = 'npc_dk_ghoul' WHERE (`entry` = '26125');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64859');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64860');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64861');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64862');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64863');
+UPDATE `creature` SET `spawndist` = '3', `MovementType` = '1' WHERE (`guid` = '64864');
+update creature set spawndist = 3, movementtype = 1 where id = 18912 and movementtype = 0;
+INSERT INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`) VALUES ('31746', '31773', '0', 'Whisper Aura 0');
+INSERT INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`) VALUES ('-31773', '31774', '0', 'Whisper Aura 1');
+INSERT INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`) VALUES ('-31774', '31775', '0', 'Whisper Aura 2');
+INSERT INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`) VALUES ('-31775', '31776', '0', 'Whisper Aura 3');
+INSERT INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`) VALUES ('-31776', '31777', '0', 'Whisper Aura 4');
+INSERT INTO `event_scripts` (`id`, `delay`, `command`, `datalong`, `datalong2`, `dataint`, `x`, `y`, `z`, `o`) VALUES ('11286', '0', '0', '4', '0', '0', '0', '0', '0', '0');
+UPDATE `event_scripts` SET `dataint` = '14706' WHERE (`entry` = '464');
+UPDATE `event_scripts` SET `command` = '10', `datalong` = '17841', `datalong2` = '100', `dataint` = '0' WHERE (`entry` = '464');
+INSERT INTO `event_scripts` (`id`, `delay`, `command`, `datalong`, `datalong2`, `dataint`, `x`, `y`, `z`, `o`) VALUES ('11289', '0', '10', '17841', '100', '0', '0', '0', '0', '0');
+INSERT INTO `event_scripts` (`id`, `delay`, `command`, `datalong`, `datalong2`, `dataint`, `x`, `y`, `z`, `o`) VALUES ('11290', '0', '10', '17841', '100', '0', '0', '0', '0', '0');
+INSERT INTO `event_scripts` (`id`, `delay`, `command`, `datalong`, `datalong2`, `dataint`, `x`, `y`, `z`, `o`) VALUES ('11291', '0', '10', '17841', '100', '0', '0', '0', '0', '0');
+delete from creature_text where creatureid = 17841;
+insert into creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 17841;
+UPDATE `smart_scripts` SET `comment` = 'Ysiel Windsinger - Just summoned - invisible' WHERE (`entryorguid` = '17841') and (`source_type` = '0') and (`id` = '1') and (`link` = '0');
+UPDATE `smart_scripts` SET `event_type` = '38', `event_param1` = '1', `event_param2` = '1', `comment` = 'Ysiel Windsinger - Just summoned - Say tex 0' WHERE (`entryorguid` = '17841') and (`source_type` = '0') and (`id` = '2') and (`link` = '0');
+UPDATE `smart_scripts` SET `event_type` = '38', `event_param1` = '1', `event_param2` = '2', `comment` = 'Ysiel Windsinger - Just summoned - Say tex 1' WHERE (`entryorguid` = '17841') and (`source_type` = '0') and (`id` = '3') and (`link` = '0');
+UPDATE `smart_scripts` SET `event_type` = '38', `event_param1` = '1', `event_param2` = '3', `comment` = 'Ysiel Windsinger - Just summoned - Say tex 2' WHERE (`entryorguid` = '17841') and (`source_type` = '0') and (`id` = '4') and (`link` = '0');
+UPDATE `smart_scripts` SET `event_type` = '38', `event_param1` = '1', `event_param2` = '4', `comment` = 'Ysiel Windsinger - Just summoned - Say tex 3' WHERE (`entryorguid` = '17841') and (`source_type` = '0') and (`id` = '5') and (`link` = '0');
+UPDATE `event_scripts` SET `dataint` = '1' WHERE (`entry` = '464');
+UPDATE `event_scripts` SET `dataint` = '2' WHERE (`entry` = '465');
+UPDATE `event_scripts` SET `dataint` = '3' WHERE (`entry` = '466');
+UPDATE `event_scripts` SET `dataint` = '4' WHERE (`entry` = '467');
+INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_type`, `event_phase_mask`, `event_chance`, `event_flags`, `event_param1`, `event_param2`, `event_param3`, `event_param4`, `event_param5`, `action_type`, `action_param1`, `action_param2`, `action_param3`, `action_param4`, `action_param5`, `action_param6`, `target_type`, `target_param1`, `target_param2`, `target_param3`, `target_x`, `target_y`, `target_z`, `target_o`, `comment`) VALUES ('18214', '0', '0', '0', '0', '0', '100', '0', '3000', '5000', '10000', '15000', '0', '11', '6016', '0', '0', '0', '0', '0', '2', '0', '0', '0', '0', '0', '0', '0', 'Fenclaw Thrasher - IC - Cast \'Pierce Armor\'');
+UPDATE `creature_template` SET `AIName` = 'SmartAI' WHERE (`entry` = '18214');
+UPDATE `gossip_menu_option` SET `OptionIcon` = '0', `OptionBroadcastTextId` = '10693' WHERE (`MenuId` = '7481') and (`OptionIndex` = '0');
+UPDATE `gossip_menu_option` SET `OptionIcon` = '5', `OptionText` = 'Make this inn your home.', `OptionBroadcastTextId` = '2822' WHERE (`MenuId` = '7481') and (`OptionIndex` = '1');

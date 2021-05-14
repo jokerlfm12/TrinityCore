@@ -405,6 +405,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                     engageDelay -= pmDiff;
                     if (engageDelay <= 0)
                     {
+                        ogEngageTarget.Clear();
                         sb->rm->ResetMovement();
                         sb->ClearTarget();
                         return;
@@ -421,7 +422,9 @@ void Awareness_Base::Update(uint32 pmDiff)
                             }
                             else
                             {
-                                engageTarget = NULL;
+                                ogEngageTarget.Clear();
+                                sb->rm->ResetMovement();
+                                sb->ClearTarget();
                                 engageDelay = 0;
                             }
                             break;
@@ -442,7 +445,9 @@ void Awareness_Base::Update(uint32 pmDiff)
                             }
                             else
                             {
-                                engageTarget = NULL;
+                                ogEngageTarget.Clear();
+                                sb->rm->ResetMovement();
+                                sb->ClearTarget();
                                 engageDelay = 0;
                             }
                             break;
@@ -638,6 +643,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                         engageDelay -= pmDiff;
                         if (engageDelay <= 0)
                         {
+                            ogEngageTarget.Clear();
                             sb->rm->ResetMovement();
                             sb->ClearTarget();
                             return;
@@ -650,14 +656,16 @@ void Awareness_Base::Update(uint32 pmDiff)
                             }
                             else
                             {
-                                engageTarget = NULL;
-                                engageDelay = 0;
+                                ogEngageTarget.Clear();
+                                sb->rm->ResetMovement();
+                                sb->ClearTarget();
+                                return;
                             }
                         }
                         return;
                     }
                     // hostile pvp check
-                    if (hostilePVPCheckDelay > 0)
+                    if (hostilePVPCheckDelay >= 0)
                     {
                         hostilePVPCheckDelay -= pmDiff;
                         if (hostilePVPCheckDelay < 0)

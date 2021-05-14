@@ -331,7 +331,7 @@ void Creature::AddToWorld()
                 {
                     if (Unit* hostileUnit = SelectNearestHostileUnitInAggroRange(true))
                     {
-                        EngageWithTarget(hostileUnit);
+                        GetAI()->AttackStart(hostileUnit);
                         return;
                     }
                 }
@@ -352,7 +352,7 @@ void Creature::AddToWorld()
                                     float playerAggroRange = GetAggroRange(eachPlayer);
                                     if (IsWithinDistInMap(eachPlayer, playerAggroRange))
                                     {
-                                        EngageWithTarget(eachPlayer);
+                                        GetAI()->AttackStart(eachPlayer);
                                     }
                                 }
                             }
