@@ -2537,6 +2537,16 @@ void ObjectMgr::LoadCreatures()
         data.displayid      = fields[7].GetUInt32();
         data.equipmentId    = fields[8].GetInt8();
         data.spawntimesecs  = fields[9].GetUInt32();
+
+        // lfm rare spawn will not be less than 12 hours
+        if (cInfo->rank == CreatureEliteType::CREATURE_ELITE_RARE || cInfo->rank == CreatureEliteType::CREATURE_ELITE_RAREELITE)
+        {
+            if (data.spawntimesecs < 43200)
+            {
+                data.spawntimesecs = 43200;
+            }
+        }
+
         data.spawndist      = fields[10].GetFloat();
         data.currentwaypoint= fields[11].GetUInt32();
         data.curhealth      = fields[12].GetUInt32();

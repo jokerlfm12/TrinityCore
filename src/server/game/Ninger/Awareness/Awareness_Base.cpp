@@ -704,6 +704,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                         }
                         return;
                     }
+                    sb->ClearTarget();
                     if (Rest())
                     {
                         return;

@@ -3042,8 +3042,7 @@ bool NingerManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetL
     {
         needToLogout = true;
     }
-    LearnPlayerSpells(pmTargetPlayer);
-    pmTargetPlayer->UpdateWeaponsSkillsToMaxSkillsForLevel();
+    LearnPlayerSpells(pmTargetPlayer);    
 
     bool resetEquipments = false;
     if (needToLogout)

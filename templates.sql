@@ -11,3 +11,5 @@ target_type, target_param1, target_param2, target_param3, target_x, target_y, ta
 insert into world_trinitycore_ctm.gameobject 
 select guid, id, map, zone, area, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, '', 0 
 from world_emucoach.gameobject where id = 209347 or id = 209348;
+
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('215419', '54603', '543', '3562', '3562', '3', '0', '1', '169', '0', '-1', '0', '0', '-1343.26', '1650.59', '68.9473', '0.6687', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
