@@ -202,6 +202,19 @@ void CreatureAI::JustAppeared()
 
 void CreatureAI::JustEnteredCombat(Unit* who)
 {
+    // lfm motion reinitial
+    //me->freeMovementType = me->GetDefaultMovementType();
+    //if (me->freeMovementType == MovementGeneratorType::RANDOM_MOTION_TYPE)
+    //{
+    //    me->SetDefaultMovementType(MovementGeneratorType::IDLE_MOTION_TYPE);
+    //    me->GetMotionMaster()->Initialize();
+    //}
+
+    if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+    {
+        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+    }
+
     if (!IsEngaged() && !me->CanHaveThreatList())
         EngagementStart(who);
 }
@@ -212,6 +225,12 @@ void CreatureAI::EnterEvadeMode(EvadeReason why)
         return;
 
     TC_LOG_DEBUG("entities.unit", "Creature %u enters evade mode.", me->GetEntry());
+
+    //if (me->freeMovementType == MovementGeneratorType::RANDOM_MOTION_TYPE)
+    //{
+    //    me->SetDefaultMovementType(me->freeMovementType);
+    //    me->GetMotionMaster()->Initialize();
+    //}
 
     if (!me->GetVehicle()) // otherwise me will be in evade mode forever
     {

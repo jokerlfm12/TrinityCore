@@ -1,4 +1,4 @@
-/*
+﻿/*
  * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1890,7 +1890,7 @@ void SpellMgr::LoadSpellProcs()
             continue;
         }
         */
-
+        
         SpellProcEntry procEntry;
         procEntry.SchoolMask      = 0;
         procEntry.ProcFlags = spellInfo->ProcFlags;
@@ -1943,6 +1943,12 @@ void SpellMgr::LoadSpellProcs()
             procEntry.AttributesMask |= PROC_ATTR_REQ_EXP_OR_HONOR;
         if (addTriggerFlag)
             procEntry.AttributesMask |= PROC_ATTR_TRIGGERED_CAN_PROC;
+
+        // lfm special fix 
+        if (spellInfo->Id == 81229)
+        {
+            procEntry.AttributesMask = procEntry.AttributesMask | PROC_ATTR_TRIGGERED_CAN_PROC;
+        }
 
         procEntry.ProcsPerMinute  = 0;
         procEntry.Chance          = spellInfo->ProcChance;
@@ -3401,7 +3407,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         47134  // Quest Complete
     }, [](SpellInfo* spellInfo)
     {
-        //! HACK: This spell break quest complete for alliance and on retail not used �_O
+        //! HACK: This spell break quest complete for alliance and on retail not used 癬O
         spellInfo->Effects[EFFECT_0].Effect = 0;
     });
 

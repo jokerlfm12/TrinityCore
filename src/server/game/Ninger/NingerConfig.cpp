@@ -169,9 +169,7 @@ bool NingerConfig::StartNinger()
     DPSDelay = GetIntDefault("DPSDelay", 2000);
     OnlineCheckDelay = GetIntDefault("OnlineCheckDelay", 60000);
     OfflineCheckDelay = GetIntDefault("OfflineCheckDelay", 3600000);
-    NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);
-    NingerRandomTeleportMinRange = GetFloatDefault("NingerRandomTeleportMinRange", 200.0f);
-    NingerRandomTeleportMaxRange = GetFloatDefault("NingerRandomTeleportMinRange", 400.0f);
+    NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);    
 
     if (Enable == 0)
     {

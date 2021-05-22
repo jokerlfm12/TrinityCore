@@ -385,7 +385,31 @@ void SmartAI::UpdateAI(uint32 diff)
         return;
 
     if (!UpdateVictim())
-        return;
+    {
+        // lfm - smart ai for pet, check master engagement
+        if (Unit* owner = me->GetCharmerOrOwner())
+        {
+            if (Unit* ownerAttacker = owner->getAttackerForHelper())
+            {
+                AttackStart(ownerAttacker);
+            }
+        }
+    }
+    else
+    {
+        // lfm update combat move in update loop 
+        if (!me->isMoving())
+        {
+            if (_canCombatMove)
+            {
+                if (Unit* victim = me->GetVictim())
+                {
+                    SetRun(_run);
+                    me->GetMotionMaster()->MoveChase(victim);
+                }
+            }
+        }
+    }
 
     if (_canAutoAttack)
         DoMeleeAttackIfReady();

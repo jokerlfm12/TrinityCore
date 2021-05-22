@@ -51,7 +51,7 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
     }
     if (me->IsNonMeleeSpellCast(false))
     {
-        return false;
+        return true;
     }
     if (!pmChaseTarget)
     {
@@ -170,12 +170,8 @@ void NingerMovement::MovePoint(float pmX, float pmY, float pmZ, uint32 pmLimitDe
         ResetMovement();
         return;
     }
-    float distance = me->GetDistance(pmX, pmY, pmZ);
-    if (distance >= CONTACT_DISTANCE && distance <= VISIBILITY_DISTANCE_LARGE)
-    {
-        activeMovementType = NingerMovementType::NingerMovementType_Point;
-        MoveTargetPosition(pmX, pmY, pmZ);
-    }
+    activeMovementType = NingerMovementType::NingerMovementType_Point;
+    MoveTargetPosition(pmX, pmY, pmZ);
 }
 
 void NingerMovement::MoveTargetPosition()
@@ -189,8 +185,8 @@ void NingerMovement::MoveTargetPosition()
         if (me->IsWalking())
         {
             me->SetWalk(false);
-        }
-        me->GetMotionMaster()->MovePoint(0, positionTarget);
+        }        
+        me->GetMotionMaster()->MovePoint(1, positionTarget);
     }
 }
 
@@ -646,6 +642,10 @@ bool Script_Base::CastSpell(Unit* pmTarget, std::string pmSpellName, bool pmChec
     if (!me)
     {
         return false;
+    }
+    if (me->IsNonMeleeSpellCast(false))
+    {
+        return true;
     }
     if (pmClearShapeShift)
     {

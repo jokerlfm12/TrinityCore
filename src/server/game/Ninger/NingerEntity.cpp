@@ -156,6 +156,8 @@ void NingerEntity::Update(uint32 pmDiff)
                         {
                             eachAI->sb->Initialize();
                             eachAI->Reset();
+                            eachAI->initialized = true;
+                            eachAI->randomTeleportDelay = urand(5 * TimeConstants::IN_MILLISECONDS, 10 * TimeConstants::IN_MILLISECONDS);
                         }
                     }
                     entityState = NingerEntityState::NingerEntityState_Online;

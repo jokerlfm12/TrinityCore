@@ -72,6 +72,20 @@
 
 #include "NingerConfig.h"
 
+class pvpZonePosition
+{
+public:
+    pvpZonePosition()
+    {
+        mapID = 0;
+    }
+
+    uint32 mapID;
+    Position allianceSpawnPoint;
+    Position hordeSpawnPoint;
+    Position flagPoint;
+};
+
 class NingerManager
 {
 	NingerManager();
@@ -114,7 +128,8 @@ public:
 	uint32 GetUsableArmorSubClass(Player* pmTargetPlayer);
 	void TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot);
 	bool EquipNewItem(Player* pmTargetPlayer, uint32 pmItemEntry, uint8 pmEquipSlot);
-	void RandomTeleport(Player* pmTargetPlayer);    
+	void RandomTeleport(Player* pmTargetPlayer);
+    void TeleportPlayer(Player* pmTargetPlayer, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ);
 
 	bool TankThreatOK(Player* pmTankPlayer, Unit* pmVictim);
 	bool HasAura(Unit* pmTarget, std::string pmSpellName, Unit* pmCaster = NULL);	
@@ -122,6 +137,7 @@ public:
 	uint32 GetAuraStack(Unit* pmTarget, std::string pmSpellName, Unit* pmCaster = NULL);
 
     Player* GetNearbyHostilePlayer(Player* pmSearcher, float pmRange = RANGE_HEAL_DISTANCE);
+    Unit* GetNearbyHostileUnit(Player* pmSearcher, float pmRange = RANGE_HEAL_DISTANCE);
     Unit* GetAnyUnitInRange(Player* pmSearcher, float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
 
 public:
@@ -144,6 +160,8 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>>> characterTalentLearningMap;
 
     std::unordered_map<uint32, uint32> instantPoisonEntryMap;
+
+    std::unordered_map<uint32, pvpZonePosition*> pvpPositionMap;
 
 	int onlineCheckDelay;
 	int offlineCheckDelay;

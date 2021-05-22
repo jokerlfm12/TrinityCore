@@ -14,6 +14,7 @@ public:
     bool Revive(Player* pmTarget);
     bool Heal(Unit* pmTarget);
     bool Heal_Discipline(Unit* pmTarget);
+    bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
 
     int manaCheckDelay;
     int powerWordShieldDelay;
@@ -26,5 +27,7 @@ public:
     int hymnOfHopeDelay;
     int prayerOfMendingDelay;
     int shadowfiendDelay;
+
+    int mindBlastDelay;
 };
 #endif

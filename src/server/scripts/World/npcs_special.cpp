@@ -3219,11 +3219,7 @@ public:
             boreSpellID = 32738;
             boneboreDelay = boneboreLimit;
             freeMotionType = me->GetDefaultMovementType();
-
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            DoCastSelf(tunnelPassiveSpellID);
-            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SUBMERGED);
-            SetCombatMovement(true);
+            me->SetVisible(false);
         }
 
         void Reset() override
@@ -3231,6 +3227,25 @@ public:
             me->SetDefaultMovementType(freeMotionType);
             me->GetMotionMaster()->Initialize();
             evading = false;
+        }
+
+        void JustAppeared()
+        {
+            // underground at first
+            me->AttackStop();
+            me->StopMoving();
+            me->HandleEmoteCommand(EMOTE_ONESHOT_SUBMERGE);
+            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SUBMERGED);
+            SetCombatMovement(true);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            DoCastSelf(tunnelPassiveSpellID);
+            boneboreDelay = boneboreLimit;
+            me->SetVisible(true);
+        }
+
+        void IsSummonedBy(Unit* /*summoner*/)
+        {
+            
         }
 
         void JustEngagedWith(Unit* who) override

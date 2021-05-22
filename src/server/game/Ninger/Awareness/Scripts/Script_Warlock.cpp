@@ -173,105 +173,105 @@ bool Script_Warlock::DPS_Destruction(Unit* pmTarget, bool pmChase, bool pmAOE, b
         return false;
     }
 
-    uint32 comboPoints = me->GetComboPoints();
-    uint32 energy = me->GetPower(Powers::POWER_ENERGY);
-
     if (pmTarget)
     {
-        if (me->IsValidAttackTarget(pmTarget))
+        if (pmTarget->IsAlive())
         {
-            float targetDistance = me->GetDistance(pmTarget);
-            if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
+            if (me->IsValidAttackTarget(pmTarget))
             {
-                if (pmChase)
+                float targetDistance = me->GetDistance(pmTarget);
+                if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
                 {
-                    if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
+                    if (pmChase)
                     {
-                        return false;
-                    }
-                }
-                else
-                {
-                    if (!me->isInFront(pmTarget, M_PI / 4))
-                    {
-                        me->SetFacingToObject(pmTarget);
-                    }
-                }
-                //me->Attack(pmTarget, true);
-
-                if (targetDistance < RANGE_DPS_DISTANCE)
-                {
-                    if (pmAOE)
-                    {
-                        if (aoeCheckDelay < 0)
+                        if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
                         {
-                            aoeCheckDelay = 1000;
-                            uint32 targetsCount = 0;
-                            std::list<Unit*> unitList;
-                            Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
-                            Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
-                            Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
-                            if (!unitList.empty())
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (!me->isInFront(pmTarget, M_PI / 4))
+                        {
+                            me->SetFacingToObject(pmTarget);
+                        }
+                    }
+                    me->Attack(pmTarget, true);
+
+                    if (targetDistance < RANGE_DPS_DISTANCE)
+                    {
+                        if (pmAOE)
+                        {
+                            if (aoeCheckDelay < 0)
                             {
-                                for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                aoeCheckDelay = 1000;
+                                uint32 targetsCount = 0;
+                                std::list<Unit*> unitList;
+                                Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
+                                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                                Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
+                                if (!unitList.empty())
                                 {
-                                    if (Unit* eachUnit = *uIT)
-                                    {
-                                        if (me->IsValidAttackTarget(eachUnit))
-                                        {
-                                            targetsCount++;
-                                        }
-                                    }
-                                }
-                            }
-                            if (targetsCount > 2)
-                            {
-                                if (summonDelay < 0)
-                                {
-                                    summonDelay = 1000;
-                                    if (CastSpell(pmTarget, "Summon Infernal"))
-                                    {
-                                        summonDelay = 601000;
-                                        return true;
-                                    }
-                                }
-                                if (shadowfuryDelay < 0)
-                                {
-                                    shadowfuryDelay = 1000;
-                                    if (CastSpell(pmTarget, "Shadowfury", true))
-                                    {
-                                        shadowfuryDelay = 21000;
-                                        return true;
-                                    }
-                                }
-                                if (CastSpell(pmTarget, "Rain of Fire"))
-                                {
-                                    return true;
-                                }
-                            }
-                            else if (targetsCount == 2)
-                            {
-                                if (baneOfHavocDelay < 0)
-                                {
-                                    baneOfHavocDelay = 1000;
                                     for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
                                     {
                                         if (Unit* eachUnit = *uIT)
                                         {
                                             if (me->IsValidAttackTarget(eachUnit))
                                             {
-                                                if (pmTarget->GetGUID() != eachUnit->GetGUID())
+                                                targetsCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (targetsCount > 2)
+                                {
+                                    if (summonDelay < 0)
+                                    {
+                                        summonDelay = 1000;
+                                        if (CastSpell(pmTarget, "Summon Infernal"))
+                                        {
+                                            summonDelay = 601000;
+                                            return true;
+                                        }
+                                    }
+                                    if (shadowfuryDelay < 0)
+                                    {
+                                        shadowfuryDelay = 1000;
+                                        if (CastSpell(pmTarget, "Shadowfury", true))
+                                        {
+                                            shadowfuryDelay = 21000;
+                                            return true;
+                                        }
+                                    }
+                                    if (CastSpell(pmTarget, "Rain of Fire"))
+                                    {
+                                        return true;
+                                    }
+                                }
+                                else if (targetsCount == 2)
+                                {
+                                    if (baneOfHavocDelay < 0)
+                                    {
+                                        baneOfHavocDelay = 1000;
+                                        for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                        {
+                                            if (Unit* eachUnit = *uIT)
+                                            {
+                                                if (me->IsValidAttackTarget(eachUnit))
                                                 {
-                                                    if (sNingerManager->HasAura(eachUnit, "Bane of Havoc", me))
+                                                    if (pmTarget->GetGUID() != eachUnit->GetGUID())
                                                     {
-                                                        baneOfHavocDelay = 10000;
+                                                        if (sNingerManager->HasAura(eachUnit, "Bane of Havoc", me))
+                                                        {
+                                                            baneOfHavocDelay = 10000;
+                                                        }
+                                                        else if (CastSpell(eachUnit, "Bane of Havoc"))
+                                                        {
+                                                            baneOfHavocDelay = 10000;
+                                                            return true;
+                                                        }
+                                                        break;
                                                     }
-                                                    else if (CastSpell(eachUnit, "Bane of Havoc"))
-                                                    {
-                                                        baneOfHavocDelay = 10000;
-                                                        return true;
-                                                    }
-                                                    break;
                                                 }
                                             }
                                         }
@@ -279,153 +279,153 @@ bool Script_Warlock::DPS_Destruction(Unit* pmTarget, bool pmChase, bool pmAOE, b
                                 }
                             }
                         }
-                    }
-                    if (shadowburnDelay < 0)
-                    {
-                        shadowburnDelay = 1000;
-                        float targetHealthPCT = pmTarget->GetHealthPct();
-                        if (targetHealthPCT < 20.0f)
+                        if (shadowburnDelay < 0)
                         {
-                            if (CastSpell(pmTarget, "Shadowburn"))
+                            shadowburnDelay = 1000;
+                            float targetHealthPCT = pmTarget->GetHealthPct();
+                            if (targetHealthPCT < 20.0f)
                             {
-                                shadowburnDelay = 15000;
-                                return true;
-                            }
-                        }
-                    }
-                    if (curseDelay < 0)
-                    {
-                        curseDelay = 1000;
-                        switch (curseType)
-                        {
-                        case WarlockCurseType::WarlockCurseType_None:
-                        {
-                            curseDelay = 600000;
-                            break;
-                        }
-                        case WarlockCurseType::WarlockCurseType_Element:
-                        {
-                            if (CastSpell(pmTarget, "Curse of the Elements", true))
-                            {
-                                curseDelay = 5000;
-                                return true;
-                            }
-                            break;
-                        }
-                        case WarlockCurseType::WarlockCurseType_Tongues:
-                        {
-                            if (CastSpell(pmTarget, "Curse of Tongues", true))
-                            {
-                                curseDelay = 5000;
-                                return true;
-                            }
-                            break;
-                        }
-                        case WarlockCurseType::WarlockCurseType_Weakness:
-                        {
-                            if (CastSpell(pmTarget, "Curse of Weakness", true))
-                            {
-                                curseDelay = 5000;
-                                return true;
-                            }
-                            break;
-                        }
-                        default:
-                        {
-                            break;
-                        }
-                        }
-                    }
-                    int soulShards = me->GetPower(Powers::POWER_SOUL_SHARDS);
-                    if (soulburnDelay < 0)
-                    {
-                        if (soulShards > 0)
-                        {
-                            soulburnDelay = 1000;
-                            if (CastSpell(me, "Soulburn", true))
-                            {
-                                soulburnDelay = 46000;
-                                return true;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (soulFireDelay < 0)
-                        {
-                            soulFireDelay = 1000;
-                            if (sNingerManager->HasAura(me, "Soulburn"))
-                            {
-                                if (CastSpell(pmTarget, "Soul Fire"))
+                                if (CastSpell(pmTarget, "Shadowburn"))
                                 {
+                                    shadowburnDelay = 15000;
                                     return true;
                                 }
                             }
                         }
-                    }
-                    if (empoweredImpDelay < 0)
-                    {
-                        empoweredImpDelay = 1000;
-                        if (me->HasAura(47283))
+                        if (curseDelay < 0)
                         {
-                            if (CastSpell(pmTarget, "Soul Fire"))
+                            curseDelay = 1000;
+                            switch (curseType)
                             {
-                                empoweredImpDelay = 5000;
+                            case WarlockCurseType::WarlockCurseType_None:
+                            {
+                                curseDelay = 600000;
+                                break;
+                            }
+                            case WarlockCurseType::WarlockCurseType_Element:
+                            {
+                                if (CastSpell(pmTarget, "Curse of the Elements", true))
+                                {
+                                    curseDelay = 5000;
+                                    return true;
+                                }
+                                break;
+                            }
+                            case WarlockCurseType::WarlockCurseType_Tongues:
+                            {
+                                if (CastSpell(pmTarget, "Curse of Tongues", true))
+                                {
+                                    curseDelay = 5000;
+                                    return true;
+                                }
+                                break;
+                            }
+                            case WarlockCurseType::WarlockCurseType_Weakness:
+                            {
+                                if (CastSpell(pmTarget, "Curse of Weakness", true))
+                                {
+                                    curseDelay = 5000;
+                                    return true;
+                                }
+                                break;
+                            }
+                            default:
+                            {
+                                break;
+                            }
+                            }
+                        }
+                        int soulShards = me->GetPower(Powers::POWER_SOUL_SHARDS);
+                        if (soulburnDelay < 0)
+                        {
+                            if (soulShards > 0)
+                            {
+                                soulburnDelay = 1000;
+                                if (CastSpell(me, "Soulburn", true))
+                                {
+                                    soulburnDelay = 46000;
+                                    return true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (soulFireDelay < 0)
+                            {
+                                soulFireDelay = 1000;
+                                if (sNingerManager->HasAura(me, "Soulburn"))
+                                {
+                                    if (CastSpell(pmTarget, "Soul Fire"))
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        if (empoweredImpDelay < 0)
+                        {
+                            empoweredImpDelay = 1000;
+                            if (me->HasAura(47283))
+                            {
+                                if (CastSpell(pmTarget, "Soul Fire"))
+                                {
+                                    empoweredImpDelay = 5000;
+                                    return true;
+                                }
+                            }
+                        }
+                        if (immolateDelay < 0)
+                        {
+                            immolateDelay = 1000;
+                            if (CastSpell(pmTarget, "Immolate", true, true))
+                            {
                                 return true;
                             }
                         }
-                    }
-                    if (immolateDelay < 0)
-                    {
-                        immolateDelay = 1000;
-                        if (CastSpell(pmTarget, "Immolate", true, true))
+                        if (conflagrateDelay < 0)
+                        {
+                            conflagrateDelay = 1000;
+                            if (sNingerManager->HasAura(pmTarget, "Immolate", me))
+                            {
+                                if (CastSpell(pmTarget, "Conflagrate"))
+                                {
+                                    conflagrateDelay = 10000;
+                                    return true;
+                                }
+                            }
+                        }
+                        if (chaosBoltDelay < 0)
+                        {
+                            chaosBoltDelay = 1000;
+                            if (sNingerManager->HasAura(pmTarget, "Immolate", me))
+                            {
+                                if (CastSpell(pmTarget, "Chaos Bolt"))
+                                {
+                                    chaosBoltDelay = 12000;
+                                    return true;
+                                }
+                            }
+                        }
+                        if (soulshatterDelay < 0)
+                        {
+                            soulshatterDelay = 1000;
+                            if (CastSpell(me, "Soulshatter"))
+                            {
+                                soulshatterDelay = 121000;
+                                return true;
+                            }
+                        }
+                        if (CastSpell(pmTarget, "Incinerate"))
+                        {
+                            return true;
+                        }
+                        if (CastSpell(pmTarget, "Shadow Bolt"))
                         {
                             return true;
                         }
                     }
-                    if (conflagrateDelay < 0)
-                    {
-                        conflagrateDelay = 1000;
-                        if (sNingerManager->HasAura(pmTarget, "Immolate", me))
-                        {
-                            if (CastSpell(pmTarget, "Conflagrate"))
-                            {
-                                conflagrateDelay = 10000;
-                                return true;
-                            }
-                        }
-                    }
-                    if (chaosBoltDelay < 0)
-                    {
-                        chaosBoltDelay = 1000;
-                        if (sNingerManager->HasAura(pmTarget, "Immolate", me))
-                        {
-                            if (CastSpell(pmTarget, "Chaos Bolt"))
-                            {
-                                chaosBoltDelay = 12000;
-                                return true;
-                            }
-                        }
-                    }
-                    if (soulshatterDelay < 0)
-                    {
-                        soulshatterDelay = 1000;
-                        if (CastSpell(me, "Soulshatter"))
-                        {
-                            soulshatterDelay = 121000;
-                            return true;
-                        }
-                    }
-                    if (CastSpell(pmTarget, "Incinerate"))
-                    {
-                        return true;
-                    }
-                    if (CastSpell(pmTarget, "Shadow Bolt"))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
-                return true;
             }
         }
     }

@@ -421,6 +421,7 @@ Unit::Unit(bool isWorldObject) :
 
     // lfm Unit extra delay
     extraDelay = 0;
+    freeMovementType = MovementGeneratorType::IDLE_MOTION_TYPE;
 }
 
 ////////////////////////////////////////////////////////////

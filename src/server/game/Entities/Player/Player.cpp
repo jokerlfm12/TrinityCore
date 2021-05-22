@@ -6215,7 +6215,11 @@ void Player::RewardOnKill(Unit* victim, float rate)
                 uint32 current_bonus_reputation_rank1 = GetReputationMgr().GetRank(bonusFactionEntry1);
 
                 if (bonusFactionEntry1)
-                    GetReputationMgr().ModifyReputation(bonusFactionEntry1, donerep1, current_bonus_reputation_rank1 > Rew->ReputationMaxCap1);
+                {
+                    // lfm tabard reputation has no spillover 
+                    //GetReputationMgr().ModifyReputation(bonusFactionEntry1, donerep1, current_bonus_reputation_rank1 > Rew->ReputationMaxCap1);
+                    GetReputationMgr().ModifyReputation(bonusFactionEntry1, donerep1);
+                }                    
             }
         }
     }
@@ -6245,7 +6249,11 @@ void Player::RewardOnKill(Unit* victim, float rate)
                 uint32 current_bonus_reputation_rank2 = GetReputationMgr().GetRank(bonusFactionEntry2);
 
                 if (bonusFactionEntry2)
-                    GetReputationMgr().ModifyReputation(bonusFactionEntry2, donerep2, current_bonus_reputation_rank2 > Rew->ReputationMaxCap1);
+                {
+                    // lfm tabard reputation has no spillover
+                    //GetReputationMgr().ModifyReputation(bonusFactionEntry2, donerep2, current_bonus_reputation_rank2 > Rew->ReputationMaxCap1);
+                    GetReputationMgr().ModifyReputation(bonusFactionEntry2, donerep2);
+                }                    
             }
         }
     }
@@ -7033,6 +7041,10 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
         return;
 
     uint32 const oldZone = m_zoneUpdateId;
+
+    // lfm area update handler 
+    uint32 oldArea = m_areaUpdateId;
+
     m_zoneUpdateId = newZone;
     m_zoneUpdateTimer = ZONE_UPDATE_INTERVAL;
 
@@ -7095,7 +7107,9 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
 
     // call enter script hooks after everyting else has processed
     sScriptMgr->OnPlayerUpdateZone(this, newZone, newArea);
-    if (oldZone != newZone)
+
+    // lfm area updating will affect pvp enter and leave 
+    if ((oldZone != newZone) || (oldArea != newArea))
     {
         sOutdoorPvPMgr->HandlePlayerEnterZone(this, newZone);
         sBattlefieldMgr->HandlePlayerEnterZone(this, newZone);

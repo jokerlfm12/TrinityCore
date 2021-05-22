@@ -2,6 +2,7 @@
 #include "Group.h"
 #include "SpellAuras.h"
 #include "SpellAuraEffects.h"
+#include "GridNotifiers.h"
 
 Script_Priest::Script_Priest(Player* pmMe) :Script_Base(pmMe)
 {
@@ -16,6 +17,7 @@ Script_Priest::Script_Priest(Player* pmMe) :Script_Base(pmMe)
     hymnOfHopeDelay = 0;
     prayerOfMendingDelay = 0;
     shadowfiendDelay = 0;
+    mindBlastDelay = 0;
 }
 
 void Script_Priest::Update(uint32 pmDiff)
@@ -64,6 +66,10 @@ void Script_Priest::Update(uint32 pmDiff)
     if (shadowfiendDelay >= 0)
     {
         shadowfiendDelay -= pmDiff;
+    }
+    if (mindBlastDelay >= 0)
+    {
+        mindBlastDelay -= pmDiff;
     }
 }
 
@@ -491,6 +497,185 @@ bool Script_Priest::Heal_Discipline(Unit* pmTarget)
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Script_Priest::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (pmTarget)
+    {
+        if (pmTarget->IsAlive())
+        {
+            if (me->IsValidAttackTarget(pmTarget))
+            {
+                float targetDistance = me->GetDistance(pmTarget);
+                if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
+                {
+                    if (pmChase)
+                    {
+                        if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (!me->isInFront(pmTarget, M_PI / 4))
+                        {
+                            me->SetFacingToObject(pmTarget);
+                        }
+                    }
+                    me->Attack(pmTarget, true);
+
+                    if (targetDistance < RANGE_DPS_DISTANCE)
+                    {
+                        if (pmAOE)
+                        {
+                            if (aoeCheckDelay < 0)
+                            {
+                                aoeCheckDelay = 1000;
+                                uint32 targetsCount = 0;
+                                std::list<Unit*> unitList;
+                                Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
+                                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                                Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
+                                if (!unitList.empty())
+                                {
+                                    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                    {
+                                        if (Unit* eachUnit = *uIT)
+                                        {
+                                            if (me->IsValidAttackTarget(eachUnit))
+                                            {
+                                                targetsCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (targetsCount > 2)
+                                {
+
+                                }
+                            }
+                        }
+                        if (mindBlastDelay < 0)
+                        {
+                            mindBlastDelay = 1000;
+                            if (CastSpell(pmTarget, "Mind Blast"))
+                            {
+                                mindBlastDelay = 8000;
+                                return true;
+                            }
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (Group* myGroup = me->GetGroup())
+        {
+            if (pmMark)
+            {
+                // icon  
+                if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetOGByTargetIcon(7)))
+                {
+                    if (DPS(target, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                // tank target
+                Player* mainTank = NULL;
+                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (Awareness_Base* ab = member->awarenessMap[member->activeAwarenessIndex])
+                        {
+                            if (ab->groupRole == GroupRole::GroupRole_Tank)
+                            {
+                                mainTank = member;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (mainTank)
+                {
+                    if (Unit* tankTarget = mainTank->GetSelectedUnit())
+                    {
+                        if (tankTarget->IsInCombat())
+                        {
+                            if (DPS(tankTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    if (mainTank->IsAlive())
+                    {
+                        std::set<Unit*> const& tankAttackers = mainTank->getAttackers();
+                        for (Unit* eachAttacker : tankAttackers)
+                        {
+                            if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                if (Unit* myTarget = me->GetSelectedUnit())
+                {
+                    if (DPS(myTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                    {
+                        return true;
+                    }
+                }
+                std::set<Unit*> const& myAttackers = me->getAttackers();
+                for (Unit* eachAttacker : myAttackers)
+                {
+                    if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (Unit* myTarget = me->GetSelectedUnit())
+            {
+                if (DPS(myTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                {
+                    return true;
+                }
+            }
+            std::set<Unit*> const& myAttackers = me->getAttackers();
+            for (Unit* eachAttacker : myAttackers)
+            {
+                if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
+                {
+                    return true;
                 }
             }
         }

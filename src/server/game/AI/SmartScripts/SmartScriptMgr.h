@@ -409,9 +409,11 @@ struct SmartEvent
         {
             uint32 minHpPct;
             uint32 maxHpPct;
-            uint32 radius;
+            // lfm radius position fix 
+            //uint32 radius;
             uint32 repeatMin;
             uint32 repeatMax;
+            uint32 radius;
         } friendlyHealthPct;
 
         struct

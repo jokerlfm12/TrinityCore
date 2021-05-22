@@ -18,10 +18,13 @@
 
 Awareness_Base::Awareness_Base(Player* pmMe)
 {
+    initialized = false;
     me = pmMe;
     groupRole = GroupRole::GroupRole_DPS;
     ogEngageTarget = ObjectGuid::Empty;
-    randomTeleportDelay = urand(10 * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::IN_MILLISECONDS);
+    randomTeleportDelay = 0;
+    deadTime = 0;
+    teleportDelay = 0;    
     reviveDelay = 0;
     engageDelay = 0;
     moveDelay = 0;
@@ -128,7 +131,9 @@ void Awareness_Base::Reset()
 {
     groupRole = GroupRole::GroupRole_DPS;
     ogEngageTarget = ObjectGuid::Empty;
-    randomTeleportDelay = urand(10 * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::IN_MILLISECONDS);
+    randomTeleportDelay = urand(20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 30 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+    deadTime = 0;
+    teleportDelay = 0;
     reviveDelay = 0;
     engageDelay = 0;
     moveDelay = 0;
@@ -223,14 +228,33 @@ void Awareness_Base::Update(uint32 pmDiff)
     {
         return;
     }
+    if (!initialized)
+    {
+        return;
+    }
     if (WorldSession* mySesson = me->GetSession())
     {
         if (mySesson->isNinger)
         {
             sb->Update(pmDiff);
-            if (me->IsNonMeleeSpellCast(false, false, true))
+            if (teleportDelay > 0)
             {
-                return;
+                teleportDelay -= pmDiff;
+                if (teleportDelay <= 0)
+                {
+                    if (me->IsBeingTeleported())
+                    {
+                        teleportDelay = 1000;                        
+                    }
+                    else
+                    {
+                        me->ClearInCombat();
+                        sb->ClearTarget();
+                        sb->rm->ResetMovement();
+                        me->TeleportTo(wlTeleportDestination);
+                        return;
+                    }                    
+                }
             }
             if (Group* myGroup = me->GetGroup())
             {
@@ -269,6 +293,10 @@ void Awareness_Base::Update(uint32 pmDiff)
                         }
                     }
                 }
+                if (staying)
+                {
+                    return;
+                }
                 if (teleportAssembleDelay > 0)
                 {
                     teleportAssembleDelay -= pmDiff;
@@ -300,36 +328,15 @@ void Awareness_Base::Update(uint32 pmDiff)
                             {
                                 if (leaderPlayer->IsInWorld())
                                 {
-                                    //for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
-                                    //{
-                                    //    Player::BoundInstancesMap& binds = me->GetBoundInstances(Difficulty(i));
-                                    //    for (Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end(); itr++)
-                                    //    {
-                                    //        InstanceSave* save = itr->second.save;
-                                    //        if (itr->first != me->GetMapId())
-                                    //        {
-                                    //            me->UnbindInstance(itr, Difficulty(i));
-                                    //        }
-                                    //    }
-                                    //}
-                                    if (me->TeleportTo(leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ(), leaderPlayer->GetOrientation()))
+                                    sNingerManager->TeleportPlayer(me, leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ());
+                                    if (me->IsAlive())
                                     {
-                                        if (me->IsAlive())
-                                        {
-                                            sNingerManager->WhisperTo(leaderPlayer, "I have come.", Language::LANG_UNIVERSAL, me);
-                                        }
-                                        else
-                                        {
-                                            resurrectDelay = urand(5000, 10000);
-                                            sNingerManager->WhisperTo(leaderPlayer, "I have come. I will revive in a few seconds", Language::LANG_UNIVERSAL, me);
-                                        }
-                                        me->ClearInCombat();
-                                        sb->ClearTarget();
-                                        sb->rm->ResetMovement();
+                                        sNingerManager->WhisperTo(leaderPlayer, "I am coming.", Language::LANG_UNIVERSAL, me);
                                     }
                                     else
                                     {
-                                        sNingerManager->WhisperTo(leaderPlayer, "I can not come to you", Language::LANG_UNIVERSAL, me);
+                                        resurrectDelay = urand(10000, 15000);
+                                        sNingerManager->WhisperTo(leaderPlayer, "I am coming. And I will revive in a few seconds", Language::LANG_UNIVERSAL, me);
                                     }
                                 }
                                 else
@@ -345,60 +352,14 @@ void Awareness_Base::Update(uint32 pmDiff)
                         }
                     }
                 }
-                if (resurrectDelay > 0)
-                {
-                    resurrectDelay -= pmDiff;
-                    if (resurrectDelay < 0)
-                    {
-                        resurrectDelay = 0;
-                        if (!me->IsAlive())
-                        {
-                            me->ResurrectPlayer(0.2f);
-                            me->SpawnCorpseBones();
-                        }
-                    }
-                }
-                if (moveDelay > 0)
-                {
-                    moveDelay -= pmDiff;
-                    if (moveDelay < 0)
-                    {
-                        moveDelay = 0;
-                    }
-                    return;
-                }
-                if (reviveDelay > 0)
-                {
-                    reviveDelay -= pmDiff;
-                    if (!sb->Revive(nullptr))
-                    {
-                        reviveDelay = 0;
-                        sb->ogReviveTarget.Clear();
-                    }
-                    if (reviveDelay <= 0)
-                    {
-                        sb->ogReviveTarget.Clear();
-                    }
-                    return;
-                }
-                if (staying)
-                {
-                    return;
-                }
                 if (!me->IsAlive())
                 {
+                    deadTime += pmDiff;
                     return;
-                }
-                bool groupInCombat = GroupInCombat();
-                if (groupInCombat)
-                {
-                    eatDelay = 0;
-                    drinkDelay = 0;
-                    combatTime += pmDiff;
                 }
                 else
                 {
-                    combatTime = 0;
+                    deadTime = 0;
                 }
                 if (engageDelay > 0)
                 {
@@ -460,6 +421,33 @@ void Awareness_Base::Update(uint32 pmDiff)
                     }
                     return;
                 }
+                if (resurrectDelay > 0)
+                {
+                    resurrectDelay -= pmDiff;
+                    if (resurrectDelay < 0)
+                    {
+                        resurrectDelay = 0;
+                        if (!me->IsAlive())
+                        {
+                            me->ResurrectPlayer(0.2f);
+                            me->SpawnCorpseBones();
+                        }
+                    }
+                }
+                if (reviveDelay > 0)
+                {
+                    reviveDelay -= pmDiff;
+                    if (!sb->Revive(nullptr))
+                    {
+                        reviveDelay = 0;
+                        sb->ogReviveTarget.Clear();
+                    }
+                    if (reviveDelay <= 0)
+                    {
+                        sb->ogReviveTarget.Clear();
+                    }
+                    return;
+                }
                 if (assistDelay > 0)
                 {
                     assistDelay -= pmDiff;
@@ -472,8 +460,20 @@ void Awareness_Base::Update(uint32 pmDiff)
                         assistDelay = 0;
                     }
                 }
-                if (groupInCombat)
+                if (moveDelay > 0)
                 {
+                    moveDelay -= pmDiff;
+                    if (moveDelay < 0)
+                    {
+                        moveDelay = 0;
+                    }
+                    return;
+                }
+                if (GroupInCombat())
+                {
+                    eatDelay = 0;
+                    drinkDelay = 0;
+                    combatTime += pmDiff;
                     if (sb->Assist(nullptr))
                     {
                         return;
@@ -494,11 +494,11 @@ void Awareness_Base::Update(uint32 pmDiff)
                     }
                     case GroupRole::GroupRole_Healer:
                     {
-                        if (Cure())
+                        if (Heal())
                         {
                             return;
                         }
-                        if (Heal())
+                        if (Cure())
                         {
                             return;
                         }
@@ -520,6 +520,7 @@ void Awareness_Base::Update(uint32 pmDiff)
                 }
                 else
                 {
+                    combatTime = 0;
                     if (eatDelay > 0)
                     {
                         eatDelay -= pmDiff;
@@ -601,6 +602,47 @@ void Awareness_Base::Update(uint32 pmDiff)
             }
             else
             {
+                if (!me->IsAlive())
+                {
+                    deadTime += pmDiff;
+                    if (deadTime > 60000)
+                    {
+                        if (me->IsBeingTeleported())
+                        {
+                            return;
+                        }
+                        Reset();
+                        me->ResurrectPlayer(1.0f);
+                        me->SpawnCorpseBones();
+                        if (me->GetAreaId() == 3628)
+                        {
+                            pvpZonePosition* halaa = sNingerManager->pvpPositionMap[3628];
+                            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+                            Position spawnPosition;
+                            if (me->GetTeamId() == TeamId::TEAM_ALLIANCE)
+                            {
+                                spawnPosition = halaa->allianceSpawnPoint;
+                            }
+                            else
+                            {
+                                spawnPosition = halaa->hordeSpawnPoint;
+                            }
+                            destX = frand(spawnPosition.m_positionX - 5.0f, spawnPosition.m_positionX + 5.0f);
+                            destY = frand(spawnPosition.m_positionY - 5.0f, spawnPosition.m_positionY + 5.0f);
+                            destZ = spawnPosition.m_positionZ;
+                            sNingerManager->TeleportPlayer(me, halaa->mapID, destX, destY, destZ);
+                        }
+                        else
+                        {
+                            me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, 0.0f);
+                        }
+                    }
+                    return;
+                }
+                else
+                {
+                    deadTime = 0;
+                }
                 if (me->IsInCombat())
                 {
                     engageDelay = 0;
@@ -608,11 +650,11 @@ void Awareness_Base::Update(uint32 pmDiff)
                     eatDelay = 0;
                     drinkDelay = 0;
                     combatTime += pmDiff;
-                    if (Cure())
+                    if (Heal())
                     {
                         return;
                     }
-                    if (Heal())
+                    if (Cure())
                     {
                         return;
                     }
@@ -622,22 +664,8 @@ void Awareness_Base::Update(uint32 pmDiff)
                     }
                 }
                 else
-                {
+                {            
                     combatTime = 0;
-                    if (randomTeleportDelay > 0)
-                    {
-                        randomTeleportDelay -= pmDiff;
-                        if (randomTeleportDelay <= 0)
-                        {
-                            randomTeleportDelay = urand(10 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
-                            sNingerManager->RandomTeleport(me);
-                            return;
-                        }
-                    }
-                    if (!me->IsAlive())
-                    {
-                        return;
-                    }
                     if (engageDelay > 0)
                     {
                         engageDelay -= pmDiff;
@@ -659,10 +687,21 @@ void Awareness_Base::Update(uint32 pmDiff)
                                 ogEngageTarget.Clear();
                                 sb->rm->ResetMovement();
                                 sb->ClearTarget();
-                                return;
+                                engageDelay = 0;
                             }
                         }
                         return;
+                    }
+                    if (randomTeleportDelay > 0)
+                    {
+                        randomTeleportDelay -= pmDiff;
+                        if (randomTeleportDelay <= 0)
+                        {
+                            randomTeleportDelay = urand(20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 30 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                            Reset();
+                            sNingerManager->RandomTeleport(me);
+                            return;
+                        }
                     }
                     // hostile pvp check
                     if (hostilePVPCheckDelay >= 0)
@@ -678,6 +717,19 @@ void Awareness_Base::Update(uint32 pmDiff)
                                     ogEngageTarget = enemyPlayer->GetGUID();
                                     engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
                                     return;
+                                }
+                            }
+                            if (me->GetAreaId() == 3628)
+                            {
+                                // attack any hostile unit
+                                if (Unit* enemyUnit = sNingerManager->GetNearbyHostileUnit(me))
+                                {
+                                    if (sb->DPS(enemyUnit, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+                                    {
+                                        ogEngageTarget = enemyUnit->GetGUID();
+                                        engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
+                                        return;
+                                    }
                                 }
                             }
                         }
@@ -994,34 +1046,61 @@ bool Awareness_Base::Follow()
 
 bool Awareness_Base::Wander()
 {
-    uint32 wanderRate = urand(0, 100);
-    if (wanderRate < 25)
+    if (me->isMoving())
     {
-        if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
+        return true;
+    }
+    if (me->GetAreaId() == 3628)
+    {        
+        pvpZonePosition* halaa = sNingerManager->pvpPositionMap[3628];
+        float flagDistance = me->GetDistance(halaa->flagPoint);
+        if (flagDistance > 100.0f)
         {
-            if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-            {
-                ogEngageTarget = enemyPlayer->GetGUID();
-                engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
-                return true;
-            }
+            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+            destX = frand(halaa->flagPoint.m_positionX - 20.0f, halaa->flagPoint.m_positionX + 20.0f);
+            destY = frand(halaa->flagPoint.m_positionY - 20.0f, halaa->flagPoint.m_positionY + 20.0f);
+            destZ = halaa->flagPoint.m_positionZ + 2.0f;
+            me->SetWalk(false);
+            moveDelay = 5 * TimeConstants::IN_MILLISECONDS;
+            sb->rm->MovePoint(destX, destY, destZ, moveDelay);
+            return true;
         }
     }
-    else if (wanderRate < 50)
-    {
-        float angle = frand(0, 2 * M_PI);
-        float distance = frand(10.0f, 30.0f);
-        float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-        me->GetNearPoint(me, destX, destY, destZ, distance, angle);
-        me->GetMotionMaster()->MovePoint(0, destX, destY, destZ);
-        moveDelay = 20 * TimeConstants::IN_MILLISECONDS;
-    }
-    else
-    {
-        me->StopMoving();
-        me->GetMotionMaster()->Clear();
-        moveDelay = 20 * TimeConstants::IN_MILLISECONDS;
-    }
+    float angle = frand(0, 2 * M_PI);
+    float distance = frand(10.0f, 30.0f);
+    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+    me->GetNearPoint(me, destX, destY, destZ, distance, angle);
+    moveDelay = 5 * TimeConstants::IN_MILLISECONDS;
+    sb->rm->MovePoint(destX, destY, destZ, moveDelay);
+
+    //uint32 wanderRate = urand(0, 100);
+    //if (wanderRate < 25)
+    //{
+    //    if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
+    //    {
+    //        if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+    //        {
+    //            ogEngageTarget = enemyPlayer->GetGUID();
+    //            engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
+    //            return true;
+    //        }
+    //    }
+    //}
+    //else if (wanderRate < 50)
+    //{
+    //    me->StopMoving();
+    //    me->GetMotionMaster()->Clear();
+    //    moveDelay = 10 * TimeConstants::IN_MILLISECONDS;
+    //}
+    //else
+    //{
+    //    float angle = frand(0, 2 * M_PI);
+    //    float distance = frand(10.0f, 30.0f);
+    //    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+    //    me->GetNearPoint(me, destX, destY, destZ, distance, angle);
+    //    moveDelay = 5 * TimeConstants::IN_MILLISECONDS;        
+    //    sb->rm->MovePoint(destX, destY, destZ, moveDelay);
+    //}
     return true;
 }
 

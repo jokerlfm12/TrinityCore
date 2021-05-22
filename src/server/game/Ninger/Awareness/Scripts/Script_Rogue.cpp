@@ -143,221 +143,224 @@ bool Script_Rogue::DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmM
 
 	if (pmTarget)
 	{
-		if (me->IsValidAttackTarget(pmTarget))
-		{            
-			float targetDistance = me->GetDistance(pmTarget);
-			if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
-			{				
-				if (pmChase)
-				{
-					if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
-					{
-						return false;
-					}
-				}
-				else
-				{
-					if (!me->isInFront(pmTarget, M_PI / 4))
-					{
-						me->SetFacingToObject(pmTarget);
-					}
-				}
-				me->Attack(pmTarget, true);
-                if (targetDistance > INTERACTION_DISTANCE)
+        if (pmTarget->IsAlive())
+        {
+            if (me->IsValidAttackTarget(pmTarget))
+            {
+                float targetDistance = me->GetDistance(pmTarget);
+                if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
                 {
-                    if (sprintDelay < 0)
+                    if (pmChase)
                     {
-                        sprintDelay = 1000;
-                        if (CastSpell(me, "Sprint"))
+                        if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
                         {
-                            sprintDelay = 61000;
-                            return true;
+                            return false;
                         }
                     }
-                }
-                else
-                {
-                    if (energy > 15)
+                    else
                     {
-                        if (kickDelay < 0)
+                        if (!me->isInFront(pmTarget, M_PI / 4))
                         {
-                            kickDelay = 1000;
-                            if (pmTarget->IsNonMeleeSpellCast(false))
+                            me->SetFacingToObject(pmTarget);
+                        }
+                    }
+                    me->Attack(pmTarget, true);
+                    if (targetDistance > INTERACTION_DISTANCE)
+                    {
+                        if (sprintDelay < 0)
+                        {
+                            sprintDelay = 1000;
+                            if (CastSpell(me, "Sprint"))
                             {
-                                if (CastSpell(pmTarget, "Kick"))
-                                {
-                                    kickDelay = 11000;
-                                    return true;
-                                }
+                                sprintDelay = 61000;
+                                return true;
                             }
                         }
                     }
-                    if (energy > 25)
+                    else
                     {
-                        if (dismantleDelay < 0)
+                        if (energy > 15)
                         {
-                            dismantleDelay = 1000;
-                            bool hasWeapon = true;
-                            if (pmTarget->GetTypeId() == TYPEID_PLAYER)
+                            if (kickDelay < 0)
                             {
-                                if (Player const* targetPlayer = pmTarget->ToPlayer())
+                                kickDelay = 1000;
+                                if (pmTarget->IsNonMeleeSpellCast(false))
                                 {
-                                    if (!targetPlayer->GetWeaponForAttack(BASE_ATTACK) || !targetPlayer->IsUseEquipedWeapon(true))
+                                    if (CastSpell(pmTarget, "Kick"))
                                     {
-                                        hasWeapon = false;
+                                        kickDelay = 11000;
+                                        return true;
                                     }
                                 }
                             }
-                            else if (!pmTarget->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
-                            {
-                                hasWeapon = false;
-                            }
-                            if (hasWeapon)
-                            {
-                                if (CastSpell(pmTarget, "Dismantle"))
-                                {
-                                    dismantleDelay = 61000;
-                                    return true;
-                                }
-                            }
                         }
-                    }
-                    if (pmAOE)
-                    {
-                        if (aoeCheckDelay < 0)
+                        if (energy > 25)
                         {
-                            aoeCheckDelay = 1000;
-                            uint32 targetsCount = 0;
-                            std::list<Unit*> unitList;
-                            Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
-                            Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
-                            Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
-                            if (!unitList.empty())
+                            if (dismantleDelay < 0)
                             {
-                                for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                dismantleDelay = 1000;
+                                bool hasWeapon = true;
+                                if (pmTarget->GetTypeId() == TYPEID_PLAYER)
                                 {
-                                    if (Unit* eachUnit = *uIT)
+                                    if (Player const* targetPlayer = pmTarget->ToPlayer())
                                     {
-                                        if (me->IsValidAttackTarget(eachUnit))
+                                        if (!targetPlayer->GetWeaponForAttack(BASE_ATTACK) || !targetPlayer->IsUseEquipedWeapon(true))
                                         {
-                                            targetsCount++;
+                                            hasWeapon = false;
                                         }
                                     }
                                 }
+                                else if (!pmTarget->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                                {
+                                    hasWeapon = false;
+                                }
+                                if (hasWeapon)
+                                {
+                                    if (CastSpell(pmTarget, "Dismantle"))
+                                    {
+                                        dismantleDelay = 61000;
+                                        return true;
+                                    }
+                                }
                             }
-                            if (targetsCount > 1)
+                        }
+                        if (pmAOE)
+                        {
+                            if (aoeCheckDelay < 0)
                             {
-                                if (CastSpell(me, "Blade Flurry", true))
+                                aoeCheckDelay = 1000;
+                                uint32 targetsCount = 0;
+                                std::list<Unit*> unitList;
+                                Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
+                                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                                Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
+                                if (!unitList.empty())
+                                {
+                                    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                                    {
+                                        if (Unit* eachUnit = *uIT)
+                                        {
+                                            if (me->IsValidAttackTarget(eachUnit))
+                                            {
+                                                targetsCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (targetsCount > 1)
+                                {
+                                    if (CastSpell(me, "Blade Flurry", true))
+                                    {
+                                        return true;
+                                    }
+                                }
+                                else
+                                {
+                                    CancelAura("Blade Flurry");
+                                }
+                            }
+                        }
+                        if (killingSpreeDelay < 0)
+                        {
+                            killingSpreeDelay = 1000;
+                            if (CastSpell(pmTarget, "Killing Spree"))
+                            {
+                                killingSpreeDelay = 121000;
+                                return true;
+                            }
+                        }
+                        if (evasionDelay < 0)
+                        {
+                            evasionDelay = 1000;
+                            std::set<Unit*> const& myAttackers = me->getAttackers();
+                            for (Unit* eachAttacker : myAttackers)
+                            {
+                                if (eachAttacker->GetTarget() == me->GetGUID())
+                                {
+                                    float attackerDistance = me->GetDistance(eachAttacker);
+                                    if (attackerDistance < INTERACTION_DISTANCE)
+                                    {
+                                        if (CastSpell(me, "Evasion"))
+                                        {
+                                            evasionDelay = 181000;
+                                            return true;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (adrenalineRushDelay < 0)
+                        {
+                            adrenalineRushDelay = 1000;
+                            if (CastSpell(me, "Adrenaline Rush"))
+                            {
+                                adrenalineRushDelay = 181000;
+                                return true;
+                            }
+                        }
+                        if (energy > 25)
+                        {
+                            if (sliceDelay < 0)
+                            {
+                                sliceDelay = 1000;
+                                if (CastSpell(pmTarget, "Slice and Dice"))
+                                {
+                                    sliceDelay = 14000;
+                                    return true;
+                                }
+                            }
+                        }
+                        if (energy > 35)
+                        {
+                            bool finish = false;
+                            if (comboPoints >= 5)
+                            {
+                                finish = true;
+                            }
+                            else if (comboPoints >= 4)
+                            {
+                                if (urand(0, 100) < 80)
+                                {
+                                    finish = true;
+                                }
+                            }
+                            else if (comboPoints >= 2)
+                            {
+                                if (urand(0, 100) < 50)
+                                {
+                                    finish = true;
+                                }
+                            }
+                            if (finish)
+                            {
+                                if (CastSpell(pmTarget, "Eviscerate"))
                                 {
                                     return true;
                                 }
                             }
-                            else
-                            {
-                                CancelAura("Blade Flurry");
-                            }
                         }
-                    }
-                    if (killingSpreeDelay < 0)
-                    {
-                        killingSpreeDelay = 1000;
-                        if (CastSpell(pmTarget, "Killing Spree"))
+                        if (energy > 40)
                         {
-                            killingSpreeDelay = 121000;
-                            return true;
-                        }
-                    }
-                    if (evasionDelay < 0)
-                    {
-                        evasionDelay = 1000;
-                        std::set<Unit*> const& myAttackers = me->getAttackers();
-                        for (Unit* eachAttacker : myAttackers)
-                        {
-                            if (eachAttacker->GetTarget() == me->GetGUID())
+                            if (revealingStrikeDelay < 0)
                             {
-                                float attackerDistance = me->GetDistance(eachAttacker);
-                                if (attackerDistance < INTERACTION_DISTANCE)
+                                revealingStrikeDelay = 1000;
+                                if (CastSpell(pmTarget, "Revealing Strike", true))
                                 {
-                                    if (CastSpell(me, "Evasion"))
-                                    {
-                                        evasionDelay = 181000;
-                                        return true;
-                                    }
-                                    break;
+                                    revealingStrikeDelay = 10000;
+                                    return true;
                                 }
                             }
-                        }
-                    }
-                    if (adrenalineRushDelay < 0)
-                    {
-                        adrenalineRushDelay = 1000;
-                        if (CastSpell(me, "Adrenaline Rush"))
-                        {
-                            adrenalineRushDelay = 181000;
-                            return true;
-                        }
-                    }
-                    if (energy > 25)
-                    {
-                        if (sliceDelay < 0)
-                        {
-                            sliceDelay = 1000;
-                            if (CastSpell(pmTarget, "Slice and Dice"))
-                            {
-                                sliceDelay = 14000;
-                                return true;
-                            }
-                        }
-                    }
-                    if (energy > 35)
-                    {
-                        bool finish = false;
-                        if (comboPoints >= 5)
-                        {
-                            finish = true;
-                        }
-                        else if (comboPoints >= 4)
-                        {
-                            if (urand(0, 100) < 80)
-                            {
-                                finish = true;
-                            }
-                        }
-                        else if (comboPoints >= 2)
-                        {
-                            if (urand(0, 100) < 50)
-                            {
-                                finish = true;
-                            }
-                        }
-                        if (finish)
-                        {
-                            if (CastSpell(pmTarget, "Eviscerate"))
+                            if (CastSpell(pmTarget, "Sinister Strike"))
                             {
                                 return true;
                             }
                         }
                     }
-                    if (energy > 40)
-                    {
-                        if (revealingStrikeDelay < 0)
-                        {
-                            revealingStrikeDelay = 1000;
-                            if (CastSpell(pmTarget, "Revealing Strike", true))
-                            {
-                                revealingStrikeDelay = 10000;
-                                return true;
-                            }
-                        }
-                        if (CastSpell(pmTarget, "Sinister Strike"))
-                        {
-                            return true;
-                        }
-                    }
+                    return true;
                 }
-				return true;
-			}
-		}
+            }
+        }
 	}
 	else
 	{

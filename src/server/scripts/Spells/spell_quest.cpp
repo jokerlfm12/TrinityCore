@@ -2422,18 +2422,23 @@ class spell_q10929_fumping : SpellScriptLoader
 
         class spell_q10929_fumpingAuraScript : public AuraScript
         {
-            bool Validate(SpellInfo const* /*spell*/) override
-            {
-                return ValidateSpellInfo({ SPELL_SUMMON_SAND_GNOME, SPELL_SUMMON_BONE_SLICER });
-            }
-
             void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
                 if (!GetTargetApplication()->GetRemoveMode().HasFlag(AuraRemoveFlags::Expired))
+                {
                     return;
+                }
 
                 if (Unit* caster = GetCaster())
-                    caster->CastSpell(caster, urand(SPELL_SUMMON_SAND_GNOME, SPELL_SUMMON_BONE_SLICER), true);
+                {
+                    uint32 summonRate = urand(0, 100);
+                    uint32 summonSpellID = 39240;
+                    if (summonRate > 50)
+                    {
+                        summonSpellID = 39241;
+                    }
+                    caster->CastSpell(caster, summonSpellID);
+                }
             }
 
         void Register() override
@@ -2445,6 +2450,44 @@ class spell_q10929_fumping : SpellScriptLoader
     AuraScript* GetAuraScript() const override
     {
         return new spell_q10929_fumpingAuraScript();
+    }
+};
+
+// lfm scripts 
+class spell_q10930_fumping : SpellScriptLoader
+{
+public:
+    spell_q10930_fumping() : SpellScriptLoader("spell_q10930_fumping") { }
+
+    class spell_q10930_fumpingAuraScript : public AuraScript
+    {
+        void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            if (Unit* caster = GetCaster())
+            {
+                uint32 summonRate = urand(0, 100);
+                uint32 summonSpellID = 39247;
+                if (summonRate > 40 && summonRate < 80)
+                {
+                    summonSpellID = 39245;
+                }
+                else if (summonRate >= 80)
+                {
+                    summonSpellID = 39248;
+                }
+                caster->CastSpell(caster, summonSpellID);
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectRemove.Register(&spell_q10930_fumpingAuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_q10930_fumpingAuraScript();
     }
 };
 
@@ -2807,4 +2850,7 @@ void AddSC_quest_spell_scripts()
     new spell_q11306_failed_mix_43376();
     new spell_q11306_failed_mix_43378();
     new spell_q14098_knocking_67869();
+
+    // lfm scripts
+    new spell_q10930_fumping();
 }

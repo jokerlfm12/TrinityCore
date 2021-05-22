@@ -127,7 +127,7 @@ INSERT INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES ('85466', 'sp
 INSERT INTO `quest_template_addon` (`ID`, `MaxLevel`, `AllowableClasses`, `SourceSpellID`, `PrevQuestID`, `NextQuestID`, `ExclusiveGroup`, `BreadcrumbForQuestId`, `RewardMailTemplateID`, `RewardMailDelay`, `RequiredSkillID`, `RequiredSkillPoints`, `RequiredMinRepFaction`, `RequiredMaxRepFaction`, `RequiredMinRepValue`, `RequiredMaxRepValue`, `ProvidedItemCount`, `SpecialFlags`) VALUES ('29539', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '2');
 UPDATE `areatrigger_involvedrelation` SET `quest` = '29539' WHERE (`id` = '4200');
 UPDATE `creature_template` SET `unit_flags` = '0' WHERE (`entry` = '17398');
-INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('17381', '73200', '0', '100', '1', '0', '1', '1', '1', '1');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('17381', '73200', '0', '100', '1', '0', '1', '0', '1', '1');
 UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '7396') and (`OptionIndex` = '0');
 UPDATE `gossip_menu_option` SET `OptionType` = '3' WHERE (`MenuId` = '10437') and (`OptionIndex` = '1');
 UPDATE `creature_template` SET `unit_flags` = '0' WHERE (`entry` = '19733');
@@ -184,4 +184,124 @@ select entryorguid, source_type, id, link, event_type, event_phase_mask, event_c
 action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
 target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '17893%';
 UPDATE `creature_template` SET `gossip_menu_id` = '7520' WHERE (`entry` = '17893');
-
+INSERT INTO `quest_offer_reward` (`ID`, `Emote1`, `Emote2`, `Emote3`, `Emote4`, `EmoteDelay1`, `EmoteDelay2`, `EmoteDelay3`, `EmoteDelay4`, `RewardText`, `VerifiedBuild`) VALUES ('29566', '0', '0', '0', '0', '0', '0', '0', '0', 'What\'re you doing all the way down here? As you can see, it isn\'t exactly safe!', '15595');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('19895', '72118', '0', '100', '1', '0', '1', '0', '1', '1');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('17991', '72118', '0', '100', '1', '0', '1', '0', '1', '1');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('19894', '72119', '0', '100', '1', '0', '1', '0', '1', '1');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('17942', '72119', '0', '100', '1', '0', '1', '0', '1', '1');
+UPDATE `quest_template_addon` SET `PrevQuestID` = '9990' WHERE (`ID` = '9994');
+UPDATE `creature_template_addon` SET `emote` = '233' WHERE (`entry` = '18595');
+INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_type`, `event_phase_mask`, `event_chance`, `event_flags`, `event_param1`, `event_param2`, `event_param3`, `event_param4`, `event_param5`, `action_type`, `action_param1`, `action_param2`, `action_param3`, `action_param4`, `action_param5`, `action_param6`, `target_type`, `target_param1`, `target_param2`, `target_param3`, `target_x`, `target_y`, `target_z`, `target_o`, `comment`) VALUES ('18449', '0', '1', '0', '0', '0', '100', '0', '1000', '5000', '5000', '10000', '0', '11', '54185', '1', '0', '0', '0', '0', '2', '0', '0', '0', '0', '0', '0', '0', 'Shienor Talonite - In Combat - Cast \'Claw Slash\'');
+INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_type`, `event_phase_mask`, `event_chance`, `event_flags`, `event_param1`, `event_param2`, `event_param3`, `event_param4`, `event_param5`, `action_type`, `action_param1`, `action_param2`, `action_param3`, `action_param4`, `action_param5`, `action_param6`, `target_type`, `target_param1`, `target_param2`, `target_param3`, `target_x`, `target_y`, `target_z`, `target_o`, `comment`) VALUES ('18449', '0', '0', '0', '0', '0', '100', '0', '6000', '10000', '9000', '14000', '0', '11', '11428', '1', '0', '0', '0', '0', '2', '0', '0', '0', '0', '0', '0', '0', 'Shienor Talonite - In Combat - Cast \'Knockdown\'');
+UPDATE `smart_scripts` SET `event_param3` = '15000', `event_param4` = '18000', `action_param1` = '30285', `comment` = 'Shienor Talonite - In Combat - Cast \'Eagle Claw\'' WHERE (`entryorguid` = '18449') and (`source_type` = '0') and (`id` = '1') and (`link` = '0');
+INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_type`, `event_phase_mask`, `event_chance`, `event_flags`, `event_param1`, `event_param2`, `event_param3`, `event_param4`, `event_param5`, `action_type`, `action_param1`, `action_param2`, `action_param3`, `action_param4`, `action_param5`, `action_param6`, `target_type`, `target_param1`, `target_param2`, `target_param3`, `target_x`, `target_y`, `target_z`, `target_o`, `comment`) VALUES ('19943', '0', '0', '0', '0', '0', '100', '0', '6000', '10000', '9000', '14000', '0', '11', '11428', '1', '0', '0', '0', '0', '2', '0', '0', '0', '0', '0', '0', '0', 'Lash Talonite - In Combat - Cast \'Knockdown\'');
+INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_type`, `event_phase_mask`, `event_chance`, `event_flags`, `event_param1`, `event_param2`, `event_param3`, `event_param4`, `event_param5`, `action_type`, `action_param1`, `action_param2`, `action_param3`, `action_param4`, `action_param5`, `action_param6`, `target_type`, `target_param1`, `target_param2`, `target_param3`, `target_x`, `target_y`, `target_z`, `target_o`, `comment`) VALUES ('19943', '0', '1', '0', '0', '0', '100', '0', '1000', '3000', '4000', '8000', '0', '11', '37685', '1', '0', '0', '0', '0', '2', '0', '0', '0', '0', '0', '0', '0', 'Lash Talonite - In Combat - Cast \'Backstab\'');
+UPDATE `creature_template` SET `AIName` = 'SmartAI' WHERE (`entry` = '18449');
+UPDATE `creature_template` SET `AIName` = 'SmartAI' WHERE (`entry` = '19943');
+insert into npc_vendor select entry, slot, item, maxcount, incrtime, extendedcost, 1, 0, verifiedbuild from world_trinitycore_wlk.npc_vendor where entry = 25195;
+UPDATE `smart_scripts` SET `target_type` = '19', `target_param2` = '50', `target_param3` = '0' WHERE (`entryorguid` = '184725') and (`source_type` = '1') and (`id` = '2') and (`link` = '0');
+UPDATE `creature_template` SET `unit_flags` = '32832', `type_flags` = '0' WHERE (`entry` = '18707');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('400000', '22441', '530', '0', '0', '1', '0', '1', '169', '0', '-1', '0', '0', '-3536.95', '4552.85', '83.9206', '1.40712', '300', '0', '0', '1', '0', '2', '0', '0', '0', '', '0');
+UPDATE `world_trinitycore_ctm`.`creature_template` SET `AIName` = 'SmartAI' WHERE (`entry` = '22441');
+INSERT INTO `world_trinitycore_ctm`.`creature_template_movement` (`CreatureId`, `Ground`, `Swim`, `Flight`, `Rooted`, `Random`) VALUES ('22441', '1', '0', '1', '0', '0');
+UPDATE `world_trinitycore_ctm`.`event_scripts` SET `dataint` = '1' WHERE (`entry` = '181');
+insert into world_trinitycore_ctm.waypoint_data select entry + 6000000, pointid, position_x, position_y, position_z, orientation, velocity, delay, 0, 0, 100, 0 from world_trinitycore_ctm.waypoints where entry = 22441;
+UPDATE `world_trinitycore_ctm`.`creature_template` SET `DamageModifier` = '4' WHERE (`entry` = '22441');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('223859', '54840', '556', '3791', '3791', '3', '0', '1', '169', '0', '-1', '0', '0', '-0.53787', '-0.352111', '0.0062', '6.25175', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('223860', '54847', '556', '3791', '3791', '3', '0', '1', '169', '0', '-1', '0', '0', '-143.996', '213.04', '0.0107748', '4.71238', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+delete from world_trinitycore_ctm.smart_scripts where entryorguid like '18956%';
+insert into world_trinitycore_ctm.smart_scripts 
+select entryorguid, source_type, id, link, event_type, event_phase_mask, event_chance, event_flags, event_param1,  event_param2,  event_param3,  event_param4,  event_param5, 
+action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
+target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '18956%';
+insert into waypoints select entry, pointid, position_x, position_y, position_z, orientation, 0, delay, point_comment from world_trinitycore_wlk.waypoints where entry = 18956;
+UPDATE `world_trinitycore_ctm`.`quest_template` SET `RequiredNpcOrGo1` = '18956', `RequiredNpcOrGo2` = '0', `RequiredNpcOrGoCount1` = '1', `RequiredNpcOrGoCount2` = '0', `ObjectiveText1` = 'Free Lakka', `ObjectiveText2` = '' WHERE (`ID` = '29605');
+delete from world_trinitycore_ctm.smart_scripts where entryorguid like '18319%';
+insert into world_trinitycore_ctm.smart_scripts 
+select entryorguid, source_type, id, link, event_type, event_phase_mask, event_chance, event_flags, event_param1,  event_param2,  event_param3,  event_param4,  event_param5, 
+action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
+target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '18319%';
+INSERT INTO `world_trinitycore_ctm`.`creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('19428', '72480', '0', '50', '1', '0', '1', '0', '1', '1');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('400003', '54668', '547', '3717', '3717', '3', '0', '1', '169', '0', '-1', '0', '0', '131.382', '-104.577', '-1.59057', '3.82016', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('400001', '54692', '557', '3792', '3792', '3', '0', '1', '169', '0', '-1', '0', '0', '-13.5759', '7.64209', '-0.954327', '4.39333', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('400002', '54694', '557', '3792', '3792', '3', '0', '1', '169', '0', '-1', '0', '0', '-14.5759', '7.64209', '-0.954327', '4.39333', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+INSERT INTO `world_trinitycore_ctm`.`creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `IsCurrency`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`) VALUES ('18343', '72127', '0', '100', '1', '0', '1', '0', '1', '1');
+INSERT INTO `world_trinitycore_ctm`.`conditions` (`SourceTypeOrReferenceId`, `SourceGroup`, `SourceEntry`, `SourceId`, `ElseGroup`, `ConditionTypeOrReference`, `ConditionTarget`, `ConditionValue1`, `ConditionValue2`, `ConditionValue3`, `NegativeCondition`, `ErrorType`, `ErrorTextId`, `ScriptName`, `Comment`) VALUES ('14', '7891', '9654', '0', '0', '8', '0', '10109', '0', '0', '1', '0', '0', '', 'Group 0: Show gossip text 9654 if quest \'I Must Have Them!\' is not rewarded');
+INSERT INTO `world_trinitycore_ctm`.`conditions` (`SourceTypeOrReferenceId`, `SourceGroup`, `SourceEntry`, `SourceId`, `ElseGroup`, `ConditionTypeOrReference`, `ConditionTarget`, `ConditionValue1`, `ConditionValue2`, `ConditionValue3`, `NegativeCondition`, `ErrorType`, `ErrorTextId`, `ScriptName`, `Comment`) VALUES ('14', '7891', '9659', '0', '0', '8', '0', '10109', '0', '0', '0', '0', '0', '', 'Group 0: Show gossip text 9659 if quest \'I Must Have Them!\' is rewarded');
+INSERT INTO `world_trinitycore_ctm`.`conditions` (`SourceTypeOrReferenceId`, `SourceGroup`, `SourceEntry`, `SourceId`, `ElseGroup`, `ConditionTypeOrReference`, `ConditionTarget`, `ConditionValue1`, `ConditionValue2`, `ConditionValue3`, `NegativeCondition`, `ErrorType`, `ErrorTextId`, `ScriptName`, `Comment`) VALUES ('15', '7891', '0', '0', '0', '8', '0', '10109', '0', '0', '0', '0', '0', '', 'Group 0: Show Gossip Option 0 if quest \'I Must Have Them!\' is rewarded');
+INSERT INTO `world_trinitycore_ctm`.`conditions` (`SourceTypeOrReferenceId`, `SourceGroup`, `SourceEntry`, `SourceId`, `ElseGroup`, `ConditionTypeOrReference`, `ConditionTarget`, `ConditionValue1`, `ConditionValue2`, `ConditionValue3`, `NegativeCondition`, `ErrorType`, `ErrorTextId`, `ScriptName`, `Comment`) VALUES ('15', '7891', '0', '0', '0', '2', '0', '27808', '1', '1', '1', '0', '0', '', 'Group 0: Show Gossip Option 0 if player does not have item \'Jump-a-tron 4000 Key\'');
+DELETE FROM `world_trinitycore_ctm`.`creature` WHERE (`guid` = '86598');
+DELETE FROM `world_trinitycore_ctm`.`creature` WHERE (`guid` = '86599');
+UPDATE `world_trinitycore_ctm`.`creature` SET `MovementType` = '1' WHERE (`guid` = '65624');
+UPDATE `world_trinitycore_ctm`.`creature` SET `MovementType` = '1' WHERE (`guid` = '86752');
+UPDATE `world_trinitycore_ctm`.`creature` SET `spawndist` = '5' WHERE (`guid` = '65624');
+UPDATE `world_trinitycore_ctm`.`creature` SET `spawndist` = '5' WHERE (`guid` = '86752');
+UPDATE `world_trinitycore_ctm`.`creature` SET `spawndist` = '0', `MovementType` = '0' WHERE (`guid` = '65624');
+UPDATE `world_trinitycore_ctm`.`creature` SET `spawndist` = '0', `MovementType` = '0' WHERE (`guid` = '86752');
+UPDATE `world_trinitycore_ctm`.`creature_template` SET `AIName` = 'SmartAI' WHERE (`entry` = '18297');
+insert into world_trinitycore_ctm.waypoints select entry, pointid, position_x, position_y, position_z, orientation, 0, delay, point_comment from world_trinitycore_wlk.waypoints where entry = 18297;
+insert into world_trinitycore_ctm.waypoints select entry, pointid, position_x, position_y, position_z, orientation, 0, delay, point_comment from world_trinitycore_wlk.waypoints where entry = 18294;
+UPDATE `world_trinitycore_ctm`.`creature` SET `position_x` = '-1463.63', `position_y` = '6363.4', `position_z` = '36.9237', `orientation` = '0' WHERE (`guid` = '86752');
+delete from world_trinitycore_ctm.creature_text where creatureid = 18297;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 18297;delete from world_trinitycore_ctm.creature_text where creatureid = 18294;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 18294;
+DELETE FROM `world_trinitycore_ctm`.`creature` WHERE (`guid` = '86752');
+UPDATE `world_trinitycore_ctm`.`smart_scripts` SET `target_type` = '1', `target_param1` = '0' WHERE (`entryorguid` = '1829701') and (`source_type` = '9') and (`id` = '6') and (`link` = '0');
+delete from world_trinitycore_ctm.smart_scripts where entryorguid like '18200%';
+insert into world_trinitycore_ctm.smart_scripts 
+select entryorguid, source_type, id, link, event_type, event_phase_mask, event_chance, event_flags, event_param1,  event_param2,  event_param3,  event_param4,  event_param5, 
+action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
+target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '18200%';
+delete from world_trinitycore_ctm.smart_scripts where entryorguid like '18180%';
+insert into world_trinitycore_ctm.smart_scripts 
+select entryorguid, source_type, id, link, event_type, event_phase_mask, event_chance, event_flags, event_param1,  event_param2,  event_param3,  event_param4,  event_param5, 
+action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
+target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '18180%';
+delete from world_trinitycore_ctm.smart_scripts where entryorguid like '18218%';
+insert into world_trinitycore_ctm.smart_scripts 
+select entryorguid, source_type, id, link, event_type, event_phase_mask, event_chance, event_flags, event_param1,  event_param2,  event_param3,  event_param4,  event_param5, 
+action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
+target_type, target_param1, target_param2, target_param3, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid like '18218%';
+delete from world_trinitycore_ctm.creature_text where creatureid = 18218;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 18218;
+delete from world_trinitycore_ctm.creature_text where creatureid = 18180;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 18180;
+delete from world_trinitycore_ctm.creature_text where creatureid = 18200;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 18200;
+DELETE FROM `world_trinitycore_ctm`.`creature_template_addon` WHERE (`entry` = '18297');
+DELETE FROM `world_trinitycore_ctm`.`creature_template_addon` WHERE (`entry` = '19055');use world_trinitycore_ctm;
+INSERT INTO `quest_template_addon` (`ID`, `MaxLevel`, `AllowableClasses`, `SourceSpellID`, `PrevQuestID`, `NextQuestID`, `ExclusiveGroup`, `BreadcrumbForQuestId`, `RewardMailTemplateID`, `RewardMailDelay`, `RequiredSkillID`, `RequiredSkillPoints`, `RequiredMinRepFaction`, `RequiredMaxRepFaction`, `RequiredMinRepValue`, `RequiredMaxRepValue`, `ProvidedItemCount`, `SpecialFlags`) VALUES ('29692', '0', '0', '0', '29691', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');
+INSERT INTO world_trinitycore_ctm.creature (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES 
+('215086', '54678', '546', '3716', '3716', '1', '0', '31', '169', '0', '-1', '0', '0', '40.226', '-21.8615', '-2.75393', '5.26059', '300', '0', '0', '1', '0', '0', '0', '0', '0', '', '0');
+delete from world_trinitycore_ctm.creature_formations where leaderguid in (SELECT guid FROM world_trinitycore_ctm.creature where map = 546) or memberguid in (SELECT guid FROM world_trinitycore_ctm.creature where map = 546);
+insert into world_trinitycore_ctm.creature_formations 
+select leaderguid + 1000000, memberguid + 1000000, dist, angle, groupai, point_1, point_2 from 
+world_trinitycore_wlk.creature_formations where leaderguid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546) or memberguid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546);
+delete from world_trinitycore_ctm.creature_addon where guid in (SELECT guid FROM world_trinitycore_ctm.creature where map = 546 and movementtype = 2);
+insert into world_trinitycore_ctm.creature_addon 
+select guid + 1000000, path_id + 10000000, 0, mount, bytes1, bytes2, emote, 0, 0, 0, visibilitydistancetype, auras 
+from world_trinitycore_wlk.creature_addon where guid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546 and movementtype = 2);
+SELECT waypointpathid FROM world_trinitycore_ctm.creature_addon where guid in (SELECT guid FROM world_trinitycore_ctm.creature where map = 546 and movementtype = 2);
+delete from world_trinitycore_ctm.waypoint_data where id in ();
+insert into world_trinitycore_ctm.waypoint_data 
+select id + 10000000, point, position_x, position_y, position_z, orientation, 0, delay, move_type, action, action_chance, wpguid 
+FROM world_trinitycore_wlk.waypoint_data where id in (SELECT path_id FROM world_trinitycore_wlk.creature_addon where guid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546 and movementtype = 2));
+delete from world_trinitycore_ctm.creature_loot_template where entry = 17537;
+insert into world_trinitycore_ctm.creature_loot_template 
+select entry, item, reference, chance, questrequired, 0, lootmode, groupid, mincount, maxcount, comment 
+from world_trinitycore_wlk.creature_loot_template where entry = 17537;
+delete from world_trinitycore_ctm.creature_text where creatureid = 1834;
+insert into world_trinitycore_ctm.creature_text 
+select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
+from world_trinitycore_wlk.creature_text where creatureid = 1834;
+UPDATE `world_trinitycore_ctm`.`creature_template` SET `npcflag` = '129' WHERE (`entry` = '15351');

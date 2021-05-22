@@ -300,9 +300,12 @@ class go_corkis_prison : public GameObjectScript
               {
                   if (Creature* corki = me->FindNearestCreature(NPC_CORKI, 25, true))
                   {
+                      corki->AI()->SetData(1, player->GetGUID().GetCounter());
                       corki->GetMotionMaster()->MovePoint(1, me->GetPositionX() + 5, me->GetPositionY(), me->GetPositionZ());
                       if (player)
+                      {
                           player->KilledMonsterCredit(NPC_CORKI_CREDIT_1);
+                      }                          
                   }
               }
 
@@ -310,9 +313,12 @@ class go_corkis_prison : public GameObjectScript
               {
                   if (Creature* corki = me->FindNearestCreature(NPC_CORKI_2, 25, true))
                   {
+                      corki->AI()->SetData(1, player->GetGUID().GetCounter());
                       corki->GetMotionMaster()->MovePoint(1, me->GetPositionX() - 5, me->GetPositionY(), me->GetPositionZ());
                       if (player)
+                      {
                           player->KilledMonsterCredit(NPC_CORKI_2);
+                      }                          
                   }
               }
 
@@ -320,9 +326,12 @@ class go_corkis_prison : public GameObjectScript
               {
                   if (Creature* corki = me->FindNearestCreature(NPC_CORKI_3, 25, true))
                   {
+                      corki->AI()->SetData(1, player->GetGUID().GetCounter());
                       corki->GetMotionMaster()->MovePoint(1, me->GetPositionX() + 4, me->GetPositionY(), me->GetPositionZ());
                       if (player)
+                      {
                           player->KilledMonsterCredit(NPC_CORKI_CREDIT_3);
+                      }                          
                   }
               }
               return true;
@@ -356,6 +365,7 @@ public:
       {
           Say_Timer = 5000;
           ReleasedFromCage = false;
+          ogBenefactor.Clear();
       }
 
       uint32 Say_Timer;
@@ -364,6 +374,14 @@ public:
       void Reset() override
       {
           Initialize();
+      }
+
+      void SetData(uint32 type, uint32 data) override
+      {
+          if (type == 1)
+          {
+              ogBenefactor = ObjectGuid(HighGuid::Player, data);
+          }
       }
 
       void UpdateAI(uint32 diff) override
@@ -386,14 +404,28 @@ public:
           {
               Say_Timer = 5000;
               ReleasedFromCage = true;
-              if (me->GetEntry() == NPC_CORKI)
-                  Talk(CORKI_SAY_THANKS);
-              if (me->GetEntry() == NPC_CORKI_2)
-                  Talk(CORKI_SAY_PROMISE);
-              if (me->GetEntry() == NPC_CORKI_3)
-                  Talk(CORKI_SAY_LAST);
+              if (!ogBenefactor.IsEmpty())
+              {
+                  if (Player* benefactor = ObjectAccessor::GetPlayer(*me, ogBenefactor))
+                  {
+                      if (me->GetEntry() == NPC_CORKI)
+                      {
+                          Talk(CORKI_SAY_THANKS, benefactor);
+                      }                          
+                      if (me->GetEntry() == NPC_CORKI_2)
+                      {
+                          Talk(CORKI_SAY_PROMISE, benefactor);
+                      }                          
+                      if (me->GetEntry() == NPC_CORKI_3)
+                      {
+                          Talk(CORKI_SAY_LAST, benefactor);
+                      }                          
+                  }
+              }
           }
       };
+
+      ObjectGuid ogBenefactor;
   };
 };
 
@@ -634,6 +666,256 @@ class go_warmaul_prison : public GameObjectScript
         }
 };
 
+// lfm scripts 
+class npc_gankly_rottenfist : public CreatureScript
+{
+public:
+    npc_gankly_rottenfist() : CreatureScript("npc_gankly_rottenfist") { }
+
+    struct npc_gankly_rottenfistAI : public ScriptedAI
+    {
+        npc_gankly_rottenfistAI(Creature* creature) : ScriptedAI(creature)
+        {
+            destination.m_positionX = -1451.46f;
+            destination.m_positionY = 6352.27f;
+            destination.m_positionZ = 37.2739f;
+            poisonDelay = urand(5000, 10000);
+            shadowDelay = urand(10000, 15000);
+            sinisterDelay = urand(3000, 6000);
+            stepDelay = 2000;
+            stepIndex = 0;
+        }
+
+        void IsSummonedBy(Unit* /*summoner*/)
+        {
+            DoCastSelf(32199);
+            //me->GetMotionMaster()->MovePath(6018297, false);
+            me->SetImmuneToAll(true);
+            me->SetReactState(ReactStates::REACT_PASSIVE);
+            me->SetWalk(false);
+            stepIndex = 1;
+            stepDelay = 7000;
+        }
+
+        void JustEngagedWith(Unit* who) override
+        {
+            if (who->GetEntry() == 18294)
+            {
+                Talk(0);
+            }
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            std::list<Creature*> kristenList;
+            me->GetCreatureListWithEntryInGrid(kristenList, 18294, 20.0f);
+            for (Creature* kristen : kristenList)
+            {
+                if (kristen->IsAlive())
+                {
+                    kristen->AI()->SetData(1, 2);
+                }
+                break;
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    me->SetHomePosition(me->GetPosition());
+                    me->SetImmuneToPC(true);
+                    me->SetReactState(ReactStates::REACT_PASSIVE);
+                    stepIndex = 2;
+                    stepDelay = 2000;
+                }
+            }
+        }
+
+        void MovementInform(uint32 type, uint32 id) override
+        {
+            if (type == POINT_MOTION_TYPE && id == 0)
+            {
+                stepIndex = 4;
+                stepDelay = 500;
+            }
+        };
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (poisonDelay >= 0)
+                {
+                    poisonDelay -= diff;
+                }
+                if (shadowDelay >= 0)
+                {
+                    shadowDelay -= diff;
+                }
+                if (sinisterDelay >= 0)
+                {
+                    sinisterDelay -= diff;
+                }
+                if (poisonDelay < 0)
+                {
+                    poisonDelay = urand(5000, 10000);
+                    DoCastVictim(30981);
+                }
+                if (shadowDelay < 0)
+                {
+                    shadowDelay = urand(10000, 15000);
+                    DoCastVictim(41176);
+                }
+                if (sinisterDelay < 0)
+                {
+                    sinisterDelay = urand(3000, 6000);
+                    DoCastVictim(15581);
+                }
+                DoMeleeAttackIfReady();
+            }
+            if (stepDelay >= 0)
+            {
+                stepDelay -= diff;
+            }
+            if (stepDelay < 0)
+            {
+                stepDelay = 1000;
+                switch (stepIndex)
+                {
+                case 0:
+                {
+                    break;
+                }
+                case 1:
+                {
+                    std::list<Creature*> kristenList;
+                    me->GetCreatureListWithEntryInGrid(kristenList, 18294, 20.0f);
+                    for (Creature* kristen : kristenList)
+                    {
+                        if (kristen->IsAlive())
+                        {
+                            me->SetImmuneToAll(false);
+                            me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                            kristen->SetImmuneToAll(false);
+                            AttackStart(kristen);
+                            stepDelay = 5000;
+                        }
+                        break;
+                    }
+                    break;
+                }
+                case 2:
+                {
+                    Talk(1);
+                    stepIndex = 3;
+                    stepDelay = 3000;
+                    break;
+                }
+                case 3:
+                {
+                    if (!me->isMoving())
+                    {
+                        me->SetWalk(true);
+                        me->GetMotionMaster()->MovePoint(0, destination);
+                    }
+                    break;
+                }
+                case 4:
+                {
+                    std::list<Creature*> haroldList;
+                    me->GetCreatureListWithEntryInGrid(haroldList, 18218, 20.0f);
+                    for (Creature* harold : haroldList)
+                    {
+                        me->SetFacingToObject(harold);
+                        stepIndex = 5;
+                        stepDelay = 500;
+                        break;
+                    }
+                    break;
+                }
+                case 5:
+                {
+                    Talk(2);
+                    stepIndex = 6;
+                    stepDelay = 5000;
+                    break;
+                }
+                case 6:
+                {
+                    std::list<Creature*> haroldList;
+                    me->GetCreatureListWithEntryInGrid(haroldList, 18218, 20.0f);
+                    for (Creature* harold : haroldList)
+                    {
+                        harold->AI()->SetData(1, 3);
+                        stepIndex = 7;
+                        stepDelay = 5000;
+                        break;
+                    }
+                    break;
+                }
+                case 7:
+                {
+                    std::list<Creature*> fitzList;
+                    me->GetCreatureListWithEntryInGrid(fitzList, 18200, 30.0f);
+                    for (Creature* fitz : fitzList)
+                    {
+                        fitz->AI()->SetData(1, 3);
+                        stepIndex = 8;
+                        stepDelay = 200;
+                        break;
+                    }
+                    break;
+                }
+                case 8:
+                {
+                    std::list<Creature*> hemetList;
+                    me->GetCreatureListWithEntryInGrid(hemetList, 18180, 30.0f);
+                    for (Creature* hemet : hemetList)
+                    {
+                        hemet->AI()->SetData(1, 3);
+                        stepIndex = 9;
+                        stepDelay = 300;
+                        break;
+                    }
+                    break;
+                }
+                case 9:
+                {
+                    me->KillSelf();
+                    stepIndex = 10;
+                    stepDelay = 500;
+                    break;
+                }
+                case 10:
+                {
+                    stepDelay = 60000;
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+                }
+            }
+        }
+
+        int poisonDelay;
+        int shadowDelay;
+        int sinisterDelay;
+        int stepDelay;
+        int stepIndex;
+        Position destination;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_gankly_rottenfistAI(creature);
+    }
+};
+
 void AddSC_nagrand()
 {
     new npc_maghar_captive();
@@ -642,4 +924,7 @@ void AddSC_nagrand()
     new go_corkis_prison();
     new npc_kurenai_captive();
     new go_warmaul_prison();
+
+    // lfm scripts
+    new npc_gankly_rottenfist();
 }

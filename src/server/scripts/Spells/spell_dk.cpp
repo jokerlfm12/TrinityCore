@@ -1128,7 +1128,7 @@ class spell_dk_runic_empowerment : public AuraScript
     bool Validate(SpellInfo const* /*spellInfo*/) override
     {
         return ValidateSpellInfo(
-            {
+            {                
                 SPELL_DK_DEATH_COIL_DAMAGE,
                 SPELL_DK_FROST_STRIKE,
                 SPELL_DK_RUNE_STRIKE,
@@ -1143,7 +1143,9 @@ class spell_dk_runic_empowerment : public AuraScript
     {
         uint32 spellId = eventInfo.GetSpellInfo()->Id;
         if (spellId == SPELL_DK_DEATH_COIL_DAMAGE || spellId == SPELL_DK_FROST_STRIKE || spellId == SPELL_DK_RUNE_STRIKE)
+        {
             return true;
+        }
 
         return false;
     }

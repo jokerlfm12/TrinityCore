@@ -43,6 +43,8 @@ public:
 
     ObjectGuid ogEngageTarget;
 
+    bool initialized;
+
     float chaseDistanceMin;
     float chaseDistanceMax;
 
@@ -51,6 +53,7 @@ public:
 	
     int combatTime;    
     int teleportAssembleDelay;
+    int deadTime;
     int randomTeleportDelay;
     int resurrectDelay;
     int dpsDelay;
@@ -69,5 +72,7 @@ public:
     int reviveDelay;
     int moveDelay;
     int hostilePVPCheckDelay;
+    int teleportDelay;
+    WorldLocation wlTeleportDestination;
 };
 #endif

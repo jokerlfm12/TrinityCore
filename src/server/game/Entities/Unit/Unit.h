@@ -30,6 +30,9 @@
 #include <array>
 #include <map>
 
+// lfm extra 
+#include "MotionMaster.h"
+
 #define WORLD_TRIGGER   12999
 
 #define MAX_SPELL_CHARM         4
@@ -767,6 +770,7 @@ class TC_GAME_API Unit : public WorldObject
 
         // lfm Unit extra delay 
         int extraDelay;
+        MovementGeneratorType freeMovementType;
 
         UnitAI* GetAI() { return i_AI; }
         void SetAI(UnitAI* newAI) { i_AI = newAI; }

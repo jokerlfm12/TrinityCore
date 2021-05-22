@@ -24,6 +24,7 @@ NingerManager::NingerManager()
     onlinePlayerIDMap.clear();
     tamableBeastEntryMap.clear();
     spellNameEntryMap.clear();
+    pvpPositionMap.clear();
 }
 
 void NingerManager::InitializeManager()
@@ -249,6 +250,31 @@ void NingerManager::InitializeManager()
             ningerEntityMap[account_name] = re;
         } while (ningerQR->NextRow());
     }
+
+    Position halaaHorde;
+    halaaHorde.m_positionX = -1397.0f;
+    halaaHorde.m_positionY = 7835.0f;
+    halaaHorde.m_positionZ = -16.0f;
+    Position halaaAlliance;
+    halaaAlliance.m_positionX = -1756.0f;
+    halaaAlliance.m_positionY = 7997.0f;
+    halaaAlliance.m_positionZ = -26.0f;
+    Position halaaFlag;
+    halaaFlag.m_positionX = -1572.0f;
+    halaaFlag.m_positionY = 7947.0f;
+    halaaFlag.m_positionZ = -22.0f;
+    pvpZonePosition* halaa = new pvpZonePosition();
+    halaa->mapID = 530;
+    halaa->allianceSpawnPoint.m_positionX = -1756.0f;
+    halaa->allianceSpawnPoint.m_positionY = 7997.0f;
+    halaa->allianceSpawnPoint.m_positionZ = -26.0f;
+    halaa->hordeSpawnPoint.m_positionX = -1397.0f;
+    halaa->hordeSpawnPoint.m_positionY = 7835.0f;
+    halaa->hordeSpawnPoint.m_positionZ = -16.0f;
+    halaa->flagPoint.m_positionX = -1572.0f;
+    halaa->flagPoint.m_positionY = 7947.0f;
+    halaa->flagPoint.m_positionZ = -22.0f;
+    pvpPositionMap[3628] = halaa;    
 
     sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger initialized");
 }
@@ -572,7 +598,7 @@ bool NingerManager::LoginNinger(uint32 pmAccountID, uint32 pmCharacterID)
         loginSession = new WorldSession(pmAccountID, "ninger", 0, NULL, SEC_PLAYER, 3, 0, LOCALE_enUS, 0, false);
         sWorld->AddSession(loginSession);
     }
-    loginSession->isNinger = true;    
+    loginSession->isNinger = true;
     loginSession->HandlePlayerLogin(playerGuid);
     sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Log in character %d %d", pmAccountID, pmCharacterID);
 
@@ -1405,6 +1431,53 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
                     }
                 }
             }
+            else if (ningerAction == "relocate")
+            {
+                std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
+                for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
+                {
+                    if (WorldSession* eachWS = wsIT->second)
+                    {
+                        if (eachWS->isNinger)
+                        {
+                            if (Player* eachNinger = eachWS->GetPlayer())
+                            {
+                                if (eachNinger->IsInWorld())
+                                {
+                                    eachNinger->TeleportTo(eachNinger->m_homebindMapId, eachNinger->m_homebindX, eachNinger->m_homebindY, eachNinger->m_homebindZ, 0.0f);
+
+                                    std::ostringstream replyTitleStream;
+                                    replyTitleStream << "Teleport ninger to homebind : " << eachNinger->GetName();
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else if (ningerAction == "equip")
+            {
+                std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
+                for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
+                {
+                    if (WorldSession* eachWS = wsIT->second)
+                    {
+                        if (eachWS->isNinger)
+                        {
+                            if (Player* eachNinger = eachWS->GetPlayer())
+                            {
+                                if (eachNinger->IsInWorld())
+                                {
+                                    InitializeEquipments(eachNinger, true);
+                                    std::ostringstream replyTitleStream;
+                                    replyTitleStream << "Reset equipments for ninger : " << eachNinger->GetName();
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     else if (commandName == "train")
@@ -2020,7 +2093,7 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
                                         moveDelay = atoi(moveDelayStr.c_str());
                                         if (moveDelay < 1000 || moveDelay > 6000)
                                         {
-                                            moveDelay = 1000;                                            
+                                            moveDelay = 1000;
                                         }
                                     }
                                     receiverAI->moveDelay = moveDelay;
@@ -2923,7 +2996,7 @@ bool NingerManager::LearnPlayerTalents(Player* pmTargetPlayer)
                             if (talentSet.find(talentInfo->SpellRank[0]) != talentSet.end())
                             {
                                 talentsMap[talentInfo->TierID].push_back(talentInfo);
-                            }                            
+                            }
                         }
                     }
                 }
@@ -3008,7 +3081,7 @@ void NingerManager::LearnPlayerSpells(Player* pmTargetPlayer)
                     else
                     {
                         pmTargetPlayer->LearnSpell(eachSpell.SpellId, false);
-                    }                    
+                    }
                 }
             }
         }
@@ -3042,7 +3115,7 @@ bool NingerManager::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetL
     {
         needToLogout = true;
     }
-    LearnPlayerSpells(pmTargetPlayer);    
+    LearnPlayerSpells(pmTargetPlayer);
 
     bool resetEquipments = false;
     if (needToLogout)
@@ -3524,19 +3597,35 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
             {
                 if (pmTargetPlayer->getClass() == Classes::CLASS_WARLOCK || pmTargetPlayer->getClass() == Classes::CLASS_PRIEST || pmTargetPlayer->getClass() == Classes::CLASS_MAGE)
                 {
-                    bool hasIT = false;
+                    bool hasSpellPower = false;
                     for (uint32 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
                     {
                         if (proto->GetItemStatType(i) == ItemModType::ITEM_MOD_SPELL_POWER)
                         {
-                            hasIT = true;
+                            hasSpellPower = true;
                             break;
                         }
                     }
-                    if (!hasIT)
+                    if (!hasSpellPower)
                     {
                         continue;
                     }
+                }
+            }
+            else if (proto->GetSubClass() == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD)
+            {
+                bool hasSpellPower = false;
+                for (uint32 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
+                {
+                    if (proto->GetItemStatType(i) == ItemModType::ITEM_MOD_SPELL_POWER)
+                    {
+                        hasSpellPower = true;
+                        break;
+                    }
+                }
+                if (hasSpellPower)
+                {
+                    continue;
                 }
             }
         }
@@ -3590,78 +3679,59 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
         pmTargetPlayer->SpawnCorpseBones();
     }
     pmTargetPlayer->ClearInCombat();
-    pmTargetPlayer->StopMoving();
-    pmTargetPlayer->GetMotionMaster()->Initialize();
-    std::unordered_map<uint32, ObjectGuid> sameLevelPlayerOGMap;
-    std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
-    for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
+    pmTargetPlayer->StopMoving();    
+    uint32 playerLevel = pmTargetPlayer->getLevel();    
+    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+    uint32 areaID = 0;
+    if (playerLevel >= 65)
     {
-        if (WorldSession* eachWS = wsIT->second)
+        areaID = 3628;
+    }
+    if (areaID > 0)
+    {
+        pvpZonePosition* destArea = sNingerManager->pvpPositionMap[areaID];
+        Position spawnPosition;
+        if (pmTargetPlayer->GetTeamId() == TeamId::TEAM_ALLIANCE)
         {
-            if (!eachWS->isNinger)
-            {
-                if (Player* eachPlayer = eachWS->GetPlayer())
-                {
-                    if (eachPlayer->getLevel() == pmTargetPlayer->getLevel())
-                    {
-                        if (!eachPlayer->IsBeingTeleported())
-                        {
-                            if (Map* eachMap = eachPlayer->GetMap())
-                            {
-                                if (!eachMap->Instanceable())
-                                {
-                                    if (AreaTableEntry const* zone = sAreaTableStore.LookupEntry(eachPlayer->GetAreaId()))
-                                    {
-                                        FactionTemplateEntry const* factionTemplate = eachPlayer->GetFactionTemplateEntry();
-                                        if (!factionTemplate || factionTemplate->FriendGroup & zone->FactionGroupMask)
-                                        {
-                                            // friendly realm
-                                        }
-                                        else if (factionTemplate->EnemyGroup & zone->FactionGroupMask)
-                                        {
-                                            // hostile realm 
-                                        }
-                                        else
-                                        {
-                                            // neutral realm
-                                            sameLevelPlayerOGMap[sameLevelPlayerOGMap.size()] = eachPlayer->GetGUID();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Player* destPlayer = NULL;
-    if (sameLevelPlayerOGMap.size() > 0)
-    {
-        uint32 destPlayerIndex = urand(0, sameLevelPlayerOGMap.size() - 1);
-        destPlayer = ObjectAccessor::FindPlayer(sameLevelPlayerOGMap[destPlayerIndex]);
-    }
-    else
-    {
-        destPlayer = pmTargetPlayer;
-    }
-    if (destPlayer)
-    {
-        float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-        if (Unit* nearbyUnit = GetAnyUnitInRange(destPlayer, sNingerConfig->NingerRandomTeleportMinRange, sNingerConfig->NingerRandomTeleportMaxRange))
-        {
-            destX = nearbyUnit->GetPositionX();
-            destY = nearbyUnit->GetPositionY();
-            destZ = nearbyUnit->GetPositionZ();
+            spawnPosition = destArea->allianceSpawnPoint;
         }
         else
         {
-            float angle = frand(0, 2 * M_PI);
-            float distance = frand(sNingerConfig->NingerRandomTeleportMinRange, sNingerConfig->NingerRandomTeleportMaxRange);
-            destPlayer->GetNearPoint(destPlayer, destX, destY, destZ, distance, angle);
-        }
-        pmTargetPlayer->TeleportTo(destPlayer->GetMapId(), destX, destY, destZ, 0.0f);
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+            spawnPosition = destArea->hordeSpawnPoint;
+        }        
+        destX = frand(spawnPosition.m_positionX - 5.0f, spawnPosition.m_positionX + 5.0f);
+        destY = frand(spawnPosition.m_positionY - 5.0f, spawnPosition.m_positionY + 5.0f);
+        destZ = spawnPosition.m_positionZ;
+        TeleportPlayer(pmTargetPlayer, destArea->mapID, destX, destY, destZ);
+    }
+    else
+    {
+        pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
+    }
+    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+}
+
+void NingerManager::TeleportPlayer(Player* pmTargetPlayer, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ)
+{
+    if (!pmTargetPlayer)
+    {
+        return;
+    }
+    if (pmTargetPlayer->IsBeingTeleported())
+    {
+        return;
+    }
+    pmTargetPlayer->ClearInCombat();
+    pmTargetPlayer->StopMoving();
+    pmTargetPlayer->GetMotionMaster()->Initialize();
+    pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
+    if (Awareness_Base* ab = pmTargetPlayer->awarenessMap[pmTargetPlayer->activeAwarenessIndex])
+    {
+        ab->teleportDelay = 5000;
+        ab->wlTeleportDestination.m_mapId = pmMapID;
+        ab->wlTeleportDestination.m_positionX = pmDestX;
+        ab->wlTeleportDestination.m_positionY = pmDestY;
+        ab->wlTeleportDestination.m_positionZ = pmDestZ;
     }
 }
 
@@ -3806,6 +3876,38 @@ Player* NingerManager::GetNearbyHostilePlayer(Player* pmSearcher, float pmRange)
                     if (pmSearcher->IsValidAttackTarget(eachPlayer))
                     {
                         return eachPlayer;
+                    }
+                }
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+Unit* NingerManager::GetNearbyHostileUnit(Player* pmSearcher, float pmRange)
+{
+    std::list<Unit*> unitList;
+    Trinity::AnyUnitInObjectRangeCheck go_check(pmSearcher, AOE_TARGETS_RANGE);
+    Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(pmSearcher, unitList, go_check);
+    Cell::VisitGridObjects(pmSearcher, go_search, AOE_TARGETS_RANGE);
+    if (!unitList.empty())
+    {
+        for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+        {
+            if (Unit* eachUnit = *uIT)
+            {
+                if (eachUnit->IsAlive())
+                {
+                    if (Creature* hostileCreature = eachUnit->ToCreature())
+                    {
+                        if (!hostileCreature->IsCivilian())
+                        {
+                            if (pmSearcher->IsValidAttackTarget(hostileCreature))
+                            {
+                                return hostileCreature;
+                            }
+                        }
                     }
                 }
             }
