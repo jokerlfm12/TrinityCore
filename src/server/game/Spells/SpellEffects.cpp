@@ -1510,6 +1510,8 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype)
                             player->GetName().c_str(), player->GetGUID().GetCounter(), gameObjTarget->GetEntry(), gameObjTarget->GetGUID().GetCounter());
             return;
         }
+
+        // lfm goober open should not use ? 
         // special case, already has GossipHello inside so return and avoid calling twice
         if (gameObjTarget->GetGoType() == GAMEOBJECT_TYPE_GOOBER)
         {
@@ -3687,7 +3689,9 @@ void Spell::EffectActivateObject(SpellEffIndex effIndex)
             break;
         case GameObjectActions::Disturb: // What's the difference with Open?
         case GameObjectActions::Open:
-            gameObjTarget->Use(m_caster);
+            // lfm effect activate is just open 
+            gameObjTarget->SetGoState(GOState::GO_STATE_ACTIVE);
+            //gameObjTarget->Use(m_caster);
             break;
         case GameObjectActions::OpenAndUnlock:
             gameObjTarget->UseDoorOrButton(0, false, m_caster);

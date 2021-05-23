@@ -755,7 +755,6 @@ public:
     }
 };
 
-
 void AddSC_terokkar_forest()
 {
     new npc_unkor_the_ruthless();

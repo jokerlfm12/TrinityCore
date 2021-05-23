@@ -78,12 +78,17 @@ public:
     pvpZonePosition()
     {
         mapID = 0;
+        minLevel = 0;
+        maxLevel = 0;
+        spawnDistance = 5.0f;
+        flagPointMap.clear();
     }
 
     uint32 mapID;
-    Position allianceSpawnPoint;
-    Position hordeSpawnPoint;
-    Position flagPoint;
+    uint32 minLevel;
+    uint32 maxLevel;
+    float spawnDistance;
+    std::unordered_map<uint32, Position> flagPointMap;
 };
 
 class NingerManager
@@ -128,7 +133,7 @@ public:
 	uint32 GetUsableArmorSubClass(Player* pmTargetPlayer);
 	void TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot);
 	bool EquipNewItem(Player* pmTargetPlayer, uint32 pmItemEntry, uint8 pmEquipSlot);
-	void RandomTeleport(Player* pmTargetPlayer);
+	bool RandomTeleport(Player* pmTargetPlayer);
     void TeleportPlayer(Player* pmTargetPlayer, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ);
 
 	bool TankThreatOK(Player* pmTankPlayer, Unit* pmVictim);
@@ -154,6 +159,7 @@ public:
 
 	std::unordered_map<uint32, uint32> onlinePlayerIDMap;
 
+    std::unordered_set<uint32> lootItemEntrySet;
 	std::unordered_map<uint32, uint32> tamableBeastEntryMap;
 	std::unordered_map<std::string, std::set<uint32>> spellNameEntryMap;
 

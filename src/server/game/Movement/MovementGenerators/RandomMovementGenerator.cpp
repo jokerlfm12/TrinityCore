@@ -176,7 +176,8 @@ bool RandomMovementGenerator<Creature>::DoUpdate(Creature* owner, uint32 diff)
     if (!owner || !owner->IsAlive())
         return false;
 
-    if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || owner->IsMovementPreventedByCasting() || _stalled)
+    // lfm combat will interrupt random movement 
+    if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || owner->IsMovementPreventedByCasting() || _stalled || owner->IsInCombat())
     {
         _interrupt = true;
         owner->StopMoving();

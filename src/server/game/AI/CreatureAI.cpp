@@ -202,7 +202,7 @@ void CreatureAI::JustAppeared()
 
 void CreatureAI::JustEnteredCombat(Unit* who)
 {
-    // lfm motion reinitial
+    // lfm motion reinitial 
     //me->freeMovementType = me->GetDefaultMovementType();
     //if (me->freeMovementType == MovementGeneratorType::RANDOM_MOTION_TYPE)
     //{

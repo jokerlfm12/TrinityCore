@@ -1052,6 +1052,83 @@ class spell_oscillating_field : public SpellScriptLoader
         }
 };
 
+// lfm scripts 
+class npc_living_grove_defender : public CreatureScript
+{
+public:
+    npc_living_grove_defender() : CreatureScript("npc_living_grove_defender") { }
+
+    struct npc_living_grove_defenderAI : public ScriptedAI
+    {
+        npc_living_grove_defenderAI(Creature* creature) : ScriptedAI(creature)
+        {
+            wanderDelay = 2000;
+            entanglingDelay = urand(3000, 5000);
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    std::list<GameObject*> list;
+                    me->GetGameObjectListWithEntryInGrid(list, 184631, 5.0f);
+                    if (!list.empty())
+                    {
+                        if (GameObject* seedling = list.front())
+                        {
+                            seedling->DespawnOrUnsummon(500ms);
+                        }
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (UpdateVictim())
+            {
+                if (me->IsNonMeleeSpellCast(false))
+                {
+                    return;
+                }
+                if (entanglingDelay >= 0)
+                {
+                    entanglingDelay -= diff;
+                }
+                if (entanglingDelay < 0)
+                {
+                    entanglingDelay = urand(8000, 12000);
+                    DoCastVictim(12747);
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (wanderDelay >= 0)
+                {
+                    wanderDelay -= diff;
+                    if (wanderDelay < 0)
+                    {
+                        me->SetRespawnRadius(10.0f);
+                        me->SetDefaultMovementType(MovementGeneratorType::RANDOM_MOTION_TYPE);
+                        me->GetMotionMaster()->Initialize();
+                    }
+                }
+            }
+        }
+
+        int entanglingDelay;
+        int wanderDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_living_grove_defenderAI(creature);
+    }
+};
+
 void AddSC_blades_edge_mountains()
 {
     new npc_nether_drake();
@@ -1062,4 +1139,7 @@ void AddSC_blades_edge_mountains()
     new go_apexis_relic();
     new npc_oscillating_frequency_scanner_master_bunny();
     new spell_oscillating_field();
+
+    // lfm scripts
+    new npc_living_grove_defender();
 }

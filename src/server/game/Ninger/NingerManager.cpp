@@ -134,6 +134,18 @@ void NingerManager::InitializeManager()
     characterTalentTabNameMap[Classes::CLASS_DRUID][1] = "Feral";
     characterTalentTabNameMap[Classes::CLASS_DRUID][2] = "Restoration";
 
+    lootItemEntrySet.clear();
+    QueryResult creatureLootItemQR = WorldDatabase.Query("SELECT distinct Item FROM creature_loot_template where Reference = 0 and QuestRequired = 0");
+    if (creatureLootItemQR)
+    {
+        do
+        {
+            Field* fields = creatureLootItemQR->Fetch();
+            uint32 eachEntry = fields[0].GetUInt32();
+            lootItemEntrySet.insert(eachEntry);
+        } while (creatureLootItemQR->NextRow());
+    }
+
     CreatureTemplateContainer const* ctc = sObjectMgr->GetCreatureTemplates();
     for (CreatureTemplateContainer::const_iterator itr = ctc->begin(); itr != ctc->end(); ++itr)
     {
@@ -232,7 +244,6 @@ void NingerManager::InitializeManager()
     instantPoisonEntryMap[73] = 43230;
     instantPoisonEntryMap[79] = 43231;
 
-
     QueryResult ningerQR = CharacterDatabase.Query("SELECT ninger_id, account_name, character_id, target_level FROM ninger order by rand()");
     if (ningerQR)
     {
@@ -251,30 +262,39 @@ void NingerManager::InitializeManager()
         } while (ningerQR->NextRow());
     }
 
-    Position halaaHorde;
-    halaaHorde.m_positionX = -1397.0f;
-    halaaHorde.m_positionY = 7835.0f;
-    halaaHorde.m_positionZ = -16.0f;
-    Position halaaAlliance;
-    halaaAlliance.m_positionX = -1756.0f;
-    halaaAlliance.m_positionY = 7997.0f;
-    halaaAlliance.m_positionZ = -26.0f;
     Position halaaFlag;
     halaaFlag.m_positionX = -1572.0f;
     halaaFlag.m_positionY = 7947.0f;
     halaaFlag.m_positionZ = -22.0f;
-    pvpZonePosition* halaa = new pvpZonePosition();
-    halaa->mapID = 530;
-    halaa->allianceSpawnPoint.m_positionX = -1756.0f;
-    halaa->allianceSpawnPoint.m_positionY = 7997.0f;
-    halaa->allianceSpawnPoint.m_positionZ = -26.0f;
-    halaa->hordeSpawnPoint.m_positionX = -1397.0f;
-    halaa->hordeSpawnPoint.m_positionY = 7835.0f;
-    halaa->hordeSpawnPoint.m_positionZ = -16.0f;
-    halaa->flagPoint.m_positionX = -1572.0f;
-    halaa->flagPoint.m_positionY = 7947.0f;
-    halaa->flagPoint.m_positionZ = -22.0f;
-    pvpPositionMap[3628] = halaa;    
+    pvpZonePosition* nagrand = new pvpZonePosition();
+    nagrand->mapID = 530;
+    nagrand->minLevel = 65;
+    nagrand->maxLevel = 70;
+    nagrand->spawnDistance = 100.0f;
+    nagrand->flagPointMap[nagrand->flagPointMap.size()] = halaaFlag;
+    pvpPositionMap[3518] = nagrand;
+
+    pvpZonePosition* hellfirePeninsula = new pvpZonePosition();
+    hellfirePeninsula->mapID = 530;
+    hellfirePeninsula->minLevel = 60;
+    hellfirePeninsula->maxLevel = 70;
+    hellfirePeninsula->spawnDistance = 100.0f;
+    Position brokenHillFlag;
+    brokenHillFlag.m_positionX = -472.0f;
+    brokenHillFlag.m_positionY = 3450.0f;
+    brokenHillFlag.m_positionZ = 36.0f;
+    hellfirePeninsula->flagPointMap[hellfirePeninsula->flagPointMap.size()] = brokenHillFlag;
+    Position stadiumFlag;
+    stadiumFlag.m_positionX = -289.0f;
+    stadiumFlag.m_positionY = 3704.0f;
+    stadiumFlag.m_positionZ = 58.0f;
+    hellfirePeninsula->flagPointMap[hellfirePeninsula->flagPointMap.size()] = stadiumFlag;
+    Position overlookFlag;
+    overlookFlag.m_positionX = -183.0f;
+    overlookFlag.m_positionY = 3475.0f;
+    overlookFlag.m_positionZ = 40.0f;
+    hellfirePeninsula->flagPointMap[hellfirePeninsula->flagPointMap.size()] = overlookFlag;
+    pvpPositionMap[3483] = hellfirePeninsula;
 
     sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger initialized");
 }
@@ -3556,10 +3576,10 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
     std::unordered_map<uint32, uint32> validEquipSet;
-    const ItemTemplateContainer* its = sObjectMgr->GetItemTemplateStore();
-    for (ItemTemplateContainer::const_iterator itr = its->begin(); itr != its->end(); ++itr)
+    for (std::unordered_set<uint32>::iterator ieIT = lootItemEntrySet.begin(); ieIT != lootItemEntrySet.end(); ieIT++)
     {
-        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(itr->first);
+        uint32 eachItemEntry = *ieIT;
+        const ItemTemplate* proto = sObjectMgr->GetItemTemplate(eachItemEntry);
         if (!proto)
         {
             continue;
@@ -3663,15 +3683,15 @@ void NingerManager::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> 
     }
 }
 
-void NingerManager::RandomTeleport(Player* pmTargetPlayer)
+bool NingerManager::RandomTeleport(Player* pmTargetPlayer)
 {
     if (!pmTargetPlayer)
     {
-        return;
+        return false;
     }
     if (pmTargetPlayer->IsBeingTeleported())
     {
-        return;
+        return false;
     }
     if (!pmTargetPlayer->IsAlive())
     {
@@ -3679,36 +3699,50 @@ void NingerManager::RandomTeleport(Player* pmTargetPlayer)
         pmTargetPlayer->SpawnCorpseBones();
     }
     pmTargetPlayer->ClearInCombat();
-    pmTargetPlayer->StopMoving();    
-    uint32 playerLevel = pmTargetPlayer->getLevel();    
-    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-    uint32 areaID = 0;
-    if (playerLevel >= 65)
+    pmTargetPlayer->StopMoving();
+    uint32 targetLevel = pmTargetPlayer->getLevel();
+    std::unordered_map<uint32, uint32> onlinePlayerZoneIDMap;
+    std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
+    for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
     {
-        areaID = 3628;
-    }
-    if (areaID > 0)
-    {
-        pvpZonePosition* destArea = sNingerManager->pvpPositionMap[areaID];
-        Position spawnPosition;
-        if (pmTargetPlayer->GetTeamId() == TeamId::TEAM_ALLIANCE)
+        if (WorldSession* eachWS = wsIT->second)
         {
-            spawnPosition = destArea->allianceSpawnPoint;
+            if (!eachWS->isNinger)
+            {
+                if (Player* eachPlayer = eachWS->GetPlayer())
+                {
+                    uint32 playerZoneID = eachPlayer->GetZoneId();
+                    if (pvpPositionMap.find(playerZoneID) != pvpPositionMap.end())
+                    {
+                        if (targetLevel >= pvpPositionMap[playerZoneID]->minLevel && targetLevel <= pvpPositionMap[playerZoneID]->maxLevel)
+                        {
+                            onlinePlayerZoneIDMap[onlinePlayerZoneIDMap.size()] = playerZoneID;
+                        }
+                    }
+                }
+            }
         }
-        else
-        {
-            spawnPosition = destArea->hordeSpawnPoint;
-        }        
-        destX = frand(spawnPosition.m_positionX - 5.0f, spawnPosition.m_positionX + 5.0f);
-        destY = frand(spawnPosition.m_positionY - 5.0f, spawnPosition.m_positionY + 5.0f);
-        destZ = spawnPosition.m_positionZ;
-        TeleportPlayer(pmTargetPlayer, destArea->mapID, destX, destY, destZ);
     }
-    else
+    if (onlinePlayerZoneIDMap.size() > 0)
     {
-        pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
+        uint32 destZoneID = urand(0, onlinePlayerZoneIDMap.size() - 1);
+        destZoneID = onlinePlayerZoneIDMap[destZoneID];
+        if (pvpZonePosition* destZone = pvpPositionMap[destZoneID])
+        {
+            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+            uint32 positionIndex = urand(0, destZone->flagPointMap.size() - 1);
+            Position destPosition = destZone->flagPointMap[positionIndex];
+            destX = frand(destPosition.m_positionX - destZone->spawnDistance, destPosition.m_positionX + destZone->spawnDistance);
+            destY = frand(destPosition.m_positionY - destZone->spawnDistance, destPosition.m_positionY + destZone->spawnDistance);
+            destZ = destPosition.m_positionZ;
+            TeleportPlayer(pmTargetPlayer, destZone->mapID, destX, destY, destZ);
+            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "PVP Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+            return true;
+        }
     }
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+    pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
+    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Home Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+    return true;
 }
 
 void NingerManager::TeleportPlayer(Player* pmTargetPlayer, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ)

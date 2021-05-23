@@ -185,7 +185,7 @@ void NingerMovement::MoveTargetPosition()
         if (me->IsWalking())
         {
             me->SetWalk(false);
-        }        
+        }       
         me->GetMotionMaster()->MovePoint(1, positionTarget);
     }
 }

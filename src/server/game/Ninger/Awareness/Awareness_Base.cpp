@@ -607,34 +607,10 @@ void Awareness_Base::Update(uint32 pmDiff)
                     deadTime += pmDiff;
                     if (deadTime > 60000)
                     {
-                        if (me->IsBeingTeleported())
+                        if (sNingerManager->RandomTeleport(me))
                         {
+                            Reset();
                             return;
-                        }
-                        Reset();
-                        me->ResurrectPlayer(1.0f);
-                        me->SpawnCorpseBones();
-                        if (me->GetAreaId() == 3628)
-                        {
-                            pvpZonePosition* halaa = sNingerManager->pvpPositionMap[3628];
-                            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-                            Position spawnPosition;
-                            if (me->GetTeamId() == TeamId::TEAM_ALLIANCE)
-                            {
-                                spawnPosition = halaa->allianceSpawnPoint;
-                            }
-                            else
-                            {
-                                spawnPosition = halaa->hordeSpawnPoint;
-                            }
-                            destX = frand(spawnPosition.m_positionX - 5.0f, spawnPosition.m_positionX + 5.0f);
-                            destY = frand(spawnPosition.m_positionY - 5.0f, spawnPosition.m_positionY + 5.0f);
-                            destZ = spawnPosition.m_positionZ;
-                            sNingerManager->TeleportPlayer(me, halaa->mapID, destX, destY, destZ);
-                        }
-                        else
-                        {
-                            me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, 0.0f);
                         }
                     }
                     return;
@@ -697,10 +673,13 @@ void Awareness_Base::Update(uint32 pmDiff)
                         randomTeleportDelay -= pmDiff;
                         if (randomTeleportDelay <= 0)
                         {
-                            randomTeleportDelay = urand(20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 30 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
-                            Reset();
-                            sNingerManager->RandomTeleport(me);
-                            return;
+                            randomTeleportDelay = 5000;
+                            if (sNingerManager->RandomTeleport(me))
+                            {
+                                randomTeleportDelay = urand(20 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS, 30 * TimeConstants::MINUTE * TimeConstants::IN_MILLISECONDS);
+                                Reset();
+                                return;
+                            }
                         }
                     }
                     // hostile pvp check
@@ -1050,57 +1029,30 @@ bool Awareness_Base::Wander()
     {
         return true;
     }
-    if (me->GetAreaId() == 3628)
-    {        
-        pvpZonePosition* halaa = sNingerManager->pvpPositionMap[3628];
-        float flagDistance = me->GetDistance(halaa->flagPoint);
-        if (flagDistance > 100.0f)
+
+    uint32 wanderRate = urand(0, 100);
+    if (wanderRate < 50)
+    {
+        if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
         {
-            float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-            destX = frand(halaa->flagPoint.m_positionX - 20.0f, halaa->flagPoint.m_positionX + 20.0f);
-            destY = frand(halaa->flagPoint.m_positionY - 20.0f, halaa->flagPoint.m_positionY + 20.0f);
-            destZ = halaa->flagPoint.m_positionZ + 2.0f;
-            me->SetWalk(false);
-            moveDelay = 5 * TimeConstants::IN_MILLISECONDS;
-            sb->rm->MovePoint(destX, destY, destZ, moveDelay);
-            return true;
+            if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+            {
+                ogEngageTarget = enemyPlayer->GetGUID();
+                engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
+                return true;
+            }
         }
     }
-    float angle = frand(0, 2 * M_PI);
-    float distance = frand(10.0f, 30.0f);
-    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-    me->GetNearPoint(me, destX, destY, destZ, distance, angle);
-    moveDelay = 5 * TimeConstants::IN_MILLISECONDS;
-    sb->rm->MovePoint(destX, destY, destZ, moveDelay);
+    else
+    {
+        float angle = frand(0, 2 * M_PI);
+        float distance = frand(10.0f, 30.0f);
+        float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+        me->GetNearPoint(me, destX, destY, destZ, distance, angle);
+        moveDelay = 5 * TimeConstants::IN_MILLISECONDS;        
+        sb->rm->MovePoint(destX, destY, destZ, moveDelay);
+    }
 
-    //uint32 wanderRate = urand(0, 100);
-    //if (wanderRate < 25)
-    //{
-    //    if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
-    //    {
-    //        if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //        {
-    //            ogEngageTarget = enemyPlayer->GetGUID();
-    //            engageDelay = 30 * TimeConstants::IN_MILLISECONDS;
-    //            return true;
-    //        }
-    //    }
-    //}
-    //else if (wanderRate < 50)
-    //{
-    //    me->StopMoving();
-    //    me->GetMotionMaster()->Clear();
-    //    moveDelay = 10 * TimeConstants::IN_MILLISECONDS;
-    //}
-    //else
-    //{
-    //    float angle = frand(0, 2 * M_PI);
-    //    float distance = frand(10.0f, 30.0f);
-    //    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-    //    me->GetNearPoint(me, destX, destY, destZ, distance, angle);
-    //    moveDelay = 5 * TimeConstants::IN_MILLISECONDS;        
-    //    sb->rm->MovePoint(destX, destY, destZ, moveDelay);
-    //}
     return true;
 }
 
