@@ -1295,11 +1295,20 @@ void GameObject::Respawn()
 
 bool GameObject::ActivateToQuest(Player* target) const
 {
+    // lfm debug
+    uint32 goEntry = GetEntry();
     if (target->HasQuestForGO(GetEntry()))
         return true;
-
+    
     if (!sObjectMgr->IsGameObjectForQuests(GetEntry()))
+    {
         return false;
+    }
+    // lfm related go should be activated 
+    else
+    {
+        return true;
+    }
 
     switch (GetGoType())
     {
