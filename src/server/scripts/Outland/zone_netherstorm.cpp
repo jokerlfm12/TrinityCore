@@ -342,19 +342,19 @@ public:
 
 enum PhaseHunterData
 {
-    QUEST_RECHARGING_THE_BATTERIES  = 10190,
+    QUEST_RECHARGING_THE_BATTERIES = 10190,
 
-    NPC_PHASE_HUNTER_ENTRY          = 18879,
-    NPC_DRAINED_PHASE_HUNTER_ENTRY  = 19595,
+    NPC_PHASE_HUNTER_ENTRY = 18879,
+    NPC_DRAINED_PHASE_HUNTER_ENTRY = 19595,
 
-    EMOTE_WEAK                      = 0,
+    EMOTE_WEAK = 0,
 
     // Spells
-    SPELL_RECHARGING_BATTERY        = 34219,
-    SPELL_PHASE_SLIP                = 36574,
-    SPELL_MANA_BURN                 = 13321,
-    SPELL_MATERIALIZE               = 34804,
-    SPELL_DE_MATERIALIZE            = 34814,
+    SPELL_RECHARGING_BATTERY = 34219,
+    SPELL_PHASE_SLIP = 36574,
+    SPELL_MANA_BURN = 37176,
+    SPELL_ARCANE_EXPLOSION = 25679,
+    SPELL_MATERIALIZE = 34804,
 };
 
 class npc_phase_hunter : public CreatureScript
@@ -375,7 +375,9 @@ public:
             Materialize = false;
             Drained = false;
             WeakPercent = 25;
-            ManaBurnTimer = 5000;
+            slipDelay = 0;
+            arcaneExplosionDelay = urand(5000, 8000);
+            manaBurnDelay = urand(8000, 12000);
         }
 
         bool Weak;
@@ -384,8 +386,6 @@ public:
         uint8 WeakPercent;
 
         ObjectGuid PlayerGUID;
-
-        uint32 ManaBurnTimer;
 
         void Reset() override
         {
@@ -396,7 +396,9 @@ public:
 
             PlayerGUID.Clear();
 
-            ManaBurnTimer = 5000 + (rand32() % 3 * 1000); // 5-8 sec cd
+            slipDelay = 0;
+            arcaneExplosionDelay = urand(2000, 5000);
+            manaBurnDelay = urand(5000, 8000);
 
             if (me->GetEntry() == NPC_DRAINED_PHASE_HUNTER_ENTRY)
                 me->UpdateEntry(NPC_PHASE_HUNTER_ENTRY);
@@ -408,11 +410,6 @@ public:
                 PlayerGUID = who->GetGUID();
         }
 
-        //void SpellHit(Unit* /*caster*/, SpellInfo const* /*spell*/) override
-        //{
-        //    DoCast(me, SPELL_DE_MATERIALIZE);
-        //}
-
         void UpdateAI(uint32 diff) override
         {
             if (!Materialize)
@@ -421,28 +418,36 @@ public:
                 Materialize = true;
             }
 
-            if (me->HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED) || me->HasUnitState(UNIT_STATE_ROOT)) // if the mob is rooted/slowed by spells eg.: Entangling Roots, Frost Nova, Hamstring, Crippling Poison, etc. => remove it
-                DoCast(me, SPELL_PHASE_SLIP);
-
             if (!UpdateVictim())
                 return;
 
-            // some code to cast spell Mana Burn on random target which has mana
-            if (ManaBurnTimer <= diff)
+            if (slipDelay >= 0)
             {
-                std::list<Unit*> UnitsWithMana;
-                for (auto* ref : me->GetThreatManager().GetUnsortedThreatList())
-                    if (ref->GetVictim()->GetPower(POWER_MANA))
-                        UnitsWithMana.push_back(ref->GetVictim());
-                if (!UnitsWithMana.empty())
-                {
-                    DoCast(Trinity::Containers::SelectRandomContainerElement(UnitsWithMana), SPELL_MANA_BURN);
-                    ManaBurnTimer = urand(8000, 18000); // 8-18 sec cd
-                }
-                else
-                    ManaBurnTimer = 3500;
+                slipDelay -= diff;
             }
-            else ManaBurnTimer -= diff;
+            if (arcaneExplosionDelay >= 0)
+            {
+                arcaneExplosionDelay -= diff;
+            }
+            if (manaBurnDelay >= 0)
+            {
+                manaBurnDelay -= diff;
+            }
+            if (slipDelay < 0)
+            {
+                slipDelay = urand(15000, 20000);
+                DoCastSelf(SPELL_PHASE_SLIP);
+            }
+            if (arcaneExplosionDelay < 0)
+            {
+                arcaneExplosionDelay = urand(10000, 15000);
+                DoCastVictim(SPELL_ARCANE_EXPLOSION);
+            }
+            if (manaBurnDelay < 0)
+            {
+                manaBurnDelay = urand(15000, 20000);
+                DoCastVictim(SPELL_MANA_BURN);
+            }
 
             if (Player* player = ObjectAccessor::GetPlayer(*me, PlayerGUID)) // start: support for quest 10190
             {
@@ -467,6 +472,10 @@ public:
 
             DoMeleeAttackIfReady();
         }
+
+        int arcaneExplosionDelay;
+        int manaBurnDelay;
+        int slipDelay;
     };
 };
 
@@ -699,6 +708,101 @@ class go_captain_tyralius_prison : public GameObjectScript
         }
 };
 
+// lfm scripts 
+class npc_scrapped_fel_reaver : public CreatureScript
+{
+public:
+    npc_scrapped_fel_reaver() : CreatureScript("npc_scrapped_fel_reaver") { }
+
+    struct npc_scrapped_fel_reaverAI : public ScriptedAI
+    {
+        npc_scrapped_fel_reaverAI(Creature* creature) : ScriptedAI(creature)
+        {
+            summonDelay0 = 2000;
+            summonDelay1 = 17000;
+            summonDelay2 = 32000;
+            summonDelay3 = 60000;
+        }
+
+        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        {
+            if (spell->Id == 35282)
+            {
+                me->SetImmuneToAll(false);
+                Talk(0);
+            }
+        }
+
+        void JustAppeared()
+        {
+            DoCastSelf(39311);
+            me->SetReactState(ReactStates::REACT_PASSIVE);
+        }
+
+        void Reset() override
+        {
+            me->SetImmuneToAll(true);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (summonDelay0 >= 0)
+                {
+                    summonDelay0 -= diff;
+                }
+                if (summonDelay1 >= 0)
+                {
+                    summonDelay1 -= diff;
+                }
+                if (summonDelay2 < 0)
+                {
+                    summonDelay2 = 1000;
+                }
+                if (summonDelay3 < 0)
+                {
+                    summonDelay3 = 1000;
+                }
+                if (summonDelay0 < 0)
+                {
+                    summonDelay0 = 30000;
+                    me->SummonCreature(20287, 2547.08f, 3982.24f, 131.39f, 2.01f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 60000);
+                }
+                if (summonDelay1 < 0)
+                {
+                    summonDelay1 = 45000;
+                    me->SummonCreature(20287, 2537.7f, 3975.96f, 130.4f, 1.58f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 60000);
+                }
+                if (summonDelay2 < 0)
+                {
+                    summonDelay2 = 45000;
+                    me->SummonCreature(20287, 2506.46f, 4008.93f, 133.8f, 6.19f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 60000);
+                }
+                if (summonDelay3 < 0)
+                {
+                    summonDelay3 = 45000;
+                    me->SummonCreature(20287, 2537.3f, 4027.11f, 135.5f, 4.3f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 60000);
+                }
+            }
+        }
+
+        int summonDelay0;
+        int summonDelay1;
+        int summonDelay2;
+        int summonDelay3;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_scrapped_fel_reaverAI(creature);
+    }
+};
+
 void AddSC_netherstorm()
 {
     new npc_commander_dawnforge();
@@ -707,4 +811,7 @@ void AddSC_netherstorm()
     new npc_bessy();
     new npc_maxx_a_million_escort();
     new go_captain_tyralius_prison();
+
+    // lfm scripts
+    new npc_scrapped_fel_reaver();
 }

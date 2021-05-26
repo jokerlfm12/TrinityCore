@@ -35,70 +35,74 @@
 
 enum DeathKnightSpells
 {
-    SPELL_DK_ANTI_MAGIC_SHELL_TALENT            = 51052,
-    SPELL_DK_BLOOD_BOIL_TRIGGERED               = 65658,
-    SPELL_DK_BLOOD_BURST                        = 81280,
-    SPELL_DK_BLOOD_PLAGUE                       = 55078,
-    SPELL_DK_BLOOD_PRESENCE                     = 48263,
-    SPELL_DK_BLOOD_PRESENCE_TRIGGERED           = 61261,
-    SPELL_DK_BLOOD_SHIELD_MASTERY               = 77513,
-    SPELL_DK_BLOOD_SHIELD_ABSORB                = 77535,
-    SPELL_DK_BLOOD_STRIKE                       = 45902,
-    SPELL_DK_BLOOD_STRIKE_OFFHAND               = 66215,
-    SPELL_DK_BLOOD_TAP                          = 45529,
-    SPELL_DK_BUTCHERY                           = 50163,
-    SPELL_DK_CORPSE_EXPLOSION_TRIGGERED         = 43999,
-    SPELL_DK_DARK_TRANSFORMATION                = 63560,
-    SPELL_DK_DARK_TRANSFORMATION_DUMMY          = 93426,
-    SPELL_DK_DEATH_AND_DECAY_DAMAGE             = 52212,
-    SPELL_DK_DEATH_COIL                         = 47541,
-    SPELL_DK_DEATH_COIL_DAMAGE                  = 47632,
-    SPELL_DK_DEATH_COIL_HEAL                    = 47633,
-    SPELL_DK_DEATH_EATER                        = 90507,
-    SPELL_DK_DEATH_GRIP                         = 49560,
-    SPELL_DK_DEATH_GRIP_INITIAL                 = 49576,
-    SPELL_DK_DEATH_STRIKE                       = 49998,
-    SPELL_DK_DEATH_STRIKE_OFFHAND               = 66188,
-    SPELL_DK_DEATH_STRIKE_HEAL                  = 45470,
-    SPELL_DK_DEATH_STRIKE_ENABLER               = 89832,
-    SPELL_DK_EBON_PLAGUE                        = 65142,
-    SPELL_DK_ENERGIZE_BLOOD_RUNE                = 81166,
-    SPELL_DK_ENERGIZE_FROST_RUNE                = 81168,
-    SPELL_DK_ENERGIZE_UNHOLY_RUNE               = 81169,
-    SPELL_DK_FLAMING_TORRENT                    = 99000,
-    SPELL_DK_FROST_FEVER                        = 55095,
-    SPELL_DK_FROST_PRESENCE                     = 48266,
-    SPELL_DK_FROST_STRIKE                       = 49143,
-    SPELL_DK_FROST_STRIKE_OFFHAND               = 66196,
-    SPELL_DK_GHOUL_EXPLODE                      = 47496,
-    SPELL_DK_GLYPH_OF_ICEBOUND_FORTITUDE        = 58625,
-    SPELL_DK_IMPROVED_BLOOD_PRESENCE_R1         = 50365,
-    SPELL_DK_IMPROVED_BLOOD_PRESENCE            = 63611,
-    SPELL_DK_IMPROVED_DEATH_STRIKE              = 62905,
-    SPELL_DK_IMPROVED_FROST_PRESENCE            = 63621,
-    SPELL_DK_IMPROVED_UNHOLY_PRESENCE           = 63622,
-    SPELL_DK_ITEM_SIGIL_VENGEFUL_HEART          = 64962,
-    SPELL_DK_ITEM_T8_MELEE_4P_BONUS             = 64736,
-    SPELL_DK_ITEM_T11_DPS_4P_BONUS              = 90459,
-    SPELL_DK_MASTER_OF_GHOULS                   = 52143,
-    SPELL_DK_OBLITERATE                         = 49020,
-    SPELL_DK_OBLITERATE_OFFHAND                 = 66198,
-    SPELL_DK_PLAGUE_STRIKE                      = 45462,
-    SPELL_DK_PLAGUE_STRIKE_OFFHAND              = 66216,
-    SPELL_DK_RESILIENT_INFECTION                = 90721,
-    SPELL_DK_RUNIC_CORRUPTION_TRIGGERED         = 51460,
-    SPELL_DK_RUNE_STRIKE                        = 56815,
-    SPELL_DK_RUNE_STRIKE_OFFHAND                = 66217,
-    SPELL_DK_RUNE_TAP                           = 48982,
-    SPELL_DK_SCENT_OF_BLOOD                     = 50422,
-    SPELL_DK_SCOURGE_STRIKE_TRIGGERED           = 70890,
-    SPELL_DK_SHADOW_INFUSION                    = 91342,
-    SPELL_DK_SMOLDERING_RUNE_ENERGIZE           = 99055,
-    SPELL_DK_UNHOLY_BLIGHT_PERIODIC             = 50536,
-    SPELL_DK_UNHOLY_PRESENCE                    = 48265,
-    SPELL_DK_PESTILENCE_REDUCED_DOTS            = 76243,
-    SPELL_DK_PESTILENCE_VISUAL                  = 91939,
-    SPELL_DK_WILL_OF_THE_NECROPOLIS             = 96171
+    SPELL_DK_ANTI_MAGIC_SHELL_TALENT = 51052,
+    SPELL_DK_BLOOD_BOIL_TRIGGERED = 65658,
+    SPELL_DK_BLOOD_BURST = 81280,
+    SPELL_DK_BLOOD_PLAGUE = 55078,
+    SPELL_DK_BLOOD_PRESENCE = 48263,
+    SPELL_DK_BLOOD_PRESENCE_TRIGGERED = 61261,
+    SPELL_DK_BLOOD_SHIELD_MASTERY = 77513,
+    SPELL_DK_BLOOD_SHIELD_ABSORB = 77535,
+    SPELL_DK_BLOOD_STRIKE = 45902,
+    SPELL_DK_BLOOD_STRIKE_OFFHAND = 66215,
+    SPELL_DK_BLOOD_TAP = 45529,
+    SPELL_DK_BUTCHERY = 50163,
+    SPELL_DK_CORPSE_EXPLOSION_TRIGGERED = 43999,
+
+    // lfm scripts
+    SPELL_DK_DANCING_RUNE_WEAPON = 49028,
+
+    SPELL_DK_DARK_TRANSFORMATION = 63560,
+    SPELL_DK_DARK_TRANSFORMATION_DUMMY = 93426,
+    SPELL_DK_DEATH_AND_DECAY_DAMAGE = 52212,
+    SPELL_DK_DEATH_COIL = 47541,
+    SPELL_DK_DEATH_COIL_DAMAGE = 47632,
+    SPELL_DK_DEATH_COIL_HEAL = 47633,
+    SPELL_DK_DEATH_EATER = 90507,
+    SPELL_DK_DEATH_GRIP = 49560,
+    SPELL_DK_DEATH_GRIP_INITIAL = 49576,
+    SPELL_DK_DEATH_STRIKE = 49998,
+    SPELL_DK_DEATH_STRIKE_OFFHAND = 66188,
+    SPELL_DK_DEATH_STRIKE_HEAL = 45470,
+    SPELL_DK_DEATH_STRIKE_ENABLER = 89832,
+    SPELL_DK_EBON_PLAGUE = 65142,
+    SPELL_DK_ENERGIZE_BLOOD_RUNE = 81166,
+    SPELL_DK_ENERGIZE_FROST_RUNE = 81168,
+    SPELL_DK_ENERGIZE_UNHOLY_RUNE = 81169,
+    SPELL_DK_FLAMING_TORRENT = 99000,
+    SPELL_DK_FROST_FEVER = 55095,
+    SPELL_DK_FROST_PRESENCE = 48266,
+    SPELL_DK_FROST_STRIKE = 49143,
+    SPELL_DK_FROST_STRIKE_OFFHAND = 66196,
+    SPELL_DK_GHOUL_EXPLODE = 47496,
+    SPELL_DK_GLYPH_OF_ICEBOUND_FORTITUDE = 58625,
+    SPELL_DK_IMPROVED_BLOOD_PRESENCE_R1 = 50365,
+    SPELL_DK_IMPROVED_BLOOD_PRESENCE = 63611,
+    SPELL_DK_IMPROVED_DEATH_STRIKE = 62905,
+    SPELL_DK_IMPROVED_FROST_PRESENCE = 63621,
+    SPELL_DK_IMPROVED_UNHOLY_PRESENCE = 63622,
+    SPELL_DK_ITEM_SIGIL_VENGEFUL_HEART = 64962,
+    SPELL_DK_ITEM_T8_MELEE_4P_BONUS = 64736,
+    SPELL_DK_ITEM_T11_DPS_4P_BONUS = 90459,
+    SPELL_DK_MASTER_OF_GHOULS = 52143,
+    SPELL_DK_OBLITERATE = 49020,
+    SPELL_DK_OBLITERATE_OFFHAND = 66198,
+    SPELL_DK_PLAGUE_STRIKE = 45462,
+    SPELL_DK_PLAGUE_STRIKE_OFFHAND = 66216,
+    SPELL_DK_RESILIENT_INFECTION = 90721,
+    SPELL_DK_RUNIC_CORRUPTION_TRIGGERED = 51460,
+    SPELL_DK_RUNE_STRIKE = 56815,
+    SPELL_DK_RUNE_STRIKE_OFFHAND = 66217,
+    SPELL_DK_RUNE_TAP = 48982,
+    SPELL_DK_SCENT_OF_BLOOD = 50422,
+    SPELL_DK_SCOURGE_STRIKE_TRIGGERED = 70890,
+    SPELL_DK_SHADOW_INFUSION = 91342,
+    SPELL_DK_SMOLDERING_RUNE_ENERGIZE = 99055,
+    SPELL_DK_UNHOLY_BLIGHT_PERIODIC = 50536,
+    SPELL_DK_UNHOLY_PRESENCE = 48265,
+    SPELL_DK_PESTILENCE_REDUCED_DOTS = 76243,
+    SPELL_DK_PESTILENCE_VISUAL = 91939,
+    SPELL_DK_WILL_OF_THE_NECROPOLIS = 96171
 };
 
 enum DKSpellIcons
@@ -1715,6 +1719,121 @@ class spell_dk_smoldering_rune : public AuraScript
     }
 };
 
+// 49028 - Dancing Rune Weapon
+class spell_dk_dancing_rune_weapon : public SpellScriptLoader
+{
+public:
+    spell_dk_dancing_rune_weapon() : SpellScriptLoader("spell_dk_dancing_rune_weapon") { }
+
+    class spell_dk_dancing_rune_weapon_AuraScript : public AuraScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ SPELL_DK_DANCING_RUNE_WEAPON });
+        }
+
+        void OnApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+        {
+            if (aurEff->GetEffIndex() == SpellEffIndex::EFFECT_2)
+            {
+                
+            }
+        }
+
+        // This is a port of the old switch hack in Unit.cpp, it's not correct
+        void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+        {
+            if (aurEff->GetEffIndex() == SpellEffIndex::EFFECT_1)
+            {
+                PreventDefaultAction();
+                if (Unit* caster = GetCaster())
+                {
+                    for (Unit* controlled : caster->m_Controlled)
+                    {
+                        if (controlled->GetEntry() == 27893)
+                        {
+                            DamageInfo* damageInfo = eventInfo.GetDamageInfo();
+                            if (!damageInfo || !damageInfo->GetDamage())
+                            {
+                                return;
+                            }
+                            if (Unit* eventTarget = eventInfo.GetProcTarget())
+                            {
+                                if (SpellInfo const* spellInfo = eventInfo.GetSpellInfo())
+                                {
+                                    controlled->CastSpell(eventTarget, spellInfo->Id, aurEff);
+                                }
+                                else
+                                {
+                                    CalcDamageInfo cdi;
+                                    controlled->CalculateMeleeDamage(eventTarget, damageInfo->GetDamage(), &cdi);
+                                    controlled->DealDamageMods(eventTarget, cdi.damage, &cdi.absorb);
+                                    controlled->SendAttackStateUpdate(&cdi);
+                                    controlled->DealMeleeDamage(&cdi, false);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectApply.Register(&spell_dk_dancing_rune_weapon_AuraScript::OnApply, SpellEffIndex::EFFECT_2, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+            OnEffectProc.Register(&spell_dk_dancing_rune_weapon_AuraScript::HandleProc, EFFECT_1, SPELL_AURA_DUMMY);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_dk_dancing_rune_weapon_AuraScript();
+    }
+};
+
+class npc_rune_weapon : public CreatureScript
+{
+public:
+    npc_rune_weapon() : CreatureScript("npc_rune_weapon") { }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_rune_weaponAI(creature);
+    }
+
+    struct npc_rune_weaponAI : public ScriptedAI
+    {
+        npc_rune_weaponAI(Creature* creature) : ScriptedAI(creature)
+        {
+
+        }
+
+        void JustAppeared()
+        {
+            if (Unit* owner = me->GetCharmerOrOwner())
+            {
+                if (Player* ownerPlayer = owner->ToPlayer())
+                {
+                    me->GetMotionMaster()->MoveFollow(ownerPlayer, 2.0f, M_PI * 5 / 4);
+                    if (Item* ownerWeapon = ownerPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
+                    {
+                        uint32 ownerWeaponEntry = ownerWeapon->GetEntry();
+                        me->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, ownerWeaponEntry);
+                        me->SetVisible(true);                        
+                    }
+                }
+            }
+            me->SetReactState(ReactStates::REACT_PASSIVE);
+        }
+
+        void UpdateAI(uint32 uiDiff) override
+        {
+
+        }
+    };
+};
+
 void AddSC_deathknight_spell_scripts()
 {
     RegisterSpellScript(spell_dk_anti_magic_shell);
@@ -1764,4 +1883,6 @@ void AddSC_deathknight_spell_scripts()
     RegisterSpellScript(spell_dk_unholy_command);
     RegisterSpellScript(spell_dk_vampiric_blood);
     RegisterSpellScript(spell_dk_will_of_the_necropolis);
+    new spell_dk_dancing_rune_weapon();
+    new npc_rune_weapon();
 }

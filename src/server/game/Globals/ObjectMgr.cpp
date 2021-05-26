@@ -4978,6 +4978,18 @@ void ObjectMgr::LoadQuests()
             }
         }
 
+        // lfm extra fix. move following required info front if it is 0 
+        for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT-1; ++j)
+        {
+            if (qinfo->RequiredNpcOrGo[j] == 0)
+            {
+                qinfo->RequiredNpcOrGo[j] = qinfo->RequiredNpcOrGo[j + 1];
+                qinfo->RequiredNpcOrGoCount[j] = qinfo->RequiredNpcOrGoCount[j + 1];
+                qinfo->RequiredNpcOrGo[j + 1] = 0;
+                qinfo->RequiredNpcOrGoCount[j + 1] = 0;
+            }
+        }
+
         for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT; ++j)
         {
             int32 id = qinfo->RequiredNpcOrGo[j];

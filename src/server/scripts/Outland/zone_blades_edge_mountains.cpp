@@ -1129,6 +1129,467 @@ public:
     }
 };
 
+// lfm scripts 
+class npc_death_door_fel_cannon : public CreatureScript
+{
+public:
+    npc_death_door_fel_cannon() : CreatureScript("npc_death_door_fel_cannon") { }
+
+    struct npc_death_door_fel_cannonAI : public ScriptedAI
+    {
+        npc_death_door_fel_cannonAI(Creature* creature) : ScriptedAI(creature)
+        {
+
+        }
+
+        void JustDied(Unit* /*killer*/)
+        {
+            std::list<Creature*> doorShieldList;
+            me->GetCreatureListWithEntryInGrid(doorShieldList, 23116, 100.0f);
+            for (std::list<Creature*>::iterator itr = doorShieldList.begin(); itr != doorShieldList.end(); ++itr)
+            {
+                if (Creature* doorShield = *itr)
+                {
+                    doorShield->AI()->SetData(1, 1);
+                }
+                break;
+            }
+        }
+
+        void OnCharmed(bool apply) override
+        {
+            if (apply)
+            {
+                me->SetImmuneToAll(false);
+                if (Unit* charmer = me->GetCharmerOrOwner())
+                {
+                    me->SetFaction(charmer->GetFaction());
+                }
+                std::list<Creature*> doorShieldList;
+                me->GetCreatureListWithEntryInGrid(doorShieldList, 23116, 100.0f);
+                for (std::list<Creature*>::iterator itr = doorShieldList.begin(); itr != doorShieldList.end(); ++itr)
+                {
+                    if (Creature* doorShield = *itr)
+                    {
+                        me->SetFacingToObject(doorShield);
+                    }
+                    break;
+                }
+            }
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_death_door_fel_cannonAI(creature);
+    }
+};
+
+class npc_warp_gate_shield : public CreatureScript
+{
+public:
+    npc_warp_gate_shield() : CreatureScript("npc_warp_gate_shield") { }
+
+    struct npc_warp_gate_shieldAI : public ScriptedAI
+    {
+        npc_warp_gate_shieldAI(Creature* creature) : ScriptedAI(creature)
+        {
+            artilleryCount = 0;
+            engaged = false;
+            impDelay = 0;
+            houndDelay = 10000;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    engaged = false;
+                    artilleryCount = 0;
+                }
+            }
+        }
+
+        void SpellHit(Unit* caster, SpellInfo const* spell) override
+        {
+            if (spell->Id == 39221)
+            {
+                engaged = true;
+                artilleryCount++;
+                if (artilleryCount >= 7)
+                {
+                    std::list<Creature*> creditList_22504;
+                    me->GetCreatureListWithEntryInGrid(creditList_22504, 22504, 10.0f);
+                    for (std::list<Creature*>::iterator itr = creditList_22504.begin(); itr != creditList_22504.end(); ++itr)
+                    {
+                        if (caster)
+                        {
+                            if (Unit* casterCharmer = caster->GetCharmerOrOwner())
+                            {
+                                if (Player* charmerPlayer = casterCharmer->ToPlayer())
+                                {
+                                    charmerPlayer->RewardPlayerAndGroupAtEvent(22504, charmerPlayer);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    std::list<Creature*> creditList_22503;
+                    me->GetCreatureListWithEntryInGrid(creditList_22503, 22503, 10.0f);
+                    for (std::list<Creature*>::iterator itr = creditList_22503.begin(); itr != creditList_22503.end(); ++itr)
+                    {
+                        if (caster)
+                        {
+                            if (Unit* casterCharmer = caster->GetCharmerOrOwner())
+                            {
+                                if (Player* charmerPlayer = casterCharmer->ToPlayer())
+                                {
+                                    charmerPlayer->RewardPlayerAndGroupAtEvent(22503, charmerPlayer);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    DoCastSelf(44434);
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            destCannon->DespawnOrUnsummon(3000);
+                            break;
+                        }
+                    }
+                    me->DespawnOrUnsummon(5000);
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (engaged)
+            {
+                if (impDelay >= 0)
+                {
+                    impDelay -= diff;
+                }
+                if (houndDelay >= 0)
+                {
+                    houndDelay -= diff;
+                }
+                if (impDelay < 0 || houndDelay < 0)
+                {
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    if (cannonList.size() > 0)
+                    {
+                        if (impDelay < 0)
+                        {
+                            impDelay = 3000;
+                            if (TempSummon* imp = me->SummonCreature(22474, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0.0f, TempSummonType::TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000))
+                            {
+                                imp->AI()->SetData(1, 1);
+                            }
+                        }
+                        if (houndDelay < 0)
+                        {
+                            houndDelay = 20000;
+                            if (TempSummon* hound = me->SummonCreature(22500, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0.0f, TempSummonType::TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000))
+                            {
+                                hound->AI()->SetData(1, 1);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        artilleryCount = 0;
+                        engaged = false;
+                        impDelay = 0;
+                        houndDelay = 10000;
+                    }
+                }
+            }
+        }
+
+        int artilleryCount;
+        bool engaged;
+        int impDelay;
+        int houndDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_warp_gate_shieldAI(creature);
+    }
+};
+
+class npc_unstable_fel_imp : public CreatureScript
+{
+public:
+    npc_unstable_fel_imp() : CreatureScript("npc_unstable_fel_imp") { }
+
+    struct npc_unstable_fel_impAI : public ScriptedAI
+    {
+        npc_unstable_fel_impAI(Creature* creature) : ScriptedAI(creature)
+        {
+            moveCheckDelay = 0;
+            morphCheckDelay = 0;
+            explodeCheckDelay = 0;
+            engaged = false;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    engaged = true;
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            me->GetMotionMaster()->MovePoint(1, destCannon->GetPosition());
+                            moveCheckDelay = 5000;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (engaged)
+            {
+                if (moveCheckDelay >= 0)
+                {
+                    moveCheckDelay -= diff;
+                }
+                if (morphCheckDelay >= 0)
+                {
+                    morphCheckDelay -= diff;
+                }
+                if (explodeCheckDelay >= 0)
+                {
+                    explodeCheckDelay -= diff;
+                }
+                if (moveCheckDelay < 0)
+                {
+                    moveCheckDelay = 1000;
+                    if (!me->isMoving())
+                    {
+                        std::list<Creature*> cannonList;
+                        me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                        for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                        {
+                            if (Creature* destCannon = *itr)
+                            {
+                                me->GetMotionMaster()->MovePoint(1, destCannon->GetPosition());
+                                moveCheckDelay = 5000;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (morphCheckDelay < 0)
+                {
+                    morphCheckDelay = 1000;
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            if (me->GetDistance(destCannon) < 30.0f)
+                            {
+                                DoCastSelf(39227);
+                                morphCheckDelay = 600000;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (explodeCheckDelay < 0)
+                {
+                    explodeCheckDelay = 1000;
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            if (me->GetDistance(destCannon) < 2.0f)
+                            {
+                                DoCastSelf(39266);
+                                explodeCheckDelay = 600000;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        bool engaged;
+        int moveCheckDelay;
+        int morphCheckDelay;
+        int explodeCheckDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_unstable_fel_impAI(creature);
+    }
+};
+
+class npc_void_hound : public CreatureScript
+{
+public:
+    npc_void_hound() : CreatureScript("npc_void_hound") { }
+
+    struct npc_void_houndAI : public ScriptedAI
+    {
+        npc_void_houndAI(Creature* creature) : ScriptedAI(creature)
+        {
+            moveCheckDelay = 0;
+            morphCheckDelay = 0;
+            stompDelay = urand(3000, 5000);
+            breathDelay = 0;
+            engaged = false;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    engaged = true;
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            me->GetMotionMaster()->MovePoint(1, destCannon->GetPosition());
+                            moveCheckDelay = 5000;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (engaged)
+            {
+                if (moveCheckDelay >= 0)
+                {
+                    moveCheckDelay -= diff;
+                }
+                if (morphCheckDelay >= 0)
+                {
+                    morphCheckDelay -= diff;
+                }
+                if (moveCheckDelay < 0)
+                {
+                    moveCheckDelay = 1000;
+                    if (!me->isMoving())
+                    {
+                        std::list<Creature*> cannonList;
+                        me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                        for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                        {
+                            if (Creature* destCannon = *itr)
+                            {
+                                AttackStart(destCannon);
+                                moveCheckDelay = 5000;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (morphCheckDelay < 0)
+                {
+                    morphCheckDelay = 1000;
+                    std::list<Creature*> cannonList;
+                    me->GetCreatureListWithEntryInGrid(cannonList, 22443, 100.0f);
+                    for (std::list<Creature*>::iterator itr = cannonList.begin(); itr != cannonList.end(); ++itr)
+                    {
+                        if (Creature* destCannon = *itr)
+                        {
+                            if (me->GetDistance(destCannon) < 30.0f)
+                            {
+                                DoCastSelf(39275);
+                                morphCheckDelay = 600000;
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (UpdateVictim())
+                {
+                    if (Unit* victim = me->GetVictim())
+                    {
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            if (stompDelay >= 0)
+                            {
+                                stompDelay -= diff;
+                            }
+                            if (breathDelay >= 0)
+                            {
+                                breathDelay -= diff;
+                            }
+                            if (stompDelay < 0)
+                            {
+                                DoCastVictim(36405);
+                                stompDelay = urand(10000, 15000);
+                            }
+                            if (breathDelay < 0)
+                            {
+                                DoCastVictim(41437);
+                                breathDelay = urand(8000, 12000);
+                            }
+                            DoMeleeAttackIfReady();
+                        }
+                    }
+                }
+            }
+        }
+
+        bool engaged;
+        int moveCheckDelay;
+        int morphCheckDelay;
+        int stompDelay;
+        int breathDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_void_houndAI(creature);
+    }
+};
+
 void AddSC_blades_edge_mountains()
 {
     new npc_nether_drake();
@@ -1142,4 +1603,8 @@ void AddSC_blades_edge_mountains()
 
     // lfm scripts
     new npc_living_grove_defender();
+    new npc_warp_gate_shield();
+    new npc_unstable_fel_imp();
+    new npc_death_door_fel_cannon();
+    new npc_void_hound();    
 }

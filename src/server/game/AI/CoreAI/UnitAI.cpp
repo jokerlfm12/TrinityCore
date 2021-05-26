@@ -65,6 +65,12 @@ void UnitAI::DoMeleeAttackIfReady()
     //Make sure our attack is ready and we aren't currently casting before checking distance
     if (me->isAttackReady())
     {
+        // lfm stand before attack 
+        if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+        {
+            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+        }
+
         if (ShouldSparWith(victim))
             me->FakeAttackerStateUpdate(victim);
         else
@@ -164,7 +170,15 @@ void UnitAI::DoCast(uint32 spellId)
     }
 
     if (target)
+    {
+        // lfm stand before cast 
+        if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+        {
+            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+        }
+
         me->CastSpell(target, spellId, false);
+    }        
 }
 
 void UnitAI::DoCast(Unit* victim, uint32 spellId, CastSpellExtraArgs const& args)

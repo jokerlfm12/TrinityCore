@@ -1550,7 +1550,7 @@ void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
         if (commandVector.size() > 1)
         {
             if (Unit* myTarget = pmPlayer->GetSelectedUnit())
-            {
+            {                
                 std::string spellIDStr = commandVector.at(1);
                 int32 spellID = atoi(spellIDStr.c_str());
                 pmPlayer->CastSpell(myTarget, spellID);

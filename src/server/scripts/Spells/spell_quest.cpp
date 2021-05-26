@@ -2491,53 +2491,6 @@ public:
     }
 };
 
-class spell_q10457 : SpellScriptLoader
-{
-public:
-    spell_q10457() : SpellScriptLoader("spell_q10457") { }
-
-    class spell_q10457SpellScript : public SpellScript
-    {
-        bool Validate(SpellInfo const* /*spellInfo*/) override
-        {
-            return ValidateSpellInfo({ 36024 });
-        }
-
-        void HandleDummy(SpellEffIndex /*effIndex*/)
-        {
-            if (Unit* casterU = GetCaster())
-            {
-                if (TempSummon* defender = casterU->SummonCreature(21072, casterU->GetPosition(), TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 300000))
-                {
-                    defender->SetRespawnRadius(10.0f);
-                    defender->SetDefaultMovementType(MovementGeneratorType::RANDOM_MOTION_TYPE);
-                    defender->GetMotionMaster()->Initialize();
-                }
-
-                std::list<GameObject*> list;
-                casterU->GetGameObjectListWithEntryInGrid(list, 184631, 5.0f);
-                if (!list.empty())
-                {
-                    if (GameObject* seedling = list.front())
-                    {
-                        seedling->DespawnOrUnsummon(1000ms);
-                    }
-                }
-            }
-        }
-
-        void Register() override
-        {
-            OnEffectHitTarget.Register(&spell_q10457SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
-        }
-    };
-
-    SpellScript* GetSpellScript() const override
-    {
-        return new spell_q10457SpellScript();
-    }
-};
-
 enum FearNoEvil
 {
     SPELL_RENEWED_LIFE = 93097,
@@ -2899,6 +2852,5 @@ void AddSC_quest_spell_scripts()
     new spell_q14098_knocking_67869();
 
     // lfm scripts
-    new spell_q10930_fumping();
-    new spell_q10457();
+    new spell_q10930_fumping();    
 }

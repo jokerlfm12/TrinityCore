@@ -1944,12 +1944,6 @@ void SpellMgr::LoadSpellProcs()
         if (addTriggerFlag)
             procEntry.AttributesMask |= PROC_ATTR_TRIGGERED_CAN_PROC;
 
-        // lfm special fix 
-        if (spellInfo->Id == 81229)
-        {
-            procEntry.AttributesMask = procEntry.AttributesMask | PROC_ATTR_TRIGGERED_CAN_PROC;
-        }
-
         procEntry.ProcsPerMinute  = 0;
         procEntry.Chance          = spellInfo->ProcChance;
         procEntry.Cooldown        = Milliseconds::zero();
