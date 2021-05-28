@@ -541,12 +541,16 @@ class npc_bessy : public CreatureScript
                         break;
                     case 12:
                         player->GroupEventHappens(Q_ALMABTRIEB, me);
-                        if (me->FindNearestCreature(N_THADELL, 30))
-                            Talk(SAY_THADELL_1);
+                        if (Creature* thadell = me->FindNearestCreature(N_THADELL, 30))
+                        {
+                            thadell->AI()->Talk(SAY_THADELL_1);
+                        }
                         break;
                     case 13:
-                        if (me->FindNearestCreature(N_THADELL, 30))
-                            Talk(SAY_THADELL_2, player);
+                        if (Creature* thadell = me->FindNearestCreature(N_THADELL, 30))
+                        {
+                            thadell->AI()->Talk(SAY_THADELL_2, player);
+                        }
                         break;
                 }
             }
@@ -803,6 +807,252 @@ public:
     }
 };
 
+class npc_scrap_reaver_x6000 : public CreatureScript
+{
+public:
+    npc_scrap_reaver_x6000() : CreatureScript("npc_scrap_reaver_x6000") { }
+
+    struct npc_scrap_reaver_x6000AI : public ScriptedAI
+    {
+        npc_scrap_reaver_x6000AI(Creature* creature) : ScriptedAI(creature)
+        {
+            deathDelay = 0;
+        }
+
+        void OnCharmed(bool apply) override
+        {
+            if (apply)
+            {
+                me->SetImmuneToAll(false);
+                me->SetReactState(ReactStates::REACT_AGGRESSIVE);                
+                if (Unit* charmer = me->GetCharmerOrOwner())
+                {
+                    me->GetMotionMaster()->MoveFollow(charmer, 2.0f, M_PI * 5 / 4);
+                }
+            }
+        }
+
+        void JustAppeared()
+        {
+            me->SetImmuneToAll(true);
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {                    
+                    deathDelay = 1000;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (deathDelay > 0)
+            {
+                deathDelay -= diff;
+                if (deathDelay <= 0)
+                {
+                    Talk(0);
+                    me->KillSelf(false);
+                    me->DespawnOrUnsummon(5000, 60s);
+                }
+            }
+            if (UpdateVictim())
+            {
+                DoMeleeAttackIfReady();
+            }
+        }
+
+        int deathDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_scrap_reaver_x6000AI(creature);
+    }
+};
+
+class npc_negatron : public CreatureScript
+{
+public:
+    npc_negatron() : CreatureScript("npc_negatron") { }
+
+    struct npc_negatronAI : public ScriptedAI
+    {
+        npc_negatronAI(Creature* creature) : ScriptedAI(creature)
+        {
+            moveCheckDelay = 2000;
+            chargeDelay = 0;
+            demolishDelay = urand(8000, 12000);
+            earthquakeDelay = urand(15000,20000);
+            fenzyDelay = 0;
+            intro = true;
+            destination.m_positionX = 3087.21f;
+            destination.m_positionY = 3402.86f;
+            destination.m_positionZ = 105.326f;
+        }
+
+        void JustAppeared()
+        {
+            DoCastSelf(15742);
+            me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+            std::list<Creature*> doctorList;
+            me->GetCreatureListWithEntryInGrid(doctorList, 19832, 100.0f);
+            for (std::list<Creature*>::iterator itr = doctorList.begin(); itr != doctorList.end(); ++itr)
+            {
+                if (Creature* doctor = *itr)
+                {                    
+                    doctor->AI()->Talk(0);
+                    break;
+                }
+            }
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            std::list<Creature*> reaverList;
+            me->GetCreatureListWithEntryInGrid(reaverList, 19849, 10.0f);
+            for (std::list<Creature*>::iterator itr = reaverList.begin(); itr != reaverList.end(); ++itr)
+            {
+                if (Creature* reaver = *itr)
+                {
+                    reaver->AI()->SetData(1, 1);
+                    if (Unit* co = reaver->GetCharmerOrOwner())
+                    {
+                        if (Player* coPlayer = co->ToPlayer())
+                        {
+                            coPlayer->AreaExploredOrEventHappens(10248);
+                        }
+                    }
+                }
+            }
+        }
+
+        void Reset() override
+        {
+            moveCheckDelay = 2000;
+            chargeDelay = 0;
+            demolishDelay = urand(10000, 15000);
+            earthquakeDelay = urand(15000, 20000);
+            fenzyDelay = 0;
+            intro = true;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                DoMeleeAttackIfReady();
+                if (chargeDelay >= 0)
+                {
+                    chargeDelay -= diff;
+                }
+                if (demolishDelay >= 0)
+                {
+                    demolishDelay -= diff;
+                }
+                if (earthquakeDelay >= 0)
+                {
+                    earthquakeDelay -= diff;
+                }
+                if (fenzyDelay >= 0)
+                {
+                    fenzyDelay -= diff;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (intro)
+                    {
+                        Talk(0);
+                        intro = false;
+                    }
+                    if (chargeDelay < 0)
+                    {
+                        chargeDelay = 100;
+                        float victimDistance = me->GetDistance(victim);
+                        if (victimDistance > 8.0f && victimDistance < 25.0f)
+                        {
+                            DoCastVictim(35570);
+                            chargeDelay = urand(15000, 20000);
+                            return;
+                        }
+                    }
+                    if (demolishDelay < 0)
+                    {
+                        demolishDelay = 1000;
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            DoCastVictim(34625);
+                            demolishDelay = urand(8000, 12000);
+                            return;
+                        }
+                    }
+                    if (earthquakeDelay < 0)
+                    {
+                        earthquakeDelay = 1000;
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            DoCastVictim(35565);
+                            earthquakeDelay = urand(20000, 25000);
+                            return;
+                        }
+                    }
+                    if (fenzyDelay < 0)
+                    {
+                        fenzyDelay = 1000;
+                        float myHealthPCT = me->GetHealthPct();
+                        if (myHealthPCT < 50.0f)
+                        {
+                            DoCastSelf(34624);
+                            fenzyDelay = urand(15000, 20000);
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (moveCheckDelay >= 0)
+                {
+                    moveCheckDelay -= diff;
+                }
+                if (moveCheckDelay < 0)
+                {
+                    moveCheckDelay = 2000;
+                    if (!me->isMoving())
+                    {
+                        me->GetMotionMaster()->MovePoint(1, destination);
+                    }
+                }
+            }
+        }
+
+        int moveCheckDelay;
+        int chargeDelay;
+        int demolishDelay;
+        int earthquakeDelay;
+        int fenzyDelay;
+        bool intro;
+        Position destination;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_negatronAI(creature);
+    }
+};
+
 void AddSC_netherstorm()
 {
     new npc_commander_dawnforge();
@@ -814,4 +1064,6 @@ void AddSC_netherstorm()
 
     // lfm scripts
     new npc_scrapped_fel_reaver();
+    new npc_scrap_reaver_x6000();
+    new npc_negatron();
 }

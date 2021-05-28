@@ -795,6 +795,10 @@ class TC_GAME_API Unit : public WorldObject
         // lfm Unit extra delay 
         int extraDelay;
         MovementGeneratorType freeMovementType;
+        int32   m_bonusSpellDamage;
+
+        int32 GetBonusDamage() const { return m_bonusSpellDamage; }
+        void SetBonusDamage(int32 damage);
 
         UnitAI* GetAI() { return i_AI; }
         void SetAI(UnitAI* newAI) { i_AI = newAI; }

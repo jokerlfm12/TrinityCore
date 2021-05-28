@@ -4382,15 +4382,15 @@ void ObjectMgr::LoadPlayerInfo()
             // lfm xp modification
             if (current_level >= 80)
             {
-                current_xp = current_xp * 1.25f;
+                current_xp = current_xp * 1.5f;
             }
             else if (current_level >= 70)
             {
-                current_xp = current_xp * 2.0f;
+                current_xp = current_xp * 2.5f;
             }
             else if (current_level >= 60)
             {
-                current_xp = current_xp * 1.75f;
+                current_xp = current_xp * 2.0f;
             }
             else
             {

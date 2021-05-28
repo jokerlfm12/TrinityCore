@@ -1295,8 +1295,6 @@ void GameObject::Respawn()
 
 bool GameObject::ActivateToQuest(Player* target) const
 {
-    // lfm debug
-    uint32 goEntry = GetEntry();
     if (target->HasQuestForGO(GetEntry()))
         return true;
     
@@ -2597,18 +2595,22 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
                     case GAMEOBJECT_TYPE_CHEST:
                     case GAMEOBJECT_TYPE_GOOBER:
                     {
-                        // lfm related go should be activated 
-                        if (sObjectMgr->IsGameObjectForQuests(GetEntry()))
+                        if (ActivateToQuest(target))
                         {
-                            if (ActivateToQuest(target))
-                            {
-                                dynFlags |= GO_DYNFLAG_LO_ACTIVATE | GO_DYNFLAG_LO_SPARKLE;
-                            }
-                            else
-                            {
-                                dynFlags |= GO_DYNFLAG_LO_ACTIVATE;
-                            }
+                            dynFlags |= GO_DYNFLAG_LO_ACTIVATE | GO_DYNFLAG_LO_SPARKLE;
                         }
+                        // lfm related go should be activated 
+                        //if (sObjectMgr->IsGameObjectForQuests(GetEntry()))
+                        //{
+                        //    if (ActivateToQuest(target))
+                        //    {
+                        //        dynFlags |= GO_DYNFLAG_LO_ACTIVATE | GO_DYNFLAG_LO_SPARKLE;
+                        //    }
+                        //    else
+                        //    {
+                        //        dynFlags |= GO_DYNFLAG_LO_ACTIVATE;
+                        //    }
+                        //}
                         break;
                     }
                     case GAMEOBJECT_TYPE_GENERIC:

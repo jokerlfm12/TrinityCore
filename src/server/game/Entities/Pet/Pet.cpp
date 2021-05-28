@@ -807,7 +807,11 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     PetLevelInfo const* pInfo = sObjectMgr->GetPetLevelInfo(creature_ID, petlevel);
     if (pInfo)                                      // exist in DB
     {
-        SetCreateHealth(pInfo->health);
+        // lfm pet will also be scaled
+        //SetCreateHealth(pInfo->health);
+        uint32 petHealth = pInfo->health;
+        petHealth = petHealth * 1.5f;
+        SetCreateHealth(petHealth);
         SetCreateMana(pInfo->mana);
 
         if (pInfo->armor > 0)
@@ -852,77 +856,42 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     // Damage
     SetBonusDamage(0);
 
+    // lfm pet will use creature normal rank mod            
+    CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
+    float baseMinDamage = stats->GenerateBaseDamage(cinfo);
+    if (petlevel > 80)
+    {
+        baseMinDamage = baseMinDamage * 4.0f;
+    }
+    else if (petlevel > 70)
+    {
+        baseMinDamage = baseMinDamage * 3.0f;
+    }
+    else if (petlevel > 60)
+    {
+        baseMinDamage = baseMinDamage * 2.5f;
+    }
+    else if (petlevel > 30)
+    {
+        baseMinDamage = baseMinDamage * 2.0f;
+    }
+    else
+    {
+        baseMinDamage = baseMinDamage * 1.5f;
+    }
+    float baseMaxDamage = baseMinDamage * 1.5f;
+    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, baseMinDamage);
+    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, baseMaxDamage);
+
     switch (petType)
     {
         case SUMMON_PET:
         {
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
-
-            // lfm pet will use creature normal rank mod
-            CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
-            float baseMinDamage = stats->GenerateBaseDamage(cinfo);
-            if (petlevel > 80)
-            {
-                baseMinDamage = baseMinDamage * 4.0f;
-            }
-            else if (petlevel > 70)
-            {
-                baseMinDamage = baseMinDamage * 3.0f;
-            }
-            else if (petlevel > 60)
-            {
-                baseMinDamage = baseMinDamage * 2.5f;
-            }
-            else if (petlevel > 30)
-            {
-                baseMinDamage = baseMinDamage * 2.0f;
-            }
-            else
-            {
-                baseMinDamage = baseMinDamage * 1.5f;
-            }
-            float baseMaxDamage = baseMinDamage * 1.5f;
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, baseMinDamage);
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, baseMaxDamage);
             break;
         }
         case HUNTER_PET:
         {
-            SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, uint32(sObjectMgr->GetXPForLevel(petlevel) * PET_XP_FACTOR));
-            //these formula may not be correct; however, it is designed to be close to what it should be
-            //this makes dps 0.5 of pets level
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
-            //damage range is then petlevel / 2
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
-            //damage is increased afterwards as strength and pet scaling modify attack power
-
-            // lfm pet will use creature normal rank mod
-            CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
-            float baseMinDamage = stats->GenerateBaseDamage(cinfo);
-            if (petlevel > 80)
-            {
-                baseMinDamage = baseMinDamage * 4.0f;
-            }
-            else if (petlevel > 70)
-            {
-                baseMinDamage = baseMinDamage * 3.0f;
-            }
-            else if (petlevel > 60)
-            {
-                baseMinDamage = baseMinDamage * 2.5f;
-            }
-            else if (petlevel > 30)
-            {
-                baseMinDamage = baseMinDamage * 2.0f;
-            }
-            else
-            {
-                baseMinDamage = baseMinDamage * 1.5f;
-            }
-            float baseMaxDamage = baseMinDamage * 1.5f;
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, baseMinDamage);
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, baseMaxDamage);
+            SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, uint32(sObjectMgr->GetXPForLevel(petlevel) * PET_XP_FACTOR));            
             break;
         }
         default:
@@ -940,10 +909,9 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                 case ENTRY_EARTH_ELEMENTAL:
                 {
                     if (Unit* owner = m_owner->GetOwner())
+                    {
                         SetCreateHealth(owner->CountPctFromMaxHealth(75));
-
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel * 4 - petlevel));
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel * 4 + petlevel));
+                    }
                     break;
                 }
                 case ENTRY_FIRE_ELEMENTAL:
@@ -953,20 +921,16 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                         SetCreateHealth(owner->CountPctFromMaxHealth(75));
                         SetBonusDamage(int32(owner->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_FIRE) * 0.5f));
                     }
-
                     SetCreateMana(28 + 10 * petlevel);
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel * 4 - petlevel));
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel * 4 + petlevel));
                     break;
                 }
                 case ENTRY_SHADOWFIEND:
                 {
                     SetCreateMana(28 + 10 * petlevel);
                     SetCreateHealth(28 + 30 * petlevel);
-                    int32 bonus_dmg = int32(GetOwner()->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW)* 0.375f);
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float((petlevel * 4 - petlevel) + bonus_dmg));
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float((petlevel * 4 + petlevel) + bonus_dmg));
-
+                    int32 bonus_dmg = int32(GetOwner()->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW)* 0.375f);                    
+                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, m_weaponDamage[BASE_ATTACK][MINDAMAGE] + bonus_dmg);
+                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, m_weaponDamage[BASE_ATTACK][MAXDAMAGE] + bonus_dmg);
                     break;
                 }
                 case ENTRY_VENOMOUS_SNAKE:
@@ -993,12 +957,10 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                     // wolf attack speed is 1.5s
                     SetAttackTime(BASE_ATTACK, cinfo->BaseAttackTime);
 
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float((petlevel * 4 - petlevel)));
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float((petlevel * 4 + petlevel)));
-
                     // 14AP == 1dps, wolf's strike speed == 1.5s so dmg = AP / 14 * 1.5
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * dmg_multiplier / 14);
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * dmg_multiplier / 14);
+                    // lfm confused 
+                    //SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * dmg_multiplier / 14);
+                    //SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, m_owner->GetTotalAttackPowerValue(BASE_ATTACK) * dmg_multiplier / 14);
 
                     SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, float(GetOwner()->GetArmor()) * 0.35f);  // Bonus Armor (35% of player armor)
                     SetModifierValue(UNIT_MOD_STAT_STAMINA, BASE_VALUE, float(GetOwner()->GetStat(STAT_STAMINA)) * 0.3f);  // Bonus Stamina (30% of player stamina)
@@ -1009,8 +971,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                     break;
                 }
                 case ENTRY_GARGOYLE:
-                {
-                    SetCreateHealth(m_owner->CountPctFromMaxHealth(70));
+                {                    
                     if (Player* owner = m_owner->ToPlayer())
                     {
                         float bonus = owner->GetRatingBonusValue(CR_HASTE_MELEE);
@@ -1018,36 +979,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                             owner->GetTotalAuraModifier(SPELL_AURA_MOD_MELEE_RANGED_HASTE);
                         ApplyCastTimePercentMod(bonus, true);
                     }
-
-                    SetBonusDamage(int32(GetOwner()->GetTotalAttackPowerValue(BASE_ATTACK) * 0.5f));
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
-                    // lfm pet will use creature normal rank mod
-                    CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
-                    float baseMinDamage = stats->GenerateBaseDamage(cinfo);
-                    if (petlevel > 80)
-                    {
-                        baseMinDamage = baseMinDamage * 4.0f;
-                    }
-                    else if (petlevel > 70)
-                    {
-                        baseMinDamage = baseMinDamage * 3.0f;
-                    }
-                    else if (petlevel > 60)
-                    {
-                        baseMinDamage = baseMinDamage * 2.5f;
-                    }
-                    else if (petlevel > 30)
-                    {
-                        baseMinDamage = baseMinDamage * 2.0f;
-                    }
-                    else
-                    {
-                        baseMinDamage = baseMinDamage * 1.5f;
-                    }
-                    float baseMaxDamage = baseMinDamage * 1.5f;
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, baseMinDamage);
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, baseMaxDamage);
+                    SetBonusDamage(int32(GetOwner()->GetTotalAttackPowerValue(BASE_ATTACK)));
                     break;
                 }
                 case ENTRY_BLOODWORM:
@@ -1109,33 +1041,6 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                     {
                         CastSpell(this, 62137, true);
                     }
-
-                    // lfm pet will use creature normal rank mod
-                    CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
-                    float baseMinDamage = stats->GenerateBaseDamage(cinfo);
-                    if (petlevel > 80)
-                    {
-                        baseMinDamage = baseMinDamage * 4.0f;
-                    }
-                    else if (petlevel > 70)
-                    {
-                        baseMinDamage = baseMinDamage * 3.0f;
-                    }
-                    else if (petlevel > 60)
-                    {
-                        baseMinDamage = baseMinDamage * 2.5f;
-                    }
-                    else if (petlevel > 30)
-                    {
-                        baseMinDamage = baseMinDamage * 2.0f;
-                    }
-                    else
-                    {
-                        baseMinDamage = baseMinDamage * 1.5f;
-                    }
-                    float baseMaxDamage = baseMinDamage * 1.5f;
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, baseMinDamage);
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, baseMaxDamage);
                     break;
                 }
                 default:
@@ -1144,14 +1049,6 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
                      * should be copied here (or moved to another method or if that function should be called here
                      * or not just for this default case)
                      */
-                    CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(petlevel, cinfo->unit_class);
-                    float basedamage = stats->GenerateBaseDamage(cinfo);
-
-                    float weaponBaseMinDamage = basedamage;
-                    float weaponBaseMaxDamage = basedamage * 1.5f;
-
-                    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, weaponBaseMinDamage);
-                    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, weaponBaseMaxDamage);
                     break;
                 }
             }

@@ -1162,7 +1162,7 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
     SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, val);
 
     // in BASE_VALUE of UNIT_MOD_ATTACK_POWER for creatures we store data of meleeattackpower field in DB
-    float base_attPower  = GetModifierValue(unitMod, BASE_VALUE) * GetModifierValue(unitMod, BASE_PCT);
+    float base_attPower = GetModifierValue(unitMod, BASE_VALUE) * GetModifierValue(unitMod, BASE_PCT);
     float attPowerMod = GetModifierValue(unitMod, TOTAL_VALUE);
     float attPowerMultiplier = GetModifierValue(unitMod, TOTAL_PCT) - 1.0f;
 
@@ -1179,11 +1179,15 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
     UpdateDamagePhysical(BASE_ATTACK);
 
     // update pet spell power
-    int32 spellDamage = 0;
+    // lfm add unit spell power aura mod to m_bonusSpellDamage
+    //int32 spellDamage = 0;
+    //for (auto itr : GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_DONE))
+    //    spellDamage += itr->GetAmount();
+    //SetBonusDamage(spellDamage);
     for (auto itr : GetAuraEffectsByType(SPELL_AURA_MOD_DAMAGE_DONE))
-        spellDamage += itr->GetAmount();
-
-    SetBonusDamage(spellDamage);
+    {
+        m_bonusSpellDamage += itr->GetAmount();
+    }
 }
 
 void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
@@ -1243,11 +1247,4 @@ void Guardian::UpdateDamagePhysical(WeaponAttackType attType)
 
     SetStatFloatValue(UNIT_FIELD_MINDAMAGE, mindamage);
     SetStatFloatValue(UNIT_FIELD_MAXDAMAGE, maxdamage);
-}
-
-void Guardian::SetBonusDamage(int32 damage)
-{
-    //m_bonusSpellDamage = damage;
-    if (GetOwner()->GetTypeId() == TYPEID_PLAYER)
-        GetOwner()->SetUInt32Value(PLAYER_PET_SPELL_POWER, damage);
 }

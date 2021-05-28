@@ -1,6 +1,12 @@
 30619 cleave
 11976 strike
 12461 backhand 
+15165 pummel
+11972 shield bash
+15655 shield slam
+25712 heroic strike
+22911 charge
+9080 hamstring
 insert into world_trinitycore_ctm.gameobject 
 select guid, id, map, zoneid, areaid, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, scriptname, verifiedbuild 
 from world_trinitycore_wlk.gameobject where id = 183123;
@@ -57,3 +63,6 @@ delete from world_trinitycore_ctm.creature_text where creatureid = 18319;
 insert into world_trinitycore_ctm.creature_text 
 select creatureid, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, textrange, comment 
 from world_trinitycore_wlk.creature_text where creatureid = 18319;
+
+INSERT INTO world_trinitycore_ctm.creature (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES 
+('117621', '20114', '530', '3523', '3722', '1', '0', '1', '169', '0', '-1', '0', '0', '3923.06', '3873.36', '180.752', '0', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');

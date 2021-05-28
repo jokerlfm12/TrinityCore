@@ -1051,6 +1051,12 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry, SpellEffectEntry const** effe
 
     _allowedMechanicMask = 0;
     MaxAuraTargets = 0;
+
+    // lfm spell map extra fix
+    if (Id == 36659)
+    {
+        Effects[SpellEffIndex::EFFECT_1].BonusMultiplier = 0.17f;
+    }
 }
 
 SpellInfo::~SpellInfo()

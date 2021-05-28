@@ -423,6 +423,7 @@ Unit::Unit(bool isWorldObject) :
     // lfm Unit extra delay
     extraDelay = 0;
     freeMovementType = MovementGeneratorType::IDLE_MOTION_TYPE;
+    m_bonusSpellDamage = 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -6709,138 +6710,6 @@ float Unit::SpellDamagePctDone(Unit* victim, SpellInfo const* spellProto, Damage
     if (GetTypeId() == TYPEID_UNIT && !IsPet())
     {
         DoneTotalMod *= ToCreature()->GetSpellDamageMod(ToCreature()->GetCreatureTemplate()->rank);
-
-        // lfm spell damage modifier definition
-        if (const Creature* meCreature = ToCreature())
-        {
-            if (const CreatureTemplate* ct = meCreature->GetCreatureTemplate())
-            {
-                uint32 myLevel = getLevel();
-                if (myLevel > 80)
-                {
-
-                }
-                else if (myLevel > 70)
-                {
-                    switch (ct->rank)
-                    {
-                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-                    {
-                        DoneTotalMod *= 2.0f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_ELITE:
-                    {
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RARE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-                    {
-                        DoneTotalMod *= 1.5f;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                    }
-                }
-                else if (myLevel > 60)
-                {
-                    switch (ct->rank)
-                    {
-                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-                    {
-                        DoneTotalMod *= 1.75f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_ELITE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RARE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-                    {
-                        DoneTotalMod *= 1.5f;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                    }
-                }
-                else if (myLevel > 30)
-                {
-                    switch (ct->rank)
-                    {
-                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-                    {
-                        DoneTotalMod *= 1.5f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_ELITE:
-                    {
-                        DoneTotalMod *= 1.5f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RARE:
-                    {
-                        DoneTotalMod *= 1.5f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-                    {
-                        DoneTotalMod *= 1.75f;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                    }
-                }
-                else
-                {
-                    switch (ct->rank)
-                    {
-                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_ELITE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RARE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-                    {
-                        DoneTotalMod *= 1.25f;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                    }
-                }
-            }
-        }
     }
 
     float maxModDamagePercentSchool = 0.0f;
@@ -7126,6 +6995,10 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask, bool withSpellP
 
         // ... and attack power
         DoneAdvertisedBenefit += static_cast<int32>(CalculatePct(GetTotalAttackPowerValue(BASE_ATTACK), GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_SPELL_DAMAGE_OF_ATTACK_POWER, schoolMask)));
+    }
+    else
+    {
+        DoneAdvertisedBenefit = DoneAdvertisedBenefit + GetBonusDamage();
     }
 
     return DoneAdvertisedBenefit;
@@ -15076,4 +14949,15 @@ void Unit::ProcessItemCast(PendingSpellCastRequest const& castRequest, SpellCast
         // no script or script not process request by self
         player->CastItemUseSpell(item, targets, castRequest.CastRequest.CastID, castRequest.CastRequest.Misc);
     }
+}
+
+// lfm unit bonus spell damage  
+void Unit::SetBonusDamage(int32 damage)
+{
+    // lfm should be pure spell damage bonus ? 
+    m_bonusSpellDamage = damage;
+    //if (GetOwner()->GetTypeId() == TYPEID_PLAYER)
+    //{
+    //    GetOwner()->SetUInt32Value(PLAYER_PET_SPELL_POWER, damage);
+    //}        
 }

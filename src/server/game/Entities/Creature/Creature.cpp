@@ -714,6 +714,29 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/,
     LoadTemplateImmunities();
 
     GetThreatManager().EvaluateSuppressed();
+
+    // lfm spell damage modifier definition 
+    uint32 myLevel = getLevel();
+    if (myLevel > 80)
+    {
+        m_bonusSpellDamage = myLevel * 20;
+    }
+    else if (myLevel > 70)
+    {
+        m_bonusSpellDamage = myLevel * 15;
+    }
+    else if (myLevel > 60)
+    {
+        m_bonusSpellDamage = myLevel * 10;
+    }
+    else if (myLevel > 30)
+    {
+        m_bonusSpellDamage = myLevel * 6;
+    }
+    else
+    {
+        m_bonusSpellDamage = myLevel*3;
+    }
     return true;
 }
 
@@ -725,6 +748,15 @@ void Creature::Update(uint32 diff)
             m_vehicleKit->Reset();
         m_triggerJustAppeared = false;
         AI()->JustAppeared();
+
+        // lfm creature attack when appeared 
+        if (!GetOwner())
+        {
+            if (Unit* hostile = SelectNearestHostileUnitInAggroRange(true))
+            {
+                AI()->AttackStart(hostile);
+            }
+        }
     }
 
     UpdateMovementFlags();
