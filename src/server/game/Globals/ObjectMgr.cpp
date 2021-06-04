@@ -612,149 +612,11 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         }
     }
 
-    // lfm creature_template correction
-    if (creatureTemplate.Entry == 28557 || creatureTemplate.Entry == 28626 || creatureTemplate.Entry == 28892)
-    {
-        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
-    }
-    else if (creatureTemplate.Entry == 28576 || creatureTemplate.Entry == 28577 || creatureTemplate.Entry == 28660 || creatureTemplate.Entry == 28662 || creatureTemplate.Entry == 28764)
-    {
-        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
-    }
-    else if (creatureTemplate.Entry == 16993)
-    {
-        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
-    }
-    else if (creatureTemplate.Entry == 28834 || creatureTemplate.Entry == 28850 || creatureTemplate.Entry == 28856)
-    {
-        if (creatureTemplate.ModHealth < 20.0f)
-        {
-            creatureTemplate.ModHealth = 20.0f;
-        }
-    }
-    else if (creatureTemplate.Entry == 29173)
-    {
-        // Highlord Darion Mograine level 
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 1000.0f;
-        creatureTemplate.ModDamage = 30.0f;        
-    }
-    else if (creatureTemplate.Entry == 29185)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;        
-        creatureTemplate.ModHealth = 11.0f;
-        creatureTemplate.ModDamage = 6.0f;        
-    }
-    else if (creatureTemplate.Entry == 19320)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 12.0f;
-        creatureTemplate.ModDamage = 8.0f;        
-    }
-    else if (creatureTemplate.Entry == 29186)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 20.0f;
-        creatureTemplate.ModDamage = 8.0f;        
-    }
-    else if (creatureTemplate.Entry == 29206)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 18.0f;
-        creatureTemplate.ModDamage = 8.5f;        
-    }
-    else if (creatureTemplate.Entry == 29190)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 22.0f;
-        creatureTemplate.ModDamage = 9.0f;        
-    }
-    else if (creatureTemplate.Entry == 29174)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 16.0f;
-        creatureTemplate.ModDamage = 9.0f;
-    }
-    else if (creatureTemplate.Entry == 29199)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 650.0f;
-        creatureTemplate.ModDamage = 20.0f;
-    }
-    else if (creatureTemplate.Entry == 29204)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 700.0f;
-        creatureTemplate.ModDamage = 21.0f;
-    }
-    else if (creatureTemplate.Entry == 29200)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 750.0f;
-        creatureTemplate.ModDamage = 22.0f;
-    }
-    else if (creatureTemplate.Entry == 29176)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 680.0f;
-        creatureTemplate.ModDamage = 20.0f;
-    }
-    else if (creatureTemplate.Entry == 29178)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 690.0f;
-        creatureTemplate.ModDamage = 21.0f;
-    }
-    else if (creatureTemplate.Entry == 29177)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 640.0f;
-        creatureTemplate.ModDamage = 22.0f;
-    }
-    else if (creatureTemplate.Entry == 29181)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 620.0f;
-        creatureTemplate.ModDamage = 20.0f;
-    }
-    else if (creatureTemplate.Entry == 29182)
-    {
-        creatureTemplate.minlevel = 60;
-        creatureTemplate.maxlevel = 60;
-        creatureTemplate.expansion = 2;
-        creatureTemplate.ModHealth = 630.0f;
-        creatureTemplate.ModDamage = 21.0f;
-    }
-
     // lfm creature template modifier definition
+    if (creatureTemplate.ModHealth >= 0.5f && creatureTemplate.ModHealth < 1.0f)
+    {
+        creatureTemplate.ModHealth = 1.0f;
+    }
     if (creatureTemplate.ModHealth >= 1.0f)
     {
         switch (creatureTemplate.rank)
@@ -796,6 +658,10 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
             break;
         }
         }
+    }
+    else
+    {
+        creatureTemplate.ModHealth = creatureTemplate.ModHealth * 1.5f;
     }
     if (creatureTemplate.minlevel > 80)
     {
@@ -1006,6 +872,148 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
             break;
         }
         }
+    }
+
+    // lfm creature_template correction
+    if (creatureTemplate.Entry == 28557 || creatureTemplate.Entry == 28626 || creatureTemplate.Entry == 28892)
+    {
+        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
+    }
+    else if (creatureTemplate.Entry == 28576 || creatureTemplate.Entry == 28577 || creatureTemplate.Entry == 28660 || creatureTemplate.Entry == 28662 || creatureTemplate.Entry == 28764)
+    {
+        creatureTemplate.flags_extra |= CreatureFlagsExtra::CREATURE_FLAG_EXTRA_CIVILIAN;
+    }
+    else if (creatureTemplate.Entry == 16993)
+    {
+        creatureTemplate.unit_flags |= UnitFlags::UNIT_FLAG_IMMUNE_TO_PC;
+    }
+    else if (creatureTemplate.Entry == 28834 || creatureTemplate.Entry == 28850 || creatureTemplate.Entry == 28856)
+    {
+        if (creatureTemplate.ModHealth < 20.0f)
+        {
+            creatureTemplate.ModHealth = 20.0f;
+        }
+    }
+    else if (creatureTemplate.Entry == 29173)
+    {
+        // Highlord Darion Mograine level 
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 1000.0f;
+        creatureTemplate.ModDamage = 30.0f;
+    }
+    else if (creatureTemplate.Entry == 29185)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 11.0f;
+        creatureTemplate.ModDamage = 6.0f;
+    }
+    else if (creatureTemplate.Entry == 19320)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 12.0f;
+        creatureTemplate.ModDamage = 8.0f;
+    }
+    else if (creatureTemplate.Entry == 29186)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 20.0f;
+        creatureTemplate.ModDamage = 8.0f;
+    }
+    else if (creatureTemplate.Entry == 29206)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 18.0f;
+        creatureTemplate.ModDamage = 8.5f;
+    }
+    else if (creatureTemplate.Entry == 29190)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 22.0f;
+        creatureTemplate.ModDamage = 9.0f;
+    }
+    else if (creatureTemplate.Entry == 29174)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 16.0f;
+        creatureTemplate.ModDamage = 9.0f;
+    }
+    else if (creatureTemplate.Entry == 29199)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 650.0f;
+        creatureTemplate.ModDamage = 20.0f;
+    }
+    else if (creatureTemplate.Entry == 29204)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 700.0f;
+        creatureTemplate.ModDamage = 21.0f;
+    }
+    else if (creatureTemplate.Entry == 29200)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 750.0f;
+        creatureTemplate.ModDamage = 22.0f;
+    }
+    else if (creatureTemplate.Entry == 29176)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 680.0f;
+        creatureTemplate.ModDamage = 20.0f;
+    }
+    else if (creatureTemplate.Entry == 29178)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 690.0f;
+        creatureTemplate.ModDamage = 21.0f;
+    }
+    else if (creatureTemplate.Entry == 29177)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 640.0f;
+        creatureTemplate.ModDamage = 22.0f;
+    }
+    else if (creatureTemplate.Entry == 29181)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 620.0f;
+        creatureTemplate.ModDamage = 20.0f;
+    }
+    else if (creatureTemplate.Entry == 29182)
+    {
+        creatureTemplate.minlevel = 60;
+        creatureTemplate.maxlevel = 60;
+        creatureTemplate.expansion = 2;
+        creatureTemplate.ModHealth = 630.0f;
+        creatureTemplate.ModDamage = 21.0f;
     }
 }
 
@@ -4978,15 +4986,39 @@ void ObjectMgr::LoadQuests()
             }
         }
 
-        // lfm extra fix. move following required info front if it is 0 
-        for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT-1; ++j)
+        // lfm quest extra fix. move following required info front if it is 0 
+        for (uint8 i = 0; i < QUEST_OBJECTIVES_COUNT - 2; i++)
         {
-            if (qinfo->RequiredNpcOrGo[j] == 0)
+            if (qinfo->RequiredNpcOrGo[i] == 0)
             {
-                qinfo->RequiredNpcOrGo[j] = qinfo->RequiredNpcOrGo[j + 1];
-                qinfo->RequiredNpcOrGoCount[j] = qinfo->RequiredNpcOrGoCount[j + 1];
-                qinfo->RequiredNpcOrGo[j + 1] = 0;
-                qinfo->RequiredNpcOrGoCount[j + 1] = 0;
+                for (uint8 j = i + 1; j < QUEST_OBJECTIVES_COUNT - 1; j++)
+                {
+                    if (qinfo->RequiredNpcOrGo[j] != 0)
+                    {
+                        qinfo->RequiredNpcOrGo[i] = qinfo->RequiredNpcOrGo[j];
+                        qinfo->RequiredNpcOrGoCount[i] = qinfo->RequiredNpcOrGoCount[j];
+                        qinfo->RequiredNpcOrGo[j] = 0;
+                        qinfo->RequiredNpcOrGoCount[j] = 0;
+                        break;
+                    }
+                }
+            }
+        }
+        for (uint8 i = 0; i < QUEST_OBJECTIVES_COUNT - 2; i++)
+        {
+            if (qinfo->RequiredItemId[i] == 0)
+            {
+                for (uint8 j = i + 1; j < QUEST_OBJECTIVES_COUNT - 1; j++)
+                {
+                    if (qinfo->RequiredItemId[j] != 0)
+                    {
+                        qinfo->RequiredItemId[i] = qinfo->RequiredItemId[j];
+                        qinfo->RequiredItemCount[i] = qinfo->RequiredItemCount[j];
+                        qinfo->RequiredItemId[j] = 0;
+                        qinfo->RequiredItemCount[j] = 0;
+                        break;
+                    }
+                }
             }
         }
 

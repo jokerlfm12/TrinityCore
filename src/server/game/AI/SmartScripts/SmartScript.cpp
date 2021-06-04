@@ -1186,7 +1186,7 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                 if (Creature* cTarget = target->ToCreature())
                 {
                     CreatureAI* ai = cTarget->AI();
-                    if (IsSmart(cTarget))
+                    if (IsSmart(cTarget, true))
                         ENSURE_AI(SmartAI, ai)->SetData(e.action.setData.field, e.action.setData.data, me);
                     else
                         ai->SetData(e.action.setData.field, e.action.setData.data);
@@ -2665,9 +2665,48 @@ void SmartScript::GetTargets(ObjectVector& targets, SmartScriptHolder const& e, 
             }
             break;
         case SMART_TARGET_ACTION_INVOKER:
-            if (scriptTrigger)
-                targets.push_back(scriptTrigger);
+        {
+            // lfm with root invoker
+            if (e.target.raw.param1 == 1)
+            {
+                if (scriptTrigger)
+                {
+                    bool isRootInvoker = false;
+                    Unit* rootInvoker = scriptTrigger;
+                    while (true)
+                    {
+                        if (rootInvoker->IsGuardian() || rootInvoker->IsPet())
+                        {
+                            rootInvoker = rootInvoker->GetCharmerOrOwner();
+                        }
+                        else if (rootInvoker->IsSummon())
+                        {
+                            if (TempSummon* ts = rootInvoker->ToTempSummon())
+                            {
+                                rootInvoker = ts->GetSummoner();
+                            }
+                        }
+                        else
+                        {
+                            isRootInvoker = true;
+                        }
+                        if (isRootInvoker)
+                        {
+                            break;
+                        }
+                    }
+                    targets.push_back(rootInvoker);
+                }
+            }
+            else
+            {
+                if (scriptTrigger)
+                {
+                    targets.push_back(scriptTrigger);
+                }
+            }
             break;
+        }
         case SMART_TARGET_ACTION_INVOKER_VEHICLE:
             if (scriptTrigger && scriptTrigger->GetVehicle() && scriptTrigger->GetVehicle()->GetBase())
                 targets.push_back(scriptTrigger->GetVehicle()->GetBase());
@@ -3331,6 +3370,12 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
         }
         case SMART_EVENT_DATA_SET:
         {
+            // lfm debug
+            if (unit->GetEntry() == 21024)
+            {
+                bool breakPoint = true;
+            }
+
             if (e.event.dataSet.id != var0 || e.event.dataSet.value != var1)
                 return;
             RecalcTimer(e, e.event.dataSet.cooldownMin, e.event.dataSet.cooldownMax);

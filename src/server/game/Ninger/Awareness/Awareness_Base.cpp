@@ -331,12 +331,12 @@ void Awareness_Base::Update(uint32 pmDiff)
                                     sNingerManager->TeleportPlayer(me, leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ());
                                     if (me->IsAlive())
                                     {
-                                        sNingerManager->WhisperTo(leaderPlayer, "I have come.", Language::LANG_UNIVERSAL, me);
+                                        sNingerManager->WhisperTo(leaderPlayer, "I am coming.", Language::LANG_UNIVERSAL, me);
                                     }
                                     else
                                     {
                                         resurrectDelay = urand(10000, 15000);
-                                        sNingerManager->WhisperTo(leaderPlayer, "I have come. And I will revive in a few seconds", Language::LANG_UNIVERSAL, me);
+                                        sNingerManager->WhisperTo(leaderPlayer, "I am coming. And I will revive in a few seconds", Language::LANG_UNIVERSAL, me);
                                     }
                                 }
                                 else

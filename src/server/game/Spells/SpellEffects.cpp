@@ -3017,8 +3017,11 @@ void Spell::EffectSurvey(SpellEffIndex effIndex)
 
 void Spell::EffectScriptEffect(SpellEffIndex effIndex)
 {
-    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
+    // lfm spell script effect should handle launch 
+    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET && effectHandleMode != SpellEffectHandleMode::SPELL_EFFECT_HANDLE_LAUNCH)
+    {
         return;
+    }
 
     /// @todo we must implement hunter pet summon at login there (spell 6962)
 
@@ -3466,6 +3469,15 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
 
                     m_caster->CastSpell(m_caster, spellPlayer[urand(0, 4)], true);
                     unitTarget->CastSpell(unitTarget, spellTarget[urand(0, 4)], true);
+                    break;
+                }
+                // lfm extra script effects
+                case 38055:
+                {
+                    if (Unit* caster = GetCaster())
+                    {
+                        caster->CastSpell(caster, m_spellInfo->Effects[SpellEffIndex::EFFECT_0].BasePoints);
+                    }
                     break;
                 }
             }

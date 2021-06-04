@@ -32,6 +32,8 @@
 #include "SpellScript.h"
 #include "Vehicle.h"
 
+#include "SpellHistory.h"
+
 class spell_generic_quest_update_entry_SpellScript : public SpellScript
 {
     private:
@@ -2453,44 +2455,6 @@ class spell_q10929_fumping : SpellScriptLoader
     }
 };
 
-// lfm scripts 
-class spell_q10930_fumping : SpellScriptLoader
-{
-public:
-    spell_q10930_fumping() : SpellScriptLoader("spell_q10930_fumping") { }
-
-    class spell_q10930_fumpingAuraScript : public AuraScript
-    {
-        void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
-        {
-            if (Unit* caster = GetCaster())
-            {
-                uint32 summonRate = urand(0, 100);
-                uint32 summonSpellID = 39247;
-                if (summonRate > 40 && summonRate < 80)
-                {
-                    summonSpellID = 39245;
-                }
-                else if (summonRate >= 80)
-                {
-                    summonSpellID = 39248;
-                }
-                caster->CastSpell(caster, summonSpellID);
-            }
-        }
-
-        void Register() override
-        {
-            OnEffectRemove.Register(&spell_q10930_fumpingAuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
-        }
-    };
-
-    AuraScript* GetAuraScript() const override
-    {
-        return new spell_q10930_fumpingAuraScript();
-    }
-};
-
 enum FearNoEvil
 {
     SPELL_RENEWED_LIFE = 93097,
@@ -2779,6 +2743,383 @@ public:
     }
 };
 
+// lfm scripts 
+class spell_q10930_fumping : SpellScriptLoader
+{
+public:
+    spell_q10930_fumping() : SpellScriptLoader("spell_q10930_fumping") { }
+
+    class spell_q10930_fumpingAuraScript : public AuraScript
+    {
+        void HandleEffectRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            if (Unit* caster = GetCaster())
+            {
+                uint32 summonRate = urand(0, 100);
+                uint32 summonSpellID = 39247;
+                if (summonRate > 40 && summonRate < 80)
+                {
+                    summonSpellID = 39245;
+                }
+                else if (summonRate >= 80)
+                {
+                    summonSpellID = 39248;
+                }
+                caster->CastSpell(caster, summonSpellID);
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectRemove.Register(&spell_q10930_fumpingAuraScript::HandleEffectRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_q10930_fumpingAuraScript();
+    }
+};
+
+class spell_q10271 : public SpellScriptLoader
+{
+public:
+    spell_q10271() : SpellScriptLoader("spell_q10271") { }
+
+    class spell_q10271_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 98592 });
+        }
+
+        void HandleDummy(SpellEffIndex /*effIndex*/)
+        {
+            if (Unit* target = GetHitUnit())
+            {
+                if (target->GetEntry() == 18877 || target->GetEntry() == 20332)
+                {
+                    if (!target->HasAura(77460))
+                    {
+                        target->CastSpell(target, 77460);
+                        target->GetAI()->SetData(1, 1);
+                        if (Unit* caster = GetCaster())
+                        {
+                            if (Player* casterPlayer = caster->ToPlayer())
+                            {
+                                casterPlayer->KilledMonsterCredit(53236);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectHitTarget.Register(&spell_q10271_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_q10271_SpellScript();
+    }
+};
+
+class spell_socrethar_portal_effect : public SpellScriptLoader
+{
+public:
+    spell_socrethar_portal_effect() : SpellScriptLoader("spell_socrethar_portal_effect") { }
+
+    class spell_socrethar_portal_effect_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 35741 });
+        }
+
+        void HandleAfterCast()
+        {
+            if (Unit* caster = GetCaster())
+            {
+                if (Map* casterMap = caster->GetMap())
+                {
+                    if (Unit* socrethar = casterMap->GetCreatureBySpawnId(71631))
+                    {
+                        uint32 deathblowStatus = socrethar->GetAI()->GetData(1);
+                        if (deathblowStatus != 1)
+                        {
+                            if (TempSummon* adyen = caster->SummonCreature(18537, 4806.0f, 3773.0f, 210.56f, 0.1f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 300000))
+                            {
+                                adyen->SetImmuneToAll(true);
+                                adyen->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                                adyen->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                                adyen->AI()->SetData(1, 1);
+                            }
+                            if (TempSummon* orelis = caster->SummonCreature(19466, 4804.0f, 3775.0f, 210.56f, 0.1f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 300000))
+                            {
+                                orelis->SetImmuneToAll(true);
+                                orelis->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                                orelis->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                                orelis->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                            }
+                            if (TempSummon* karja = caster->SummonCreature(19467, 4803.0f, 3772.0f, 210.56f, 0.1f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 300000))
+                            {
+                                karja->SetImmuneToAll(true);
+                                karja->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                                karja->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                                karja->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                                karja->AI()->SetData(1, 1);
+                            }
+                            socrethar->GetAI()->SetData(1, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        void Register() override
+        {
+            AfterCast.Register(&spell_socrethar_portal_effect_SpellScript::HandleAfterCast);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_socrethar_portal_effect_SpellScript();
+    }
+};
+
+class spell_fel_reaver_controller : public SpellScriptLoader
+{
+public:
+    spell_fel_reaver_controller() : SpellScriptLoader("spell_fel_reaver_controller") { }
+
+    class spell_fel_reaver_controller_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 38120 });
+        }
+
+        void OnEffectHit(SpellEffIndex /*effIndex*/)
+        {            
+            if (Unit* oCaster = GetOriginalCaster())
+            {                
+                if (Player* casterPlayer = oCaster->ToPlayer())
+                {
+                    if (const SpellInfo* pS = GetSpellInfo())
+                    {
+                        uint32 destSpellID = 38003;
+                        switch (pS->Id)
+                        {
+                        case 38002:
+                        {
+                            destSpellID = 38003;
+                            break;
+                        }
+                        case 38120:
+                        {
+                            destSpellID = 38121;
+                            break;
+                        }
+                        case 38122:
+                        {
+                            destSpellID = 38123;
+                            break;
+                        }
+                        case 38125:
+                        {
+                            destSpellID = 38126;
+                            break;
+                        }
+                        case 38127:
+                        {
+                            destSpellID = 38128;
+                            break;
+                        }
+                        case 38129:
+                        {
+                            destSpellID = 38130;
+                            break;
+                        }
+                        default:
+                        {
+                            break;
+                        }
+                        }
+                        casterPlayer->CastSpell(casterPlayer, destSpellID);
+                    }
+                }
+            }
+        }
+
+        void Register() override
+        {
+            OnEffectHitTarget.Register(&spell_fel_reaver_controller_SpellScript::OnEffectHit, EFFECT_0, SpellEffects::SPELL_EFFECT_DUMMY);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_fel_reaver_controller_SpellScript();
+    }
+};
+
+class spell_destroy_deathforged_infernal : public SpellScriptLoader
+{
+public:
+    spell_destroy_deathforged_infernal() : SpellScriptLoader("spell_destroy_deathforged_infernal") { }
+
+    class spell_destroy_deathforged_infernal_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 38055 });
+        }
+
+        void HandleAfterCast()
+        {
+            if (Unit* caster = GetCaster())
+            {
+                caster->GetSpellHistory()->AddCooldown(38055, 0, std::chrono::seconds(12));
+                //Player* receiver = receiver = caster->ToPlayer();
+                //if (!receiver)
+                //{
+                //    if (Unit* casterOwner = caster->GetCharmerOrOwner())
+                //    {
+                //        receiver = casterOwner->ToPlayer();
+                //    }
+                //}
+                //if (receiver)
+                //{
+                //    WorldPacket data;
+                //    receiver->GetSpellHistory()->BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_INCLUDE_EVENT_COOLDOWNS, 38055, 0);
+                //    receiver->SendDirectMessage(&data);
+                //    WorldPacket modifyCooldown(SMSG_MODIFY_COOLDOWN, 4 + 8 + 4);
+                //    modifyCooldown << uint32(38055);
+                //    modifyCooldown << uint64(receiver->GetGUID());
+                //    modifyCooldown << int32(12000);
+                //    receiver->SendDirectMessage(&modifyCooldown);
+                //}
+            }
+        }
+
+        void Register() override
+        {
+            AfterCast.Register(&spell_destroy_deathforged_infernal_SpellScript::HandleAfterCast);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_destroy_deathforged_infernal_SpellScript();
+    }
+};
+
+class spell_world_breaker : public SpellScriptLoader
+{
+public:
+    spell_world_breaker() : SpellScriptLoader("spell_world_breaker") { }
+
+    class spell_world_breaker_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 38006 });
+        }
+
+        void HandleAfterCast()
+        {
+            if (Unit* caster = GetCaster())
+            {
+                caster->GetSpellHistory()->AddCooldown(38006, 0, std::chrono::seconds(12));
+                //Player* receiver = receiver = caster->ToPlayer();                
+                //if (!receiver)
+                //{
+                //    if (Unit* casterOwner = caster->GetCharmerOrOwner())
+                //    {
+                //        receiver = casterOwner->ToPlayer();
+                //    }
+                //}
+                //if (receiver)
+                //{
+                //    WorldPacket data;
+                //    receiver->GetSpellHistory()->BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_INCLUDE_EVENT_COOLDOWNS, 38006, 0);
+                //    receiver->SendDirectMessage(&data);
+                //    WorldPacket modifyCooldown(SMSG_MODIFY_COOLDOWN, 4 + 8 + 4);
+                //    modifyCooldown << uint32(38006);
+                //    modifyCooldown << uint64(receiver->GetGUID());
+                //    modifyCooldown << int32(12000);
+                //    receiver->SendDirectMessage(&modifyCooldown);
+                //}
+            }
+        }
+
+        void Register() override
+        {
+            AfterCast.Register(&spell_world_breaker_SpellScript::HandleAfterCast);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_world_breaker_SpellScript();
+    }
+};
+
+class spell_turbo_boost : public SpellScriptLoader
+{
+public:
+    spell_turbo_boost() : SpellScriptLoader("spell_turbo_boost") { }
+
+    class spell_turbo_boost_SpellScript : public SpellScript
+    {
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            return ValidateSpellInfo({ 37920 });
+        }
+
+        void HandleAfterCast()
+        {
+            if (Unit* caster = GetCaster())
+            {
+                caster->GetSpellHistory()->AddCooldown(37920, 0, std::chrono::seconds(30));
+                //Player* receiver = receiver = caster->ToPlayer();
+                //if (!receiver)
+                //{
+                //    if (Unit* casterOwner = caster->GetCharmerOrOwner())
+                //    {
+                //        receiver = casterOwner->ToPlayer();
+                //    }
+                //}
+                //if (receiver)
+                //{
+                //    WorldPacket data;
+                //    receiver->GetSpellHistory()->BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_INCLUDE_EVENT_COOLDOWNS, 37920, 0);
+                //    receiver->SendDirectMessage(&data);
+                //    WorldPacket modifyCooldown(SMSG_MODIFY_COOLDOWN, 4 + 8 + 4);
+                //    modifyCooldown << uint32(37920);
+                //    modifyCooldown << uint64(receiver->GetGUID());
+                //    modifyCooldown << int32(30000);
+                //    receiver->SendDirectMessage(&modifyCooldown);
+                //}
+            }
+        }
+
+        void Register() override
+        {
+            AfterCast.Register(&spell_turbo_boost_SpellScript::HandleAfterCast);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_turbo_boost_SpellScript();
+    }
+};
+
 void AddSC_quest_spell_scripts()
 {
     new spell_q55_sacred_cleansing();
@@ -2852,5 +3193,11 @@ void AddSC_quest_spell_scripts()
     new spell_q14098_knocking_67869();
 
     // lfm scripts
-    new spell_q10930_fumping();    
+    new spell_q10930_fumping();
+    new spell_q10271();
+    new spell_socrethar_portal_effect();
+    new spell_fel_reaver_controller();
+    new spell_destroy_deathforged_infernal();
+    new spell_world_breaker();
+    new spell_turbo_boost();
 }

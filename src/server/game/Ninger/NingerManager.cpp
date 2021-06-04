@@ -2956,6 +2956,12 @@ bool NingerManager::LearnPlayerTalents(Player* pmTargetPlayer)
     {
         return false;
     }
+    bool newPlayer = false;
+    uint32 usedCount = pmTargetPlayer->GetUsedTalentCount();
+    if (usedCount == 0)
+    {
+        newPlayer = true;
+    }
     int freePoints = pmTargetPlayer->GetFreeTalentPoints();
     if (freePoints > 0)
     {
@@ -3067,10 +3073,9 @@ bool NingerManager::LearnPlayerTalents(Player* pmTargetPlayer)
             }
         }
         pmTargetPlayer->SaveToDB();
-        return true;
     }
 
-    return false;
+    return newPlayer;
 }
 
 void NingerManager::LearnPlayerSpells(Player* pmTargetPlayer)

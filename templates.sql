@@ -1,12 +1,21 @@
+24240 red lightning 
 30619 cleave
 11976 strike
 12461 backhand 
-15165 pummel
+15615 pummel
 11972 shield bash
 15655 shield slam
 25712 heroic strike
 22911 charge
 9080 hamstring
+37950 mutant
+16245 freeze 
+13737 mortal strike
+32732 flay 
+37937 flayed flesh 
+24458 shadow shock
+33651 immolate
+
 insert into world_trinitycore_ctm.gameobject 
 select guid, id, map, zoneid, areaid, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, scriptname, verifiedbuild 
 from world_trinitycore_wlk.gameobject where id = 183123;
@@ -23,9 +32,10 @@ select entryorguid, source_type, id, link, event_type, event_phase_mask, event_c
 action_type, action_param1, action_param2, action_param3, action_param4, action_param5, action_param6, 
 target_type, target_param1, target_param2, target_param3, target_param4, target_x, target_y, target_z, target_o, comment from world_trinitycore_wlk.smart_scripts where entryorguid = 20906;
 
+delete from world_trinitycore_ctm.gameobject where id = 184750;
 insert into world_trinitycore_ctm.gameobject 
-select guid, id, map, zone, area, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, '', 0 
-from world_emucoach.gameobject where id = 209347 or id = 209348;
+select id + 10000000, id, map, zone, area, spawnmask, 0, phasemask, 169, 0, -1, position_x, position_y, position_z, orientation, rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, '', 0 
+from world_emucoach.gameobject where id = 184750;
 
 INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES ('215419', '54603', '543', '3562', '3562', '3', '0', '1', '169', '0', '-1', '0', '0', '-1343.26', '1650.59', '68.9473', '0.6687', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
 
@@ -49,10 +59,16 @@ select guid + 1000000, path_id + 10000000, 0, mount, bytes1, bytes2, emote, 0, 0
 from world_trinitycore_wlk.creature_addon where guid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546 and movementtype = 2);
 
 SELECT waypointpathid FROM world_trinitycore_ctm.creature_addon where guid in (SELECT guid FROM world_trinitycore_ctm.creature where map = 546 and movementtype = 2);
+
 delete from world_trinitycore_ctm.waypoint_data where id in ();
 insert into world_trinitycore_ctm.waypoint_data 
 select id + 10000000, point, position_x, position_y, position_z, orientation, 0, delay, move_type, action, action_chance, wpguid 
 FROM world_trinitycore_wlk.waypoint_data where id in (SELECT path_id FROM world_trinitycore_wlk.creature_addon where guid in (SELECT guid FROM world_trinitycore_wlk.creature where map = 546 and movementtype = 2));
+
+delete from world_trinitycore_ctm.waypoint_data where id = 764150;
+insert into world_trinitycore_ctm.waypoint_data 
+select id, point, position_x, position_y, position_z, orientation, 0, delay, move_type, action, action_chance, wpguid 
+FROM world_trinitycore_wlk.waypoint_data where id = 764150;
 
 delete from world_trinitycore_ctm.creature_loot_template where entry = 17537;
 insert into world_trinitycore_ctm.creature_loot_template 
@@ -66,3 +82,13 @@ from world_trinitycore_wlk.creature_text where creatureid = 18319;
 
 INSERT INTO world_trinitycore_ctm.creature (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseUseFlags`, `phaseMask`, `PhaseId`, `PhaseGroup`, `terrainSwapMap`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES 
 ('117621', '20114', '530', '3523', '3722', '1', '0', '1', '169', '0', '-1', '0', '0', '3923.06', '3873.36', '180.752', '0', '300', '0', '0', '1', '0', '0', '0', '898', '0', '', '0');
+
+delete from world_trinitycore_ctm.waypoint_data where id = 18537
+INSERT INTO world_trinitycore_ctm.waypoint_data 
+select entry, point, position_x, position_y, position_z, orientation, 0, 0, 0, 0, 100, 0 
+from world_cmangos_tbc.creature_movement_template where entry = 18537;
+
+delete from world_trinitycore_ctm.creature_text where creatureid = 18537;
+insert into world_trinitycore_ctm.creature_text 
+select entry, groupid, id, text, type, language, probability, emote, duration, sound, 0, broadcasttextid, 0, comment 
+from world_emucoach.creature_text where entry = 18537;

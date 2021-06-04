@@ -49,6 +49,8 @@ EndContentData */
 #include "SpellScript.h"
 #include "TemporarySummon.h"
 
+#include "SpellHistory.h"
+
 /*#####
 # npc_invis_infernal_caster
 #####*/
@@ -142,12 +144,16 @@ public:
 
     struct npc_infernal_attackerAI : public ScriptedAI
     {
-        npc_infernal_attackerAI(Creature* creature) : ScriptedAI(creature) { }
+        npc_infernal_attackerAI(Creature* creature) : ScriptedAI(creature)
+        {
+            immolateDelay = 0;
+        }
 
         void Reset() override
         {
             me->SetDisplayId(MODEL_INVISIBLE);
             me->GetMotionMaster()->MoveRandom(5.0f);
+            immolateDelay = 0;
         }
 
         void IsSummonedBy(Unit* summoner) override
@@ -172,16 +178,30 @@ public:
             }
         }
 
-        void UpdateAI(uint32 /*diff*/) override
+        void UpdateAI(uint32 diff) override
         {
             if (!UpdateVictim())
+            {
                 return;
-
+            }
+            if (immolateDelay >= 0)
+            {
+                immolateDelay -= diff;
+            }
+            if (immolateDelay < 0)
+            {
+                immolateDelay = 2000;
+                if (!me->HasAura(15733))
+                {
+                    DoCastSelf(15733);
+                }
+            }
             DoMeleeAttackIfReady();
         }
 
     private:
         ObjectGuid casterGUID;
+        int immolateDelay;
     };
 
     CreatureAI* GetAI(Creature* creature) const override
@@ -313,6 +333,7 @@ public:
 
                         Reset();
                         me->GetMotionMaster()->Clear();
+                        me->DespawnOrUnsummon(5000);
                     }
                 }
                 else
@@ -1681,6 +1702,226 @@ public:
     }
 };
 
+// lfm scripts 
+class npc_deathforged_infernal : public CreatureScript
+{
+public:
+    npc_deathforged_infernal() : CreatureScript("npc_deathforged_infernal") { }
+
+    struct npc_deathforged_infernalAI : public ScriptedAI
+    {
+        npc_deathforged_infernalAI(Creature* creature) : ScriptedAI(creature) { }
+
+        void JustAppeared()
+        {
+            DoCastSelf(16245);
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_deathforged_infernalAI(creature);
+    }
+}; 
+
+class go_deathforged_infernal : public GameObjectScript
+{
+public:
+    go_deathforged_infernal() : GameObjectScript("go_deathforged_infernal") { }
+
+    struct go_deathforged_infernalAI : public GameObjectAI
+    {
+        go_deathforged_infernalAI(GameObject* go) : GameObjectAI(go) { }
+
+        void JustAppeared()
+        {
+            uint32 technicianRate = urand(0, 100);
+            if (technicianRate < 10)
+            {
+                float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+                float angle = me->GetOrientation() + M_PI * 3 / 2;
+                me->GetNearPoint(me, destX, destY, destZ, 6.0f, angle);
+                if (TempSummon* tech = me->SummonCreature(21960, destX, destY, destZ, 0.0f, TempSummonType::TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000))
+                {
+                    tech->SetFacingToObject(me);
+                }
+            }
+        }
+
+        void SpellHit(Unit* unit, SpellInfo const* spellInfo)
+        {
+            if (spellInfo->Id == 38054)
+            {
+                if (Unit* casterCharmer = unit->GetCharmerOrOwner())
+                {
+                    if (Player* sourcePlayer = casterCharmer->ToPlayer())
+                    {
+                        if (sourcePlayer->GetQuestStatus(10612) == QuestStatus::QUEST_STATUS_INCOMPLETE)
+                        {
+                            sourcePlayer->KilledMonsterCredit(21959);
+                        }
+                    }
+                }
+            }
+        }
+
+        void OnStateChanged(uint32 state)
+        {
+            if (state == 0)
+            {
+                me->SetGoState(GOState::GO_STATE_ACTIVE_ALTERNATIVE);
+                me->DespawnOrUnsummon(5000ms);
+            }
+        }
+    };
+
+    GameObjectAI* GetAI(GameObject* go) const override
+    {
+        return new go_deathforged_infernalAI(go);
+    }
+};
+
+class npc_crazed_colossus : public CreatureScript
+{
+public:
+    npc_crazed_colossus() : CreatureScript("npc_crazed_colossus") { }
+
+    struct npc_crazed_colossusAI : public ScriptedAI
+    {
+        npc_crazed_colossusAI(Creature* creature) : ScriptedAI(creature)
+        {
+            stompDelay = urand(5000, 8000);
+            spawn75Delay = 0;
+            spawn50Delay = 0;
+            spawn25Delay = 0;
+        }
+
+        void Reset() override
+        {
+            stompDelay = urand(5000, 8000);
+            spawn75Delay = 0;
+            spawn50Delay = 0;
+            spawn25Delay = 0;
+        }
+
+        void JustDied(Unit* killer) override
+        {
+            if (killer)
+            {
+                Unit* sourceKiller = killer;
+                if (sourceKiller->GetTypeId() != TypeID::TYPEID_PLAYER)
+                {
+                    if (Unit* co = sourceKiller->GetCharmerOrOwner())
+                    {
+                        sourceKiller = co;
+                    }
+                }
+                if (Player* killerPlayer = sourceKiller->ToPlayer())
+                {
+                    if (killerPlayer->HasAura(38224))
+                    {
+                        killerPlayer->CastSpell(killerPlayer, 38228);
+                    }
+                    if (Group* killerPlayerGroup = killerPlayer->GetGroup())
+                    {
+                        for (GroupReference* groupRef = killerPlayerGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                        {
+                            Player* member = groupRef->GetSource();
+                            if (member)
+                            {
+                                if (member->GetGUID() != killerPlayer->GetGUID())
+                                {
+                                    float memberDistance = me->GetDistance(member);
+                                    if (memberDistance < 50.0f)
+                                    {
+                                        if (member->HasAura(38224))
+                                        {
+                                            member->CastSpell(member, 38228);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!UpdateVictim())
+            {
+                return;
+            }
+
+            if (spawn75Delay >= 0)
+            {
+                spawn75Delay -= diff;
+            }
+            if (spawn50Delay >= 0)
+            {
+                spawn50Delay -= diff;
+            }
+            if (spawn25Delay >= 0)
+            {
+                spawn25Delay -= diff;
+            }
+            if (stompDelay >= 0)
+            {
+                stompDelay -= diff;
+            }
+            if (stompDelay < 0)
+            {
+                stompDelay = urand(8000, 12000);
+                DoCastSelf(12612);
+            }
+            if (spawn75Delay < 0)
+            {
+                spawn75Delay = 1000;
+                float healthPCT = me->GetHealthPct();
+                if (healthPCT < 75.0f)
+                {
+                    DoCastSelf(37947);
+                    spawn75Delay = 600000;
+                    return;
+                }
+            }
+            if (spawn50Delay < 0)
+            {
+                spawn50Delay = 1000;
+                float healthPCT = me->GetHealthPct();
+                if (healthPCT < 50.0f)
+                {
+                    DoCastSelf(37948);
+                    spawn50Delay = 600000;
+                    return;
+                }
+            }
+            if (spawn25Delay < 0)
+            {
+                spawn25Delay = 1000;
+                float healthPCT = me->GetHealthPct();
+                if (healthPCT < 25.0f)
+                {
+                    DoCastSelf(37949);
+                    spawn25Delay = 600000;
+                    return;
+                }
+            }
+        }
+
+        int spawn75Delay;
+        int spawn50Delay;
+        int spawn25Delay;
+        int stompDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_crazed_colossusAI(creature);
+    }
+};
+
 void AddSC_shadowmoon_valley()
 {
     new npc_invis_infernal_caster();
@@ -1696,4 +1937,7 @@ void AddSC_shadowmoon_valley()
     new npc_enraged_spirit();
     new spell_unlocking_zuluheds_chains();
     new npc_shadowmoon_tuber_node();
+    new npc_deathforged_infernal();
+    new go_deathforged_infernal();
+    new npc_crazed_colossus();
 }

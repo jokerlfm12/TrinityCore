@@ -42,6 +42,8 @@
 
 #include "SmartScriptMgr.h"
 
+#include "GridNotifiers.h"
+
  /*######
  ## npc_unkor_the_ruthless
  ######*/
@@ -755,6 +757,601 @@ public:
     }
 };
 
+class npc_adyen_the_lightwarden : public CreatureScript
+{
+public:
+    npc_adyen_the_lightwarden() : CreatureScript("npc_adyen_the_lightwarden") { }
+
+    struct npc_adyen_the_lightwardenAI : public ScriptedAI
+    {
+        npc_adyen_the_lightwardenAI(Creature* creature) : ScriptedAI(creature)
+        {
+            deathblowStatus = 0;
+            eventID = 0;
+            eventDelay = 0;
+            hammerDelay = urand(5000, 8000);
+            crusaderDelay = urand(2000, 5000);
+            holyDelay = urand(10000, 15000);
+        }
+
+        void Reset() override
+        {
+            hammerDelay = urand(5000,8000);
+            crusaderDelay = urand(2000, 5000);
+            holyDelay = urand(10000, 15000);
+        }
+
+        uint32 GetData(uint32 type) const override
+        {
+            if (type == 1)
+            {
+                return deathblowStatus;
+            }
+
+            return 0;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 0)
+                {
+                    deathblowStatus = 0;
+                }
+                else if (data == 1)
+                {
+                    deathblowStatus = 1;
+                }
+                else if (data == 2)
+                {
+                    eventID = 22;
+                    eventDelay = 5000;
+                }
+            }
+        }
+
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            if (deathblowStatus == 1)
+            {
+                me->SetHomePosition(me->GetPosition());
+            }
+        }
+
+        bool GossipHello(Player* player) override
+        {
+            if (deathblowStatus == 1)
+            {                
+                AddGossipItemFor(player, 100000, 0, 1, 0);
+                SendGossipMenuFor(player, 10210, me->GetGUID());
+                return true;
+            }            
+            return false;
+        }
+
+        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        {
+            if (gossipListId == 0)
+            {
+                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                me->SetImmuneToAll(false);
+                me->SetFaction(250);
+                me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                me->SetWalk(true);
+                if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                {
+                    orelis->SetImmuneToAll(false);
+                    orelis->SetFaction(250);
+                    orelis->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                    orelis->SetWalk(true);
+                }
+                if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                {
+                    karja->SetImmuneToAll(false);
+                    karja->SetFaction(250);
+                    karja->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                    karja->SetWalk(true);
+                }
+
+                eventID = 1;
+                eventDelay = 2000;
+                CloseGossipMenuFor(player);
+            }
+            return true;
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (hammerDelay >= 0)
+                {
+                    hammerDelay -= diff;
+                }
+                if (crusaderDelay >= 0)
+                {
+                    crusaderDelay -= diff;
+                }
+                if (holyDelay >= 0)
+                {
+                    holyDelay -= diff;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (hammerDelay < 0)
+                    {
+                        hammerDelay = 1000;
+                        DoCastVictim(13005);
+                        hammerDelay = urand(20000, 30000);
+                        return;
+                    }
+                    if (crusaderDelay < 0)
+                    {
+                        crusaderDelay = 1000;
+                        DoCastVictim(14518);
+                        crusaderDelay = urand(5000, 8000);
+                        return;
+                    }
+                }
+                if (holyDelay < 0)
+                {
+                    holyDelay = 2000;
+                    std::list<Unit*> unitList;
+                    Trinity::AnyUnitInObjectRangeCheck go_check(me, 20.0f);
+                    Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                    Cell::VisitGridObjects(me, go_search, 20.0f);
+                    if (!unitList.empty())
+                    {
+                        for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                        {
+                            if (Unit* eachUnit = *uIT)
+                            {
+                                if (eachUnit->IsFriendlyTo(me))
+                                {
+                                    float eachPCT = eachUnit->GetHealthPct();
+                                    if (eachPCT < 40.0f)
+                                    {
+                                        DoCast(eachUnit, 13952);
+                                        holyDelay = urand(10000, 15000);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    eventDelay = 2000;
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        eventDelay = 10000;
+                        break;
+                    }
+                    case 1:
+                    {
+                        me->GetMotionMaster()->MovePath(18537, false);
+                        if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                        {
+                            orelis->GetMotionMaster()->MoveFollow(me, 2.0f, M_PI * 3 / 4);
+                        }
+                        if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                        {
+                            karja->GetMotionMaster()->MoveFollow(me, 2.0f, M_PI * 5 / 4);
+                        }
+                        eventID = 2;
+                        eventDelay = 5000;
+                        break;
+                    }
+                    case 2:
+                    {
+                        if (!me->isMoving())
+                        {
+                            if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                            {
+                                eventID = 3;
+                                eventDelay = 1000;
+                            }
+                        }
+                        else
+                        {
+                            me->SetHomePosition(me->GetPosition());
+                            if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                            {
+                                orelis->SetHomePosition(orelis->GetPosition());
+                                if (!orelis->isMoving())
+                                {
+                                    orelis->GetMotionMaster()->MoveFollow(me, 2.0f, M_PI * 5 / 4);
+                                }
+                            }
+                            if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                            {
+                                karja->SetHomePosition(karja->GetPosition());
+                                if (!karja->isMoving())
+                                {
+                                    karja->GetMotionMaster()->MoveFollow(me, 2.0f, M_PI * 3 / 4);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 3:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            me->SetFacingToObject(socrethar);
+                            socrethar->SetFacingToObject(me);
+                            Talk(0);
+                            if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                            {
+                                orelis->SetHomePosition(orelis->GetPosition());
+                                orelis->StopMoving();
+                                orelis->GetMotionMaster()->Initialize();
+                                orelis->SetFacingToObject(socrethar);
+                            }
+                            if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                            {
+                                karja->SetHomePosition(karja->GetPosition());
+                                karja->StopMoving();
+                                karja->GetMotionMaster()->Initialize();
+                                karja->SetFacingToObject(socrethar);
+                            }
+                            eventID = 4;
+                            eventDelay = 11000;
+                        }
+                        break;
+                    }
+                    case 4:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->Talk(0);
+                            eventID = 5;
+                            eventDelay = 6000;
+                        }
+                        break;
+                    }
+                    case 5:
+                    {
+                        Talk(1);
+                        eventID = 6;
+                        eventDelay = 9000;
+                        break;
+                    }
+                    case 6:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->Talk(1);
+                            eventID = 7;
+                            eventDelay = 5000;
+                        }
+                        break;
+                    }
+                    case 7:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 100.0f))
+                        {
+                            if (!kaylaan->isMoving())
+                            {
+                                kaylaan->SetVisible(true);
+                                float destX = 4940.22f, destY = 3847.43f, destZ = 211.53f;
+                                float destinationDistance = kaylaan->GetDistance(destX, destY, destZ);
+                                if (destinationDistance > 2.0f)
+                                {
+                                    kaylaan->GetMotionMaster()->MovePoint(1, destX, destY, destZ);
+                                }
+                                else
+                                {
+                                    if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                                    {
+                                        kaylaan->SetFacingToObject(socrethar);
+                                        eventID = 8;
+                                        eventDelay = 1000;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 8:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
+                            me->SetFacingToObject(kaylaan);
+                            if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                            {
+                                orelis->SetFacingToObject(kaylaan);
+                            }
+                            if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                            {
+                                karja->SetFacingToObject(kaylaan);
+                            }
+                            eventID = 9;
+                            eventDelay = 1000;
+                        }
+                        break;
+                    }
+                    case 9:
+                    {
+                        if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                        {
+                            orelis->AI()->Talk(2);
+                            eventID = 10;
+                            eventDelay = 2000;
+                        }
+                        break;
+                    }
+                    case 10:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                            eventID = 11;
+                            eventDelay = 1000;
+                        }
+                        break;
+                    }
+                    case 11:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->SetFacingToObject(me);
+                            eventID = 12;
+                            eventDelay = 1000;
+                        }
+                        break;
+                    }
+                    case 12:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->AI()->Talk(0);
+                            eventID = 14;
+                            eventDelay = 12000;
+                        }
+                        break;
+                    }
+                    case 13:
+                    {
+                        break;
+                    }
+                    case 14:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->AI()->Talk(1);
+                            eventID = 15;
+                            eventDelay = 11000;
+                        }
+                        break;
+                    }
+                    case 15:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->AI()->Talk(2);
+                            eventID = 16;
+                            eventDelay = 12000;
+                        }
+                        break;
+                    }
+                    case 16:
+                    {
+                        Talk(2);
+                        eventID = 17;
+                        eventDelay = 9000;
+                        break;
+                    }
+                    case 17:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->AI()->Talk(3);
+                            eventID = 18;
+                            eventDelay = 5000;
+                        }
+                        break;
+                    }
+                    case 18:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                            {
+                                kaylaan->SetFaction(socrethar->GetFaction());
+                                socrethar->CastSpell(kaylaan, 35596);
+                                eventID = 19;
+                                eventDelay = 1000;
+                            }
+                        }
+                        break;
+                    }
+                    case 19:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->Talk(2);
+                            eventID = 20;
+                            eventDelay = 5000;
+                        }
+                        break;
+                    }
+                    case 20:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            kaylaan->SetHomePosition(kaylaan->GetPosition());
+                            kaylaan->SetImmuneToAll(false);
+                            kaylaan->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                            kaylaan->SetFaction(14);
+                            eventID = 21;
+                            eventDelay = 500;
+                        }
+                        break;
+                    }
+                    case 21:
+                    {
+                        if (Creature* kaylaan = me->FindNearestCreature(20794, 50.0f))
+                        {
+                            AttackStart(kaylaan);
+                            kaylaan->AI()->AttackStart(me);
+                            if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                            {
+                                orelis->AI()->AttackStart(kaylaan);
+                            }
+                            if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                            {
+                                karja->AI()->AttackStart(kaylaan);
+                            }
+                        }
+                        break;
+                    }
+                    case 22:
+                    {
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int deathblowStatus;
+        int hammerDelay;
+        int crusaderDelay;
+        int holyDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_adyen_the_lightwardenAI(creature);
+    }
+};
+
+class npc_ishanah : public CreatureScript
+{
+public:
+    npc_ishanah() : CreatureScript("npc_ishanah") { }
+
+    struct npc_ishanahAI : public ScriptedAI
+    {
+        npc_ishanahAI(Creature* creature) : ScriptedAI(creature)
+        {
+            shieldDelay = urand(5000, 8000);
+            smiteDelay = 2000;
+            holyDelay = urand(10000, 15000);
+        }
+
+        void Reset() override
+        {
+            shieldDelay = urand(5000, 8000);
+            smiteDelay = 2000;
+            holyDelay = urand(10000, 15000);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (holyDelay >= 0)
+            {
+                holyDelay -= diff;
+            }
+            if (holyDelay < 0)
+            {
+                holyDelay = 2000;
+                std::list<Unit*> unitList;
+                Trinity::AnyUnitInObjectRangeCheck go_check(me, 20.0f);
+                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                Cell::VisitGridObjects(me, go_search, 20.0f);
+                if (!unitList.empty())
+                {
+                    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                    {
+                        if (Unit* eachUnit = *uIT)
+                        {
+                            if (eachUnit->IsFriendlyTo(me))
+                            {
+                                float eachPCT = eachUnit->GetHealthPct();
+                                if (eachPCT < 40.0f)
+                                {
+                                    DoCast(eachUnit, 35096);
+                                    holyDelay = urand(10000, 15000);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (UpdateVictim())
+            {
+                if (smiteDelay >= 0)
+                {
+                    smiteDelay -= diff;
+                }
+                if (shieldDelay >= 0)
+                {
+                    shieldDelay -= diff;
+                }
+                if (smiteDelay < 0)
+                {
+                    smiteDelay = 2000;
+                    DoCastVictim(15238);
+                    return;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (shieldDelay < 0)
+                    {
+                        shieldDelay = 1000;
+                        if (Unit* victimVictim = victim->GetVictim())
+                        {
+                            DoCast(victimVictim, 22187);
+                            shieldDelay = urand(30000, 40000);
+                            return;
+                        }
+                    }
+                }
+                DoMeleeAttackIfReady();
+            }
+        }
+        
+        int shieldDelay;
+        int smiteDelay;
+        int holyDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_ishanahAI(creature);
+    }
+};
+
 void AddSC_terokkar_forest()
 {
     new npc_unkor_the_ruthless();
@@ -767,4 +1364,6 @@ void AddSC_terokkar_forest()
 
     // lfm scripts
     new npc_teribus_the_cursed();
+    new npc_adyen_the_lightwarden();
+    new npc_ishanah();
 }

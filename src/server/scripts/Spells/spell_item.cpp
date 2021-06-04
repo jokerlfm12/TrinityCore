@@ -2989,11 +2989,15 @@ class spell_item_socrethars_stone : public SpellScriptLoader
                 switch (caster->GetAreaId())
                 {
                     case 3900:
+                    {
                         caster->CastSpell(caster, SPELL_SOCRETHAR_TO_SEAT, true);
                         break;
+                    }
                     case 3742:
+                    {
                         caster->CastSpell(caster, SPELL_SOCRETHAR_FROM_SEAT, true);
                         break;
+                    }
                     default:
                         return;
                 }

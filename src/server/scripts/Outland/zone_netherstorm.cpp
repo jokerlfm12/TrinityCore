@@ -38,6 +38,8 @@ EndContentData */
 #include "ScriptedEscortAI.h"
 #include "ScriptedGossip.h"
 
+#include "GridNotifiers.h"
+
 /*######
 ## npc_commander_dawnforge
 ######*/
@@ -1053,6 +1055,1884 @@ public:
     }
 };
 
+class npc_protectorate_defender : public CreatureScript
+{
+public:
+    npc_protectorate_defender() : CreatureScript("npc_protectorate_defender") { }
+
+    struct npc_protectorate_defenderAI : public ScriptedAI
+    {
+        npc_protectorate_defenderAI(Creature* creature) : ScriptedAI(creature)
+        {
+            strikeDelay = 0;
+            hamstringDelay = 0;
+            eventID = 0;
+            eventDelay = 0;
+        }
+
+        void Reset() override
+        {
+            strikeDelay = 0;
+            hamstringDelay = 0;
+        }
+
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            me->SetHomePosition(me->GetPosition());
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    if (Creature* saeed = me->FindNearestCreature(20985, 50.0f))
+                    {
+                        me->SetFacingToObject(saeed);
+                    }
+                }
+                else if (data == 2)
+                {
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                }
+                else if (data == 3)
+                {
+                    me->SetImmuneToAll(false);
+                    me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                    me->SetFaction(1807);
+                    eventID = 1;
+                    eventDelay = 1000;
+                }
+                else if (data == 4)
+                {
+                    eventID = 2;
+                    eventDelay = 8000;
+                }
+                else if (data == 5)
+                {
+                    eventID = 3;
+                    eventDelay = urand(1000, 5000);
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                DoMeleeAttackIfReady();
+                if (strikeDelay >= 0)
+                {
+                    strikeDelay -= diff;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (strikeDelay < 0)
+                    {
+                        strikeDelay = 1000;
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            DoCastVictim(11976);
+                            strikeDelay = urand(5000, 8000);
+                            return;
+                        }
+                    }
+                    if (hamstringDelay < 0)
+                    {
+                        hamstringDelay = 1000;
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            DoCastVictim(31553);
+                            hamstringDelay = urand(15000, 20000);
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        eventDelay = 2000;
+                        if (me->IsWalking())
+                        {
+                            me->SetWalk(false);
+                        }
+                        if (Creature* saeed = me->FindNearestCreature(20985, 100.0f))
+                        {
+                            if (saeed->IsInCombat())
+                            {
+                                if (Unit* saeedVictim = saeed->GetVictim())
+                                {
+                                    AttackStart(saeedVictim);
+                                }
+                            }
+                            else
+                            {
+                                if (!me->isMoving())
+                                {
+                                    float followDistance = frand(3.0f, 10.0f);
+                                    float followAngle = me->GetAngle(saeed->GetPosition());
+                                    me->GetMotionMaster()->MoveFollow(saeed, followDistance, followAngle);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 2:
+                    {
+                        if (Creature* dimensius = me->FindNearestCreature(19554, 50.0f))
+                        {
+                            AttackStart(dimensius);
+                        }
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 3:
+                    {
+                        me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                        eventID = 4;
+                        eventDelay = 20000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        me->DespawnOrUnsummon(urand(5000, 10000));
+                        eventDelay = 20000;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int strikeDelay;
+        int hamstringDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_protectorate_defenderAI(creature);
+    }
+};
+
+class npc_protectorate_regenerator : public CreatureScript
+{
+public:
+    npc_protectorate_regenerator() : CreatureScript("npc_protectorate_regenerator") { }
+
+    struct npc_protectorate_regeneratorAI : public ScriptedAI
+    {
+        npc_protectorate_regeneratorAI(Creature* creature) : ScriptedAI(creature)
+        {
+            eventID = 0;
+            eventDelay = 0;
+        }
+
+        void Reset() override
+        {
+
+        }
+
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            me->SetHomePosition(me->GetPosition());
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    if (Creature* saeed = me->FindNearestCreature(20985, 50.0f))
+                    {
+                        me->SetFacingToObject(saeed);
+                    }
+                }
+                else if (data == 2)
+                {
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                }
+                else if (data == 3)
+                {
+                    me->SetImmuneToAll(false);
+                    me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                    me->SetFaction(1807);
+                    eventID = 1;
+                    eventDelay = 1000;
+                }
+                else if (data == 4)
+                {
+                    eventID = 2;
+                    eventDelay = 8000;
+                }
+                else if (data == 5)
+                {                    
+                    eventID = 3;
+                    eventDelay = urand(1000, 5000);
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (me->IsNonMeleeSpellCast(false))
+                {
+                    return;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    DoCastVictim(34232);
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        eventDelay = 2000;
+                        if (me->IsWalking())
+                        {
+                            me->SetWalk(false);
+                        }
+                        if (Creature* saeed = me->FindNearestCreature(20985, 100.0f))
+                        {
+                            if (saeed->IsInCombat())
+                            {
+                                if (Unit* saeedVictim = saeed->GetVictim())
+                                {
+                                    AttackStart(saeedVictim);
+                                }
+                            }
+                            else
+                            {
+                                if (!me->isMoving())
+                                {
+                                    float followDistance = frand(3.0f, 10.0f);
+                                    float followAngle = me->GetAngle(saeed->GetPosition());
+                                    me->GetMotionMaster()->MoveFollow(saeed, followDistance, followAngle);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 2:
+                    {
+                        if (Creature* dimensius = me->FindNearestCreature(19554, 50.0f))
+                        {
+                            AttackStart(dimensius);
+                        }
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 3:
+                    {
+                        me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                        eventID = 4;                        
+                        eventDelay = 20000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        me->DespawnOrUnsummon(urand(5000, 10000));
+                        eventDelay = 20000;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int strikeDelay;
+        int hamstringDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_protectorate_regeneratorAI(creature);
+    }
+};
+
+class npc_protectorate_avenger : public CreatureScript
+{
+public:
+    npc_protectorate_avenger() : CreatureScript("npc_protectorate_avenger") { }
+
+    struct npc_protectorate_avengerAI : public ScriptedAI
+    {
+        npc_protectorate_avengerAI(Creature* creature) : ScriptedAI(creature)
+        {
+            glaiveDelay = 0;
+            eventID = 0;
+            eventDelay = 0;
+        }
+
+        void Reset() override
+        {
+            glaiveDelay = 0;
+        }
+
+        void JustEngagedWith(Unit* /*who*/) override
+        {
+            me->SetHomePosition(me->GetPosition());
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    if (Creature* saeed = me->FindNearestCreature(20985, 50.0f))
+                    {
+                        me->SetFacingToObject(saeed);
+                    }
+                }
+                else if (data == 2)
+                {
+                    me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                }
+                else if (data == 3)
+                {
+                    me->SetImmuneToAll(false);
+                    me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                    me->SetFaction(1807);
+                    eventID = 1;
+                    eventDelay = 1000;
+                }
+                else if (data == 4)
+                {
+                    eventID = 2;
+                    eventDelay = 8000;
+                }
+                else if (data == 5)
+                {
+                    eventID = 3;
+                    eventDelay = urand(1000, 5000);
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (glaiveDelay >= 0)
+                {
+                    glaiveDelay -= diff;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    float victimDistance = me->GetDistance(victim);
+                    if (victimDistance > 10.0f && victimDistance < 25.0f)
+                    {
+                        if (me->isMoving())
+                        {
+                            me->StopMoving();
+                            SetCombatMovement(false);
+                        }
+                        if (glaiveDelay < 0)
+                        {
+                            glaiveDelay = 2000;
+                            DoCastVictim(36500);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        SetCombatMovement(true);
+                    }
+                    DoMeleeAttackIfReady();
+                }
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        eventDelay = 2000;
+                        if (me->IsWalking())
+                        {
+                            me->SetWalk(false);
+                        }
+                        if (Creature* saeed = me->FindNearestCreature(20985, 100.0f))
+                        {
+                            if (saeed->IsInCombat())
+                            {
+                                if (Unit* saeedVictim = saeed->GetVictim())
+                                {
+                                    AttackStart(saeedVictim);
+                                }
+                            }
+                            else
+                            {
+                                if (!me->isMoving())
+                                {
+                                    float followDistance = frand(3.0f, 10.0f);
+                                    float followAngle = me->GetAngle(saeed->GetPosition());
+                                    me->GetMotionMaster()->MoveFollow(saeed, followDistance, followAngle);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case 2:
+                    {
+                        if (Creature* dimensius = me->FindNearestCreature(19554, 50.0f))
+                        {
+                            AttackStart(dimensius);
+                        }
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 3:
+                    {
+                        me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                        eventID = 4;
+                        eventDelay = 20000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        me->DespawnOrUnsummon(urand(5000, 10000));
+                        eventDelay = 20000;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int glaiveDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_protectorate_avengerAI(creature);
+    }
+};
+
+class npc_captain_saeed : public CreatureScript
+{
+public:
+    npc_captain_saeed() : CreatureScript("npc_captain_saeed") { }
+
+    struct npc_captain_saeedAI : public ScriptedAI
+    {
+        npc_captain_saeedAI(Creature* creature) : ScriptedAI(creature)
+        {
+            cleaveDelay = 0;
+            eventID = 0;
+            eventDelay = 0;
+        }
+
+        void Reset() override
+        {
+            cleaveDelay = 0;
+        }
+
+        bool GossipHello(Player* player) override
+        {
+            player->RewardPlayerAndGroupAtEvent(20985, player);
+            return false;
+        }
+
+        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        {
+            if (gossipListId == 0)
+            {
+                me->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                me->SetImmuneToAll(false);
+                me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                me->SetFaction(1807);
+                eventID = 1;
+                eventDelay = 2000;
+                CloseGossipMenuFor(player);
+            }
+            return true;
+        }
+
+        void JustEngagedWith(Unit* who) override
+        {
+            me->SetHomePosition(me->GetPosition());
+            if (who->GetEntry() == 19554)
+            {
+                Talk(1);
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    eventID = 8;
+                    eventDelay = 3000;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                DoMeleeAttackIfReady();
+                if (cleaveDelay >= 0)
+                {
+                    cleaveDelay -= diff;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (cleaveDelay < 0)
+                    {
+                        cleaveDelay = 1000;
+                        if (me->IsWithinMeleeRange(victim))
+                        {
+                            DoCastVictim(15496);
+                            cleaveDelay = urand(8000, 12000);
+                            return;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (eventDelay>=0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        Talk(0);
+                        std::list<Creature*> defenderList;
+                        me->GetCreatureListWithEntryInGrid(defenderList, 20984, 50.0f);
+                        for (std::list<Creature*>::iterator itr = defenderList.begin(); itr != defenderList.end(); ++itr)
+                        {
+                            if (Creature* defender = *itr)
+                            {
+                                defender->AI()->SetData(1, 1);
+                            }
+                        }
+                        std::list<Creature*> avengerList;
+                        me->GetCreatureListWithEntryInGrid(avengerList, 21805, 50.0f);
+                        for (std::list<Creature*>::iterator itr = avengerList.begin(); itr != avengerList.end(); ++itr)
+                        {
+                            if (Creature* avenger = *itr)
+                            {
+                                avenger->AI()->SetData(1, 1);
+                            }
+                        }
+                        std::list<Creature*> regeneratorList;
+                        me->GetCreatureListWithEntryInGrid(regeneratorList, 21783, 50.0f);
+                        for (std::list<Creature*>::iterator itr = regeneratorList.begin(); itr != regeneratorList.end(); ++itr)
+                        {
+                            if (Creature* regenerator = *itr)
+                            {
+                                regenerator->AI()->SetData(1, 1);
+                            }
+                        }
+                        eventID = 2;
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 2:
+                    {
+                        //me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                        eventID = 3;
+                        eventDelay = 1000;
+                        break;
+                    }
+                    case 3:
+                    {
+                        std::list<Creature*> defenderList;
+                        me->GetCreatureListWithEntryInGrid(defenderList, 20984, 50.0f);
+                        for (std::list<Creature*>::iterator itr = defenderList.begin(); itr != defenderList.end(); ++itr)
+                        {
+                            if (Creature* defender = *itr)
+                            {
+                                defender->AI()->SetData(1, 2);
+                            }
+                        }
+                        std::list<Creature*> avengerList;
+                        me->GetCreatureListWithEntryInGrid(avengerList, 21805, 50.0f);
+                        for (std::list<Creature*>::iterator itr = avengerList.begin(); itr != avengerList.end(); ++itr)
+                        {
+                            if (Creature* avenger = *itr)
+                            {
+                                avenger->AI()->SetData(1, 2);
+                            }
+                        }
+                        std::list<Creature*> regeneratorList;
+                        me->GetCreatureListWithEntryInGrid(regeneratorList, 21783, 50.0f);
+                        for (std::list<Creature*>::iterator itr = regeneratorList.begin(); itr != regeneratorList.end(); ++itr)
+                        {
+                            if (Creature* regenerator = *itr)
+                            {
+                                regenerator->AI()->SetData(1, 2);
+                            }
+                        }
+                        eventID = 4;
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        me->SetWalk(false);
+                        me->GetMotionMaster()->MovePath(20985, false);
+                        std::list<Creature*> defenderList;
+                        me->GetCreatureListWithEntryInGrid(defenderList, 20984, 50.0f);
+                        for (std::list<Creature*>::iterator itr = defenderList.begin(); itr != defenderList.end(); ++itr)
+                        {
+                            if (Creature* defender = *itr)
+                            {
+                                defender->AI()->SetData(1, 3);
+                            }
+                        }
+                        std::list<Creature*> avengerList;
+                        me->GetCreatureListWithEntryInGrid(avengerList, 21805, 50.0f);
+                        for (std::list<Creature*>::iterator itr = avengerList.begin(); itr != avengerList.end(); ++itr)
+                        {
+                            if (Creature* avenger = *itr)
+                            {
+                                avenger->AI()->SetData(1, 3);
+                            }
+                        }
+                        std::list<Creature*> regeneratorList;
+                        me->GetCreatureListWithEntryInGrid(regeneratorList, 21783, 50.0f);
+                        for (std::list<Creature*>::iterator itr = regeneratorList.begin(); itr != regeneratorList.end(); ++itr)
+                        {
+                            if (Creature* regenerator = *itr)
+                            {
+                                regenerator->AI()->SetData(1, 3);
+                            }
+                        }
+                        eventID = 5;
+                        eventDelay = 1000;
+                        break;
+                    }
+                    case 5:
+                    {
+                        eventDelay = 2000;
+                        if (Unit* enemy = me->SelectNearestHostileUnitInAggroRange(true))
+                        {
+                            AttackStart(enemy);
+                            return;
+                        }
+                        if (!me->isMoving())
+                        {
+                            if (Creature* dimensius = me->FindNearestCreature(19554, 30.0f))
+                            {
+                                eventID = 6;
+                                eventDelay = 500;
+                            }
+                        }
+                        break;
+                    }
+                    case 6:
+                    {
+                        Talk(2);
+                        std::list<Creature*> defenderList;
+                        me->GetCreatureListWithEntryInGrid(defenderList, 20984, 50.0f);
+                        for (std::list<Creature*>::iterator itr = defenderList.begin(); itr != defenderList.end(); ++itr)
+                        {
+                            if (Creature* defender = *itr)
+                            {
+                                defender->AI()->SetData(1, 4);
+                            }
+                        }
+                        std::list<Creature*> avengerList;
+                        me->GetCreatureListWithEntryInGrid(avengerList, 21805, 50.0f);
+                        for (std::list<Creature*>::iterator itr = avengerList.begin(); itr != avengerList.end(); ++itr)
+                        {
+                            if (Creature* avenger = *itr)
+                            {
+                                avenger->AI()->SetData(1, 4);
+                            }
+                        }
+                        std::list<Creature*> regeneratorList;
+                        me->GetCreatureListWithEntryInGrid(regeneratorList, 21783, 50.0f);
+                        for (std::list<Creature*>::iterator itr = regeneratorList.begin(); itr != regeneratorList.end(); ++itr)
+                        {
+                            if (Creature* regenerator = *itr)
+                            {
+                                regenerator->AI()->SetData(1, 4);
+                            }
+                        }
+                        if (Creature* dimensius = me->FindNearestCreature(19554, 30.0f))
+                        {
+                            dimensius->AI()->SetData(1, 1);
+                            eventID = 8;
+                        }
+                        eventID = 7;
+                        eventDelay = 8000;
+                        break;
+                    }
+                    case 7:
+                    {
+                        eventDelay = 2000;
+                        if (Creature* dimensius = me->FindNearestCreature(19554, 50.0f))
+                        {
+                            AttackStart(dimensius);
+                        }
+                        break;
+                    }
+                    case 8:
+                    {
+                        Talk(3);
+                        me->HandleEmoteCommand(Emote::EMOTE_ONESHOT_ROAR);
+                        std::list<Creature*> defenderList;
+                        me->GetCreatureListWithEntryInGrid(defenderList, 20984, 50.0f);
+                        for (std::list<Creature*>::iterator itr = defenderList.begin(); itr != defenderList.end(); ++itr)
+                        {
+                            if (Creature* defender = *itr)
+                            {
+                                defender->AI()->SetData(1, 5);
+                            }
+                        }
+                        std::list<Creature*> avengerList;
+                        me->GetCreatureListWithEntryInGrid(avengerList, 21805, 50.0f);
+                        for (std::list<Creature*>::iterator itr = avengerList.begin(); itr != avengerList.end(); ++itr)
+                        {
+                            if (Creature* avenger = *itr)
+                            {
+                                avenger->AI()->SetData(1, 5);
+                            }
+                        }
+                        std::list<Creature*> regeneratorList;
+                        me->GetCreatureListWithEntryInGrid(regeneratorList, 21783, 50.0f);
+                        for (std::list<Creature*>::iterator itr = regeneratorList.begin(); itr != regeneratorList.end(); ++itr)
+                        {
+                            if (Creature* regenerator = *itr)
+                            {
+                                regenerator->AI()->SetData(1, 5);
+                            }
+                        }
+                        eventID = 9;                        
+                        eventDelay = 20000;
+                        break;
+                    }
+                    case 9:
+                    {
+                        me->DespawnOrUnsummon(urand(5000, 10000));
+                        eventDelay = 20000;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int cleaveDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_captain_saeedAI(creature);
+    }
+};
+
+class npc_dimensius : public CreatureScript
+{
+public:
+    npc_dimensius() : CreatureScript("npc_dimensius") { }
+
+    struct npc_dimensiusAI : public ScriptedAI
+    {
+        npc_dimensiusAI(Creature* creature) : ScriptedAI(creature)
+        {
+            vaultDelay = 5000;
+            feedDelay = 20000;
+            feedingDuration = 0;
+            summoned = 0;
+            eventID = 0;
+            eventDelay = 0;
+            summonLimit = 2;
+        }
+
+        void Reset() override
+        {
+            vaultDelay = 5000;
+            feedDelay = 20000;
+            feedingDuration = 0;
+            summoned = 0;
+            eventID = 1;
+            eventDelay = 5000;
+        }
+
+        void JustAppeared()
+        {
+            eventID = 1;
+            eventDelay = 5000;
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            if (Creature* saeed = me->FindNearestCreature(20985, 50.0f))
+            {
+                saeed->AI()->SetData(1, 1);
+            }
+            std::list<Creature*> spawnsList;
+            me->GetCreatureListWithEntryInGrid(spawnsList, 21780, 50.0f);
+            for (std::list<Creature*>::iterator itr = spawnsList.begin(); itr != spawnsList.end(); ++itr)
+            {
+                if (Creature* spawn = *itr)
+                {
+                    spawn->DespawnOrUnsummon(500);
+                }
+            }            
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    eventID = 2;
+                    eventDelay = 2000;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (feedDelay >= 0)
+                {
+                    feedDelay -= diff;
+                }
+                if (vaultDelay >= 0)
+                {
+                    vaultDelay -= diff;
+                }
+                if (me->IsNonMeleeSpellCast(false))
+                {
+                    if (me->HasAura(37450))
+                    {
+                        feedingDuration += diff;
+                        if (feedingDuration > 5000)
+                        {
+                            feedingDuration = 0;
+                            float summonX = 0.0f, summonY = 0.0f, summonZ = 0.0f, summonDistance = 0.0f, summonAngle = 0.0f;
+                            for (uint32 summonCount = 0; summonCount < summonLimit; summonCount++)
+                            {
+                                summonDistance = frand(5.0f, 10.0f);
+                                summonAngle = frand(0.0f, M_PI * 2);
+                                me->GetNearPoint(me, summonX, summonY, summonZ, summonDistance, summonAngle);
+                                if (TempSummon* ts = me->SummonCreature(21780, summonX, summonY, summonZ, me->GetOrientation(), TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000))
+                                {
+                                    if (Unit* myVictim = me->GetVictim())
+                                    {
+                                        ts->AI()->AttackStart(myVictim);
+                                    }
+                                    else if (Unit* enemy = ts->SelectNearestHostileUnitInAggroRange(true))
+                                    {
+                                        ts->AI()->AttackStart(enemy);
+                                    }
+                                }
+                            }
+                            summoned += summonLimit;
+                            if (summoned >= 10)
+                            {
+                                me->InterruptNonMeleeSpells(false);
+                                me->RemoveAurasDueToSpell(37450);
+                                summoned = 0;
+                                feedingDuration = 0;
+                                feedDelay = urand(30000, 35000);
+                            }
+                        }
+                    }
+                    return;
+                }
+                if (feedDelay < 0)
+                {
+                    feedDelay = 1000;
+                    DoCastSelf(37450);
+                    Talk(2);
+                    feedingDuration = 5000;
+                    feedDelay = urand(300000, 600000);
+                    return;
+                }
+                feedingDuration = 0;
+                if (vaultDelay < 0)
+                {
+                    vaultDelay = 1000;
+                    std::list<Player*> players;
+                    me->GetPlayerListInGrid(players, 30.0f);
+                    if (players.size() > 0)
+                    {
+                        std::unordered_map<uint32, Player*> nearbyPlayerMap;
+                        for (auto itr = players.begin(); itr != players.end(); itr++)
+                        {
+                            if (Player* eachPlayer = *itr)
+                            {
+                                if (eachPlayer->IsAlive())
+                                {
+                                    nearbyPlayerMap[nearbyPlayerMap.size()] = eachPlayer;
+                                }
+                            }
+                        }
+                        uint32 targetIndex = urand(0, nearbyPlayerMap.size() - 1);
+                        if (Player* targetPlayer = nearbyPlayerMap[targetIndex])
+                        {
+                            DoCast(targetPlayer, 37412);
+                            vaultDelay = urand(5000, 8000);
+                            return;
+                        }
+                    }
+                    return;
+                }
+                if (Unit* victim = me->GetVictim())
+                {
+                    DoCastVictim(37500);
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        SetCombatMovement(false);
+                        DoCastSelf(35939);
+                        me->SetImmuneToAll(true);
+                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                        break;
+                    }
+                    case 2:
+                    {
+                        me->RemoveAurasDueToSpell(35939);
+                        DoCastSelf(43759);
+                        eventID = 3;
+                        eventDelay = 100;
+                        break;
+                    }
+                    case 3:
+                    {
+                        DoCastSelf(26638);
+                        eventID = 4;
+                        eventDelay = 1000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        Talk(1);
+                        eventID = 5;
+                        eventDelay = 4000;
+                        break;
+                    }
+                    case 5:
+                    {
+                        me->SetImmuneToAll(false);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                        eventID = 6;
+                        eventDelay = 1000;
+                        break;
+                    }
+                    case 6:
+                    {
+                        if (Unit* enemy = me->SelectNearestHostileUnitInAggroRange(true))
+                        {
+                            AttackStart(enemy);
+                            DoCast(enemy, 37500);
+                        }
+                        eventDelay = 2000;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int vaultDelay;
+        int feedDelay;
+        int feedingDuration;
+        int summoned;
+        int eventID;
+        int eventDelay;
+        uint32 summonLimit;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_dimensiusAI(creature);
+    }
+};
+
+class npc_anchorite_karja : public CreatureScript
+{
+public:
+    npc_anchorite_karja() : CreatureScript("npc_anchorite_karja") { }
+
+    struct npc_anchorite_karjaAI : public ScriptedAI
+    {
+        npc_anchorite_karjaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            holyDelay = 2000;
+            sit = true;
+        }
+
+        void Reset() override
+        {
+            holyDelay = 2000;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    sit = false;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (holyDelay >= 0)
+            {
+                holyDelay -= diff;
+            }
+            if (holyDelay < 0)
+            {
+                holyDelay = 2000;
+                std::list<Unit*> unitList;
+                Trinity::AnyUnitInObjectRangeCheck go_check(me, 20.0f);
+                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
+                Cell::VisitGridObjects(me, go_search, 20.0f);
+                if (!unitList.empty())
+                {
+                    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
+                    {
+                        if (Unit* eachUnit = *uIT)
+                        {
+                            if (eachUnit->IsFriendlyTo(me))
+                            {
+                                float eachPCT = eachUnit->GetHealthPct();
+                                if (eachPCT < 40.0f)
+                                {
+                                    DoCast(eachUnit, 13952);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (UpdateVictim())
+            {
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (sit)
+                {
+                    if (me->GetStandState() != UnitStandStateType::UNIT_STAND_STATE_SIT_HIGH_CHAIR)
+                    {
+                        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_SIT_HIGH_CHAIR);
+                    }
+                }
+            }
+        }
+
+        int holyDelay;
+        bool sit;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_anchorite_karjaAI(creature);
+    }
+};
+
+class npc_exarch_orelis : public CreatureScript
+{
+public:
+    npc_exarch_orelis() : CreatureScript("npc_exarch_orelis") { }
+
+    struct npc_exarch_orelisAI : public ScriptedAI
+    {
+        npc_exarch_orelisAI(Creature* creature) : ScriptedAI(creature)
+        {
+            shoutDelay = 500;
+            rendDelay = urand(2000, 5000);
+            strikeDelay = urand(5000, 8000);
+        }
+
+        void Reset() override
+        {
+            shoutDelay = 500;
+            rendDelay = urand(2000, 5000);
+            strikeDelay = urand(5000, 8000);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (shoutDelay >= 0)
+                {
+                    shoutDelay -= diff;
+                }
+                if (rendDelay >= 0)
+                {
+                    rendDelay -= diff;
+                }
+                if (strikeDelay >= 0)
+                {
+                    strikeDelay -= diff;
+                }
+                if (shoutDelay < 0)
+                {
+                    shoutDelay = urand(5000, 8000);
+                    if (!me->HasAura(13730))
+                    {
+                        DoCastSelf(13730);
+                        return;
+                    }
+                }
+                if (rendDelay < 0)
+                {
+                    rendDelay = urand(5000, 8000);
+                    if (Unit* victim = me->GetVictim())
+                    {
+                        if (!victim->HasAura(16509, me->GetGUID()))
+                        {
+                            DoCast(victim, 16509);
+                        }
+                    }
+                }
+                if (strikeDelay < 0)
+                {
+                    strikeDelay = urand(5000, 8000);
+                    DoCastVictim(29426);
+                    return;
+                }
+                DoMeleeAttackIfReady();
+            }
+        }
+
+        int shoutDelay;
+        int rendDelay;
+        int strikeDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_exarch_orelisAI(creature);
+    }
+};
+
+class npc_kaylaan_the_lost : public CreatureScript
+{
+public:
+    npc_kaylaan_the_lost() : CreatureScript("npc_kaylaan_the_lost") { }
+
+    struct npc_kaylaan_the_lostAI : public ScriptedAI
+    {
+        npc_kaylaan_the_lostAI(Creature* creature) : ScriptedAI(creature)
+        {
+            eventID = 0;
+            eventDelay = 0;
+            burningDelay = urand(5000, 8000);
+            slamDelay = urand(2000, 5000);
+            holyDelay = urand(10000, 15000);
+        }
+
+        void JustAppeared()
+        {
+            me->SetImmuneToAll(true);
+            me->SetVisible(false);
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    eventID = 1;
+                    eventDelay = 8000;
+                }
+            }
+        }
+
+        void DamageTaken(Unit* attacker, uint32& damage) override
+        {
+            if (damage >= me->GetHealth())
+            {
+                damage = me->GetHealth() - 1;
+                me->ClearInCombat();
+                me->SetImmuneToAll(true);
+                if (Creature* adyen = me->FindNearestCreature(18537, 50.0f))
+                {
+                    adyen->AI()->SetData(1, 2);
+                    adyen->ClearInCombat();
+                    adyen->SetImmuneToAll(true);
+                }
+                if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                {
+                    orelis->ClearInCombat();
+                    orelis->SetImmuneToAll(true);
+                }
+                if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                {
+                    karja->ClearInCombat();
+                    karja->SetImmuneToAll(true);
+                }
+                if (Creature* socrethar = me->FindNearestCreature(20132, 100.0f))
+                {
+                    socrethar->AI()->SetData(1, 2);
+                }
+            }                
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (burningDelay >= 0)
+                {
+                    burningDelay -= diff;
+                }
+                if (slamDelay >= 0)
+                {
+                    slamDelay -= diff;
+                }
+                if (holyDelay >= 0)
+                {
+                    holyDelay -= diff;
+                }
+                if (burningDelay < 0)
+                {
+                    DoCastVictim(37552);
+                    burningDelay = urand(8000, 12000);
+                }
+                if (slamDelay < 0)
+                {
+                    DoCastVictim(37572);
+                    slamDelay = urand(5000, 8000);
+                }
+                if (holyDelay < 0)
+                {
+                    holyDelay = 1000;
+                    float myPCT = me->GetHealthPct();
+                    if (myPCT < 50.0f)
+                    {
+                        DoCastSelf(37569);
+                        holyDelay = urand(20000, 30000);
+                    }
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;                    
+                }
+                if (eventDelay < 0)
+                {
+                    eventDelay = 2000;
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        Talk(4);
+                        eventID = 2;
+                        eventDelay = 100;
+                        break;
+                    }
+                    case 2:
+                    {
+                        Creature* Ishanah = me->FindNearestCreature(18538, 60.0f);
+                        if (!Ishanah)
+                        {
+                            Ishanah = me->SummonCreature(18538, 4899.0f, 3817.0f, 208.35f, 0.6f, TempSummonType::TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 300000);
+                            if (Ishanah)
+                            {
+                                Ishanah->SetFaction(250);
+                                Ishanah->SetImmuneToAll(true);                                
+                                Ishanah->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                                Ishanah->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                                Ishanah->SetWalk(false);
+                                Ishanah->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);                                
+                            }
+                        }
+                        if (Ishanah)
+                        {
+                            if (!Ishanah->isMoving())
+                            {
+                                float destX = 4941.0f, destY = 3835.0f, destZ = 211.5f;
+                                float destinationDistance = Ishanah->GetDistance(destX, destY, destZ);
+                                if (destinationDistance > 3.0f)
+                                {
+                                    Ishanah->SetWalk(false);
+                                    Ishanah->GetMotionMaster()->MovePoint(1, destX, destY, destZ);
+                                }
+                                else
+                                {
+                                    Ishanah->SetFacingToObject(me);
+                                    me->SetFacingToObject(Ishanah);
+                                    eventID = 3;
+                                    eventDelay = 1000;
+                                }
+                            }
+
+                        }
+                        break;
+                    }
+                    case 3:
+                    {
+                        Talk(5);
+                        eventID = 4;
+                        eventDelay = 2000;
+                        break;
+                    }
+                    case 4:
+                    {
+                        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_KNEEL);
+                        eventID = 5;
+                        eventDelay = 1000;
+                        break;
+                    }
+                    case 5:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                            {                                
+                                Ishanah->SetFacingToObject(socrethar);
+                                socrethar->SetFacingToObject(Ishanah);
+                            }
+                            Ishanah->AI()->Talk(0);
+                            eventID = 6;
+                            eventDelay = 6000;
+                        }
+                        break;
+                    }
+                    case 6:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            Ishanah->AI()->Talk(1);
+                            eventID = 7;
+                            eventDelay = 9000;
+                        }
+                        break;
+                    }
+                    case 7:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->Talk(4);
+                            eventID = 8;
+                            eventDelay = 7000;
+                        }
+                        break;
+                    }
+                    case 8:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                            {
+                                socrethar->CastSpell(Ishanah, 35598);
+                                eventID = 9;
+                                eventDelay = 1500;
+                            }
+                        }
+                        break;
+                    }
+                    case 9:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            Ishanah->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);
+                            eventID = 10;
+                            eventDelay = 2000;
+                        }
+                        break;
+                    }
+                    case 10:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            me->RemoveAurasDueToSpell(35596);
+                            Talk(6);
+                            float saveX = 0.0f, saveY = 0.0f, saveZ = 0.0f;
+                            Ishanah->GetNearPoint(Ishanah, saveX, saveY, saveZ, 3.0f, Ishanah->GetAngle(me));
+                            me->GetMotionMaster()->MovePoint(1, saveX, saveY, saveZ);
+                            eventID = 11;
+                            eventDelay = 3000;
+                        }
+                        break;
+                    }
+                    case 11:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            me->SetFacingToObject(Ishanah);
+                            Talk(7);
+                            DoCastSelf(13874);
+                            me->SetFaction(250);
+                            eventID = 12;
+                            eventDelay = 4000;
+                        }
+                        break;
+                    }
+                    case 12:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                            me->CastSpell(Ishanah, 35599);
+                            eventID = 13;
+                            eventDelay = 4000;
+                        }
+                        break;
+                    }
+                    case 13:
+                    {
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            Ishanah->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_DEAD);
+                        }
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->Talk(5);
+                            eventID = 14;
+                            eventDelay = 3000;
+                        }
+                        break;
+                    }
+                    case 14:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->CastSpell(me, 35598);                            
+                            eventID = 15;
+                            eventDelay = 1500;
+                        }
+                        break;
+                    }
+                    case 15:
+                    {
+                        if (Creature* socrethar = me->FindNearestCreature(20132, 50.0f))
+                        {
+                            socrethar->AI()->SetData(1, 3);
+                            me->KillSelf(false);
+                            eventID = 16;
+                        }
+                        break;
+                    }
+                    case 16:
+                    {
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
+                }
+            }
+        }
+
+        int burningDelay;
+        int slamDelay;
+        int holyDelay;
+        int eventID;
+        int eventDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_kaylaan_the_lostAI(creature);
+    }
+};
+
+class npc_socrethar : public CreatureScript
+{
+public:
+    npc_socrethar() : CreatureScript("npc_socrethar") { }
+
+    struct npc_socretharAI : public ScriptedAI
+    {
+        npc_socretharAI(Creature* creature) : ScriptedAI(creature)
+        {
+            deathblowStatus = 0;
+            eventID = 0;
+            eventDelay = 0;
+            protectionDelay = 1000;
+            backDelay = urand(5000, 8000);
+            antiDelay = urand(20000, 30000);
+            shadowDelay = urand(10000, 20000);
+            cleaveDelay = urand(2000, 5000);
+        }
+
+        void Reset() override
+        {
+            protectionDelay = 1000;
+            backDelay = urand(5000, 8000);
+            antiDelay = urand(20000, 30000);
+            shadowDelay = urand(10000, 20000);
+            cleaveDelay = urand(2000, 5000);
+        }
+
+        void JustAppeared()
+        {
+            me->SetImmuneToAll(true);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            std::list<Player*> players;
+            Trinity::AnyPlayerInObjectRangeCheck checker(me, 100.0f);
+            Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(me, players, checker);
+            Cell::VisitWorldObjects(me, searcher, 100.0f);
+            for (std::list<Player*>::iterator itr = players.begin(); itr != players.end(); ++itr)
+            {
+                if (Player* eachPlayer = *itr)
+                {
+                    eachPlayer->CastSpell(eachPlayer, 35762);
+                }
+            }
+            if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+            {
+                orelis->DespawnOrUnsummon(60000);
+            }
+            if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+            {
+                karja->DespawnOrUnsummon(60000);
+            }
+            if (Creature* adyen = me->FindNearestCreature(18537, 50.0f))
+            {
+                adyen->DespawnOrUnsummon(60000);
+            }
+            if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+            {
+                Ishanah->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                Ishanah->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+                Ishanah->DespawnOrUnsummon(60000);
+            }
+        }
+
+        uint32 GetData(uint32 type) const override
+        {
+            if (type == 1)
+            {
+                return deathblowStatus;
+            }
+
+            return 0;
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            if (type == 1)
+            {
+                if (data == 1)
+                {
+                    deathblowStatus = 1;
+                }
+                else if (data == 2)
+                {
+                    Talk(3);
+                    if (Creature* kaylaan = me->FindNearestCreature(20794, 100.0f))
+                    {
+                        kaylaan->AI()->SetData(1, 1);
+                    }
+                }
+                else if (data == 3)
+                {
+                    eventID = 1;
+                    eventDelay = 1000;
+                }
+            }
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (!me->IsAlive())
+            {
+                return;
+            }
+            if (protectionDelay >= 0)
+            {
+                protectionDelay -= diff;
+            }
+            if (protectionDelay < 0)
+            {
+                DoCastSelf(37539);
+                protectionDelay = 600000;
+                return;
+            }
+            if (UpdateVictim())
+            {
+                if (backDelay >= 0)
+                {
+                    backDelay -= diff;
+                }
+                if (antiDelay >= 0)
+                {
+                    antiDelay -= diff;
+                }
+                if (shadowDelay >= 0)
+                {
+                    shadowDelay -= diff;
+                }
+                if (cleaveDelay >= 0)
+                {
+                    cleaveDelay -= diff;
+                }
+                if (backDelay < 0)
+                {
+                    DoCastVictim(37537);
+                    backDelay = urand(12000, 15000);
+                    return;
+                }
+                if (antiDelay < 0)
+                {
+                    DoCastSelf(37538);
+                    antiDelay = urand(20000, 30000);
+                    return;
+                }
+                if (shadowDelay < 0)
+                {
+                    DoCastVictim(28448);
+                    shadowDelay = urand(10000, 20000);
+                    return;
+                }
+                if (cleaveDelay < 0)
+                {
+                    DoCastVictim(15496);
+                    cleaveDelay = urand(8000, 12000);
+                    return;
+                }
+                DoMeleeAttackIfReady();
+            }
+            else
+            {
+                if (eventDelay >= 0)
+                {
+                    eventDelay -= diff;
+                }
+                if (eventDelay < 0)
+                {
+                    eventDelay = 2000;
+                    switch (eventID)
+                    {
+                    case 0:
+                    {
+                        break;
+                    }
+                    case 1:
+                    {
+                        me->SetImmuneToAll(false);
+                        me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                        me->SetFaction(14);
+                        if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            Ishanah->SetImmuneToAll(false);              
+                            Ishanah->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                            Ishanah->SetHomePosition(Ishanah->GetPosition());
+                        }
+                        if (Creature* adyen = me->FindNearestCreature(18537, 50.0f))
+                        {
+                            adyen->SetImmuneToAll(false);
+                            adyen->SetHomePosition(adyen->GetPosition());
+                        }
+                        if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                        {
+                            orelis->SetImmuneToAll(false);
+                            orelis->SetHomePosition(orelis->GetPosition());
+                        }
+                        if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                        {
+                            karja->SetImmuneToAll(false);
+                            karja->SetHomePosition(karja->GetPosition());
+                        }
+                        eventID = 2;
+                        eventDelay = 100;
+                        break;
+                    }
+                    case 2:
+                    {
+                        if (Unit* enemy = me->SelectNearestHostileUnitInAggroRange(true))
+                        {
+                            AttackStart(enemy);                            
+                        }
+                        else if (Creature* Ishanah = me->FindNearestCreature(18538, 50.0f))
+                        {
+                            AttackStart(Ishanah);
+                            Ishanah->AI()->AttackStart(me);
+                        }
+                        if (Creature* adyen = me->FindNearestCreature(18537, 50.0f))
+                        {
+                            adyen->AI()->AttackStart(me);
+                        }
+                        if (Creature* orelis = me->FindNearestCreature(19466, 50.0f))
+                        {
+                            orelis->AI()->AttackStart(me);
+                        }
+                        if (Creature* karja = me->FindNearestCreature(19467, 50.0f))
+                        {
+                            karja->AI()->AttackStart(me);
+                        }
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }                        
+                    }
+                }
+            }
+        }
+
+        int deathblowStatus;
+        int eventID;
+        int eventDelay;
+        int protectionDelay;
+        int backDelay;
+        int antiDelay;
+        int shadowDelay;
+        int cleaveDelay;
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_socretharAI(creature);
+    }
+};
+
 void AddSC_netherstorm()
 {
     new npc_commander_dawnforge();
@@ -1066,4 +2946,13 @@ void AddSC_netherstorm()
     new npc_scrapped_fel_reaver();
     new npc_scrap_reaver_x6000();
     new npc_negatron();
+    new npc_captain_saeed();
+    new npc_protectorate_defender();
+    new npc_protectorate_regenerator();
+    new npc_protectorate_avenger();
+    new npc_dimensius();
+    new npc_anchorite_karja();
+    new npc_kaylaan_the_lost();
+    new npc_socrethar();
+    new npc_exarch_orelis();
 }

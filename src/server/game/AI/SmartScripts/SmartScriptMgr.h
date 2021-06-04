@@ -1253,7 +1253,7 @@ enum SMARTAI_TARGETS
     SMART_TARGET_HOSTILE_LAST_AGGRO             = 4,    // Dead last on aggro, maxdist, playerOnly, powerType + 1
     SMART_TARGET_HOSTILE_RANDOM                 = 5,    // Just any random target on our threat list, maxdist, playerOnly, powerType + 1
     SMART_TARGET_HOSTILE_RANDOM_NOT_TOP         = 6,    // Any random target except top threat, maxdist, playerOnly, powerType + 1
-    SMART_TARGET_ACTION_INVOKER                 = 7,    // Unit who caused this Event to occur
+    SMART_TARGET_ACTION_INVOKER                 = 7,    // Unit who caused this Event to occur // lfm 1 - root invoker 
     SMART_TARGET_POSITION                       = 8,    // use xyz from event params
     SMART_TARGET_CREATURE_RANGE                 = 9,    // CreatureEntry(0any), minDist, maxDist // lfm max amount 
     SMART_TARGET_CREATURE_GUID                  = 10,   // guid, entry
