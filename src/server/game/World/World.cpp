@@ -96,6 +96,9 @@
 // lfm ninger
 #include "NingerManager.h"
 
+// lfm ming
+#include "MingConfig.h"
+
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -2335,6 +2338,9 @@ void World::SetInitialWorldSettings()
     {
         sNingerManager->InitializeManager();
     }
+
+    // lfm ming
+    sMingConfig->StartMing();
 }
 
 void World::LoadAutobroadcasts()

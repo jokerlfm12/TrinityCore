@@ -115,6 +115,9 @@
 #include "WorldStatePackets.h"
 #include <G3D/g3dmath.h>
 
+// lfm ming
+#include "MingConfig.h"
+
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
 // corpse reclaim times
@@ -650,6 +653,46 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // all item positions resolved
 
     GetThreatManager().Initialize();
+
+    // lfm ming    
+    if (sMingConfig->Enable)
+    {
+        if (WorldSession* mySession = GetSession())
+        {
+            if (!mySession->isNinger)
+            {
+                uint32 myClass = getClass();
+                uint32 myRace = getRace();
+                if (myClass == Classes::CLASS_DEATH_KNIGHT)
+                {
+                    // dk handling 
+                }
+                else if (myRace == Races::RACE_WORGEN || myRace == Races::RACE_GOBLIN)
+                {
+                    // worgen and goblin handling 
+                }
+                else
+                {
+                    if (sMingConfig->Expansion == 1)
+                    {
+                        if (getLevel() < 60)
+                        {
+                            GiveLevel(60);
+                            ModifyMoney(5000000);
+                        }
+                    }
+                    else if (sMingConfig->Expansion == 2)
+                    {
+                        if (getLevel() < 70)
+                        {
+                            GiveLevel(70);
+                            ModifyMoney(10000000);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     return true;
 }
